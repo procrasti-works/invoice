@@ -89,17 +89,32 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-        <main className="internal-app min-h-dvh bg-[#f3f3f1] p-2 text-[#050505] sm:p-4">
-      <div className="grid min-h-[calc(100dvh-1rem)] gap-3 lg:grid-cols-[228px_minmax(0,1fr)] lg:min-h-[calc(100dvh-2rem)]">
-        <aside className="flex min-w-0 flex-col bg-[#f7f7f5] px-2 py-2 lg:h-[calc(100dvh-2rem)]">
+    <main className="internal-app min-h-dvh bg-[#eef4fb] p-2 text-[#050505] sm:p-4">
+      <div className="grid min-h-[calc(100dvh-1rem)] gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:min-h-[calc(100dvh-2rem)]">
+
+        {/* ── Sidebar ── */}
+        <aside className="flex min-w-0 flex-col rounded-2xl bg-[#1a6fc4] px-3 py-4 shadow-lg lg:h-[calc(100dvh-2rem)]">
+
+          {/* Logo */}
           <Link
             href="/dashboard"
-            className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-[#efefec]"
+            className="flex min-w-0 items-center gap-2 rounded-xl px-2 py-2 transition-colors hover:bg-white/10"
           >
-            <img src="/payvio-logo.svg" alt="Payvio" style={{height:"51px"}} className="w-auto" />
+            <img
+              src="/payvio-logo.svg"
+              alt="Payvio"
+              style={{ height: "51px" }}
+              className="w-auto brightness-0 invert"
+            />
           </Link>
 
-          <nav className="mt-7 grid gap-2" aria-label="Invoice workspace">
+          {/* Nav label */}
+          <p className="mt-8 px-3 text-[11px] font-bold uppercase tracking-widest text-white/50">
+            Menu
+          </p>
+
+          {/* Main nav */}
+          <nav className="mt-2 grid gap-1" aria-label="Invoice workspace">
             {navItems.map((item) => {
               const isActive =
                 pathname === "/dashboard" && activeSection === item.sectionId;
@@ -109,9 +124,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.label}
                   className={cn(
-                    "flex min-h-[45px] w-full items-center gap-3 rounded-lg px-2.5 text-[16px] font-semibold text-black transition-colors hover:bg-[#efefec]",
-                    isActive &&
-                      "bg-[#efefec] text-[#050505] hover:bg-[#efefec]",
+                    "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/15 hover:text-white",
+                    isActive && "bg-white text-[#1a6fc4] shadow-sm hover:bg-white hover:text-[#1a6fc4]",
                   )}
                   href={item.href}
                   onClick={() => setActiveSection(item.sectionId)}
@@ -119,7 +133,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <span
                     className={cn(
                       "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
-                      item.tone,
+                      isActive ? item.tone : "bg-white/20 text-white",
                     )}
                   >
                     <Icon className="size-4 stroke-[1.9]" />
@@ -130,28 +144,34 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          <div className="mt-7 grid gap-2 lg:mt-auto">
+          {/* Bottom section */}
+          <div className="mt-auto grid gap-1">
+            <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-widest text-white/50">
+              Support
+            </p>
+
             <Link
               href="/dashboard#reminders"
-              className="flex min-h-[45px] w-full items-center gap-3 rounded-lg px-2.5 text-[16px] font-semibold text-black transition-colors hover:bg-[#efefec]"
+              className="flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/15 hover:text-white"
             >
-              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-[#e3edf7] text-[#536272]">
+              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-white/20 text-white">
                 <CircleHelp className="size-4 stroke-[1.9]" />
               </span>
               <span className="min-w-0 truncate">Help</span>
             </Link>
+
             <Link
               href={settingsItem.href}
               className={cn(
-                "flex min-h-[45px] w-full items-center gap-3 rounded-lg px-2.5 text-[16px] font-semibold text-black transition-colors hover:bg-[#efefec]",
+                "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/15 hover:text-white",
                 pathname === settingsItem.href &&
-                  "bg-[#efefec] text-[#050505] hover:bg-[#efefec]",
+                  "bg-white text-[#1a6fc4] shadow-sm hover:bg-white hover:text-[#1a6fc4]",
               )}
             >
               <span
                 className={cn(
                   "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
-                  settingsItem.tone,
+                  pathname === settingsItem.href ? settingsItem.tone : "bg-white/20 text-white",
                 )}
               >
                 <SettingsIcon className="size-4 stroke-[1.9]" />
@@ -159,33 +179,38 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <span className="min-w-0 truncate">{settingsItem.label}</span>
             </Link>
 
-            <Separator className="my-4 bg-[#e8e8e4]" />
+            <Separator className="my-3 bg-white/20" />
+
+            {/* User profile */}
             <div className="hidden lg:block">
-              <div className="flex min-w-0 items-center gap-3 px-2 py-2">
-                <span className="size-9 shrink-0 rounded-lg bg-[#050505]" />
+              <div className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-2">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/20 text-sm font-bold text-white">
+                  {(workspace?.name ?? user?.email ?? "P").slice(0, 1).toUpperCase()}
+                </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#050505]">
-                    {workspace?.name ?? "Invoice workspace"}
+                  <p className="truncate text-sm font-semibold text-white">
+                    {workspace?.name ?? "Payvio workspace"}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-[#686b70]">
+                  <p className="mt-0.5 truncate text-xs text-white/60">
                     {user?.email ?? "Loading account"}
                   </p>
                 </div>
               </div>
               <Button
                 variant="ghost"
-                className="mt-2 h-9 w-full justify-start rounded-lg px-2.5 text-sm font-semibold text-[#505258] hover:bg-[#efefec] hover:text-[#050505]"
+                className="mt-1 h-9 w-full justify-start rounded-xl px-3 text-sm font-semibold text-white/70 hover:bg-white/15 hover:text-white"
                 size="sm"
                 onClick={handleSignOut}
               >
-                <LogOut />
+                <LogOut className="size-4" />
                 Sign out
               </Button>
             </div>
           </div>
         </aside>
 
-        <section className="min-w-0 overflow-hidden rounded-[18px] bg-[#f5f5f3]">
+        {/* ── Main content ── */}
+        <section className="min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm">
           {children}
         </section>
       </div>
