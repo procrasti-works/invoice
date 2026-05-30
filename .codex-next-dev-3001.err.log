@@ -1,0 +1,6 @@
+⨯ Another next dev server is already running.
+- Local:        http://localhost:3000
+- PID:          18076
+- Dir:          C:\dev\invoice ledger\invoice-ledger
+- Log:          .next\dev\logs\next-development.log
+Run taskkill /PID 18076 /F to stop it.

@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Invoice Ledger | Invoice operations that scale",
+  title: "Invoice Ledger | Send client invoices",
   description:
-    "Send invoices, manage approvals, collect payments, and reconcile receivables in one workspace.",
+    "Create, send, approve, and close client invoices from one focused workspace.",
 };
 
 export default function RootLayout({
