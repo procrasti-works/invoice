@@ -16,8 +16,8 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90",
         outline: "text-foreground [a&]:hover:bg-accent",
         success:
-          "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-        warning: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+          "border-[#bfe8d8] bg-[#ecf8f2] text-[#006545]",
+        warning: "border-[#f7e09b] bg-[#fff9df] text-[#7d6000]",
       },
     },
     defaultVariants: {

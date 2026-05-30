@@ -4,35 +4,48 @@
 
 :root {
   --radius: 0.5rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: #f7f7f4;
+  --foreground: #050505;
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: #050505;
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: #050505;
+  --primary: #009b68;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f1ee;
+  --secondary-foreground: #050505;
+  --muted: #f4f4f2;
+  --muted-foreground: #686b70;
+  --accent: #eef7f2;
+  --accent-foreground: #007a54;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #e7e7e3;
+  --input: #dfdfdb;
+  --ring: #009b68;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --muted-strong: #eef4f2;
-  --line: #dfe6e3;
-  --line-dark: #cbd7d3;
-  --ink-soft: #4a5653;
-  --mint: #08dfc2;
-  --mint-soft: #ccfbf2;
+  --muted-strong: #f1f1ee;
+  --line: #e7e7e3;
+  --line-dark: #d7d7d2;
+  --ink-soft: #505258;
+  --ink-muted: #686b70;
+  --mint: #009b68;
+  --mint-soft: #dff7ec;
+  --app-bg: #f7f7f4;
+  --app-surface: #ffffff;
+  --app-surface-subtle: #fbfbfa;
+  --app-fill: #f1f1ee;
+  --app-hover: #ecece8;
+  --app-blue: #5ec7ef;
+  --app-blue-hover: #36aee2;
+  --app-green: #009b68;
+  --app-green-hover: #00875b;
+  --app-amber: #f6c932;
+  --app-red: #ff8ea3;
+  --app-purple: #b89aff;
 }
 
 .dark {
@@ -109,6 +122,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-feature-settings: "ss01" 1, "cv01" 1, "cv05" 1;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0;
 }
 
 button,
@@ -125,6 +141,59 @@ main {
   overflow-x: hidden;
 }
 
+.internal-app {
+  --internal-bg: #f7f7f4;
+  --internal-canvas: #f4f4f2;
+  --internal-surface: #f6f6f4;
+  --internal-surface-soft: #f1f1ee;
+  --internal-fill: #f0f0ed;
+  --internal-hover: #ecece8;
+  --internal-border: #deded8;
+  --internal-border-strong: #d7d7d1;
+  --internal-text: #050505;
+  --internal-muted: #686b70;
+  --internal-soft: #505258;
+  --internal-green: #009b68;
+  --internal-green-hover: #00875b;
+  background: var(--internal-bg);
+  color: var(--internal-text);
+}
+
+.internal-app h1,
+.internal-app h2,
+.internal-app h3 {
+  letter-spacing: 0;
+}
+
+.internal-app [data-slot="button"] {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.internal-app [data-slot="input"],
+.internal-app textarea {
+  border-color: var(--internal-border-strong);
+  border-radius: 8px;
+  background: var(--internal-surface-soft);
+  color: var(--internal-text);
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.internal-app [data-slot="input"]::placeholder,
+.internal-app textarea::placeholder {
+  color: #a7a9ad;
+}
+
+.internal-app [data-slot="input"]:focus,
+.internal-app [data-slot="input"]:focus-visible,
+.internal-app textarea:focus,
+.internal-app textarea:focus-visible {
+  border-color: var(--internal-green);
+  box-shadow: 0 0 0 3px rgb(0 155 104 / 14%);
+  outline: none;
+}
+
 .site-header {
   position: relative;
   z-index: 30;
@@ -134,13 +203,14 @@ main {
   min-height: 82px;
   padding: 14px clamp(22px, 4vw, 58px);
   background: #fff;
-  color: #151515;
+  color: #1d1d1f;
 }
 
 .wordmark,
 .auth-wordmark,
 .auth-mobile-wordmark {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -309,7 +379,7 @@ main {
   border: 0;
   border-radius: 4px;
   background: var(--mint);
-  color: #001f1b;
+  color: #ffffff;
   cursor: pointer;
   font-weight: 650;
 }
@@ -328,7 +398,7 @@ main {
   flex-direction: column;
   padding: clamp(84px, 12vh, 126px) 18px 56px;
   background: #fff;
-  color: #151515;
+  color: #1d1d1f;
   text-align: center;
 }
 
@@ -415,7 +485,7 @@ main {
   overflow: hidden;
   padding-top: 12px;
   background: #fff;
-  color: #151515;
+  color: #1d1d1f;
 }
 
 .workflow-rail {
@@ -437,7 +507,7 @@ main {
   padding: 26px;
   border: 1px solid #e1e8e6;
   border-radius: 8px;
-  background: #f7faf9;
+  background: #f5f5f7;
 }
 
 .workflow-card span {
@@ -486,7 +556,7 @@ main {
 .invoice-table,
 .app-topbar {
   border: 1px solid var(--line);
-  background: #fbfdfc;
+  background: #fbfbfd;
 }
 
 .app-sidebar,
@@ -507,7 +577,7 @@ main {
 .app-sidebar span,
 .task-panel span,
 .invoice-table em {
-  color: #64736f;
+  color: #6e6e73;
   font-size: 0.64rem;
   font-style: normal;
 }
@@ -548,7 +618,7 @@ main {
   height: 11px;
   margin-top: 12px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #111 0 28%, #dfe6e3 28% 100%);
+  background: linear-gradient(90deg, #111 0 28%, #e5e5ea 28% 100%);
 }
 
 .chart-card {
@@ -563,7 +633,7 @@ main {
   bottom: 28%;
   left: 8%;
   height: 68px;
-  border-bottom: 3px solid #87aca5;
+  border-bottom: 3px solid #8a8a8e;
   clip-path: polygon(0 70%, 14% 38%, 29% 58%, 43% 24%, 58% 42%, 72% 30%, 86% 50%, 100% 12%, 100% 100%, 0 100%);
 }
 
@@ -634,7 +704,7 @@ main {
   overflow: hidden;
   padding: 110px 20px;
   background: #fff;
-  color: #151515;
+  color: #1d1d1f;
 }
 
 .orbit {
@@ -699,7 +769,7 @@ main {
 .feature-section {
   overflow: hidden;
   background: #fff;
-  color: #151515;
+  color: #1d1d1f;
 }
 
 .platform-strip {
@@ -763,7 +833,7 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
   background: var(--line);
-  color: #151515;
+  color: #1d1d1f;
 }
 
 .operations-section > div {
@@ -820,8 +890,8 @@ main {
   min-height: 0;
   grid-template-columns: minmax(0, 1fr) minmax(420px, 0.9fr);
   overflow: hidden;
-  background: #fff;
-  color: #151515;
+  background: var(--app-bg);
+  color: #1d1d1f;
 }
 
 .auth-brand-panel {
@@ -833,7 +903,7 @@ main {
   align-content: space-between;
   overflow: hidden;
   padding: clamp(26px, 4.2vw, 52px);
-  background: #f7faf9;
+  background: #f5f5f7;
 }
 
 .auth-wordmark {
@@ -848,10 +918,10 @@ main {
   width: min(70%, 560px);
   min-height: 348px;
   padding: 24px;
-  border: 16px solid #111;
-  border-radius: 10px 10px 2px 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   background: #fff;
-  box-shadow: 0 48px 100px rgb(0 0 0 / 16%);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 8%);
   transform: rotate(-5deg);
 }
 
@@ -866,8 +936,9 @@ main {
 }
 
 .auth-preview-top span {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.35rem;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .auth-preview-grid {
@@ -880,7 +951,7 @@ main {
 .auth-preview-grid span {
   height: 72px;
   border: 1px solid var(--line);
-  background: linear-gradient(90deg, #111 0 22%, transparent 22%), #fbfdfc;
+  background: linear-gradient(90deg, var(--app-blue) 0 22%, transparent 22%), #fbfbfd;
 }
 
 .auth-preview-chart {
@@ -888,7 +959,7 @@ main {
   height: 112px;
   margin-top: 14px;
   border: 1px solid var(--line);
-  background: #fbfdfc;
+  background: #fbfbfd;
 }
 
 .auth-preview-chart i {
@@ -897,7 +968,7 @@ main {
   bottom: 30%;
   left: 8%;
   height: 58px;
-  border-bottom: 3px solid #88ada6;
+  border-bottom: 3px solid var(--app-blue);
   clip-path: polygon(0 66%, 18% 42%, 36% 54%, 54% 25%, 72% 46%, 100% 15%, 100% 100%, 0 100%);
 }
 
@@ -930,7 +1001,7 @@ main {
 .auth-panel-copy h2 {
   margin: 0;
   font-size: clamp(2.6rem, 4vw, 4.2rem);
-  font-weight: 430;
+  font-weight: 560;
   line-height: 0.98;
 }
 
@@ -962,22 +1033,22 @@ main {
   padding: 5px 14px;
   border-radius: 999px;
   background: var(--mint-soft);
-  color: #052b26;
+  color: var(--app-blue-hover);
   font-size: 0.88rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .auth-card h1 {
   margin: 0;
   font-size: clamp(2.85rem, 5vw, 4.9rem);
-  font-weight: 430;
+  font-weight: 560;
   line-height: 0.98;
 }
 
 .auth-description {
   max-width: 420px;
   margin: 18px 0 0;
-  color: #101615;
+  color: var(--ink-soft);
   font-size: 1.1rem;
   line-height: 1.45;
 }
@@ -994,9 +1065,9 @@ main {
 }
 
 .auth-field span {
-  color: #27312f;
+  color: var(--ink-soft);
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .auth-field input {
@@ -1004,21 +1075,26 @@ main {
   min-height: 54px;
   border: 1px solid var(--line-dark);
   border-radius: 6px;
-  background: var(--muted-strong);
-  color: #15201e;
+  background: var(--app-surface-subtle);
+  color: var(--foreground);
   outline: 0;
   padding: 0 16px;
 }
 
 .auth-field input:focus {
-  border-color: #80dacf;
-  box-shadow: 0 0 0 3px rgb(8 223 194 / 18%);
+  border-color: var(--app-blue);
+  box-shadow: 0 0 0 3px rgb(0 113 227 / 16%);
 }
 
 .auth-submit {
   min-height: 54px;
   margin-top: 6px;
-  font-weight: 720;
+  font-weight: 500;
+  transition: background 160ms ease;
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: var(--app-blue-hover);
 }
 
 .auth-submit:disabled {
@@ -1044,7 +1120,7 @@ main {
 
 .auth-footer a {
   border-bottom: 1px solid currentColor;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 @media (max-width: 980px) {

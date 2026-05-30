@@ -5,56 +5,83 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import {
-  BarChart3,
-  Building2,
-  CircleDollarSign,
-  FileSignature,
+  Bell,
   FileText,
-  HelpCircle,
-  Inbox,
-  LayoutDashboard,
   LogOut,
-  MoreHorizontal,
-  Plus,
+  CircleHelp,
   ReceiptText,
-  Search,
   Settings,
   Users,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 
-const workspaceNav = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Invoices", href: "/dashboard#invoices", icon: FileText },
-  { label: "eSign", href: "/dashboard#esign", icon: FileSignature },
-  { label: "Clients", href: "/dashboard#clients", icon: Users },
-  { label: "Collections", href: "/dashboard#collections", icon: CircleDollarSign },
-  { label: "Analytics", href: "/dashboard#analytics", icon: BarChart3 },
-];
+const navItems = [
+  {
+    label: "Invoices",
+    href: "/dashboard#invoices",
+    sectionId: "invoices",
+    icon: FileText,
+    tone: "bg-[#a8b4ff] text-[#3042a6]",
+  },
+  {
+    label: "Clients",
+    href: "/dashboard#clients",
+    sectionId: "clients",
+    icon: Users,
+    tone: "bg-[#5ce0a5] text-[#006b4a]",
+  },
+  {
+    label: "Reminders",
+    href: "/dashboard#reminders",
+    sectionId: "reminders",
+    icon: Bell,
+    tone: "bg-[#ffd13a] text-[#876600]",
+  },
+] as const;
 
-const documentNav = [
-  { label: "Approval library", href: "/dashboard#approvals", icon: Inbox },
-  { label: "Reports", href: "/dashboard#reports", icon: ReceiptText },
-  { label: "Company", href: "/dashboard#company", icon: Building2 },
-  { label: "More", href: "/dashboard#more", icon: MoreHorizontal },
-];
+type DashboardSectionId = (typeof navItems)[number]["sectionId"];
 
-const supportNav = [
-  { label: "Settings", href: "/dashboard#settings", icon: Settings },
-  { label: "Get help", href: "/dashboard#help", icon: HelpCircle },
-  { label: "Search", href: "/dashboard#search", icon: Search },
-];
+function isDashboardSectionId(value: string): value is DashboardSectionId {
+  return navItems.some((item) => item.sectionId === value);
+}
+
+const settingsItem = {
+  label: "Settings",
+  href: "/dashboard/settings",
+  icon: Settings,
+  tone: "bg-[#c49aff] text-[#6833b0]",
+};
 
 export function DashboardShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
   const router = useRouter();
+  const pathname = usePathname();
+  const [activeSection, setActiveSection] =
+    useState<DashboardSectionId>("invoices");
   const { signOut } = useAuthActions();
   const user = useQuery(api.users.current);
+  const workspace = useQuery(api.invoices.workspace);
+  const SettingsIcon = settingsItem.icon;
+
+  useEffect(() => {
+    if (pathname !== "/dashboard") {
+      return;
+    }
+
+    function syncActiveSection() {
+      const hash = window.location.hash.slice(1);
+      setActiveSection(isDashboardSectionId(hash) ? hash : "invoices");
+    }
+
+    syncActiveSection();
+    window.addEventListener("hashchange", syncActiveSection);
+
+    return () => window.removeEventListener("hashchange", syncActiveSection);
+  }, [pathname]);
 
   async function handleSignOut() {
     await signOut();
@@ -62,131 +89,103 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className="min-h-dvh bg-white p-2 text-[#151515]">
-      <div className="grid min-h-[calc(100dvh-1rem)] overflow-hidden rounded-lg border border-[#dfe6e3] bg-white shadow-[0_20px_60px_rgb(17_17_17_/_0.08)] lg:grid-cols-[242px_minmax(0,1fr)]">
-        <aside className="flex min-w-0 flex-col border-b border-[#dfe6e3] bg-[#f7faf9] p-3 lg:h-[calc(100dvh-1rem)] lg:border-b-0 lg:border-r">
-          <div className="flex items-center justify-between gap-3 px-2 py-2">
-            <Link href="/dashboard" className="flex min-w-0 items-center gap-2">
-              <img
-                src="/payvio-logo.png"
-                alt="Payvio"
-                className="h-8 w-auto shrink-0"
-              />
-            </Link>
-            <Link
-              href="/"
-              className="flex size-8 shrink-0 items-center justify-center rounded-md border border-[#dfe6e3] bg-white text-[#4a5653] transition-colors hover:bg-[#ccfbf2] hover:text-[#052b26]"
-              aria-label="Open Payvio landing page"
-            >
-              <MoreHorizontal className="size-4" />
-            </Link>
-          </div>
-
-          <Button
-            asChild
-            size="sm"
-            className="mt-3 h-8 justify-start rounded-md bg-[#08dfc2] text-[#001f1b] hover:bg-[#111] hover:text-white"
+        <main className="internal-app min-h-dvh bg-[#f3f3f1] p-2 text-[#050505] sm:p-4">
+      <div className="grid min-h-[calc(100dvh-1rem)] gap-3 lg:grid-cols-[228px_minmax(0,1fr)] lg:min-h-[calc(100dvh-2rem)]">
+        <aside className="flex min-w-0 flex-col bg-[#f7f7f5] px-2 py-2 lg:h-[calc(100dvh-2rem)]">
+          <Link
+            href="/dashboard"
+            className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-[#efefec]"
           >
-            <Link href="/dashboard#quick-create">
-              <Plus />
-              Quick Create
-            </Link>
-          </Button>
+            <img src="/payvio-logo.png" alt="Payvio" className="h-8 w-auto" />
+          </Link>
 
-          <nav className="mt-3 grid gap-1" aria-label="Workspace navigation">
-            {workspaceNav.map((item) => {
-              const isActive = pathname === item.href;
+          <nav className="mt-7 grid gap-2" aria-label="Invoice workspace">
+            {navItems.map((item) => {
+              const isActive =
+                pathname === "/dashboard" && activeSection === item.sectionId;
+              const Icon = item.icon;
 
               return (
-                <Button
+                <Link
                   key={item.label}
-                  asChild
-                  variant="ghost"
-                  size="sm"
                   className={cn(
-                    "h-8 justify-start rounded-md border border-transparent px-2 text-xs font-semibold text-[#4a5653] hover:bg-white hover:text-[#151515]",
+                    "flex min-h-[45px] w-full items-center gap-3 rounded-lg px-2.5 text-[16px] font-semibold text-black transition-colors hover:bg-[#efefec]",
                     isActive &&
-                      "border-[#dfe6e3] bg-white text-[#151515] shadow-sm",
+                      "bg-[#efefec] text-[#050505] hover:bg-[#efefec]",
                   )}
+                  href={item.href}
+                  onClick={() => setActiveSection(item.sectionId)}
                 >
-                  <Link href={item.href}>
-                    <item.icon />
-                    {item.label}
-                  </Link>
-                </Button>
+                  <span
+                    className={cn(
+                      "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
+                      item.tone,
+                    )}
+                  >
+                    <Icon className="size-4 stroke-[1.9]" />
+                  </span>
+                  <span className="min-w-0 truncate">{item.label}</span>
+                </Link>
               );
             })}
           </nav>
 
-          <p className="mb-2 mt-8 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7a8683]">
-            Documents
-          </p>
-          <nav className="grid gap-1" aria-label="Document navigation">
-            {documentNav.map((item) => (
-              <Button
-                key={item.label}
-                asChild
-                variant="ghost"
-                size="sm"
-                className="h-8 justify-start rounded-md px-2 text-xs font-semibold text-[#4a5653] hover:bg-white hover:text-[#151515]"
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  {item.label}
-                </Link>
-              </Button>
-            ))}
-          </nav>
-
-          <div className="mt-auto hidden lg:block">
-            <nav className="grid gap-1" aria-label="Support navigation">
-              {supportNav.map((item) => (
-                <Button
-                  key={item.label}
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 justify-start rounded-md px-2 text-xs font-semibold text-[#4a5653] hover:bg-white hover:text-[#151515]"
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    {item.label}
-                  </Link>
-                </Button>
-              ))}
-            </nav>
-
-            <Separator className="my-4 bg-[#dfe6e3]" />
-
-            <div className="flex items-center gap-3 px-2 py-2">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#08dfc2] text-sm font-bold text-black">
-                {user?.name?.slice(0, 1).toUpperCase() ??
-                  user?.email?.slice(0, 1).toUpperCase() ??
-                  "I"}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-[#151515]">
-                  {user?.name ?? "Invoice user"}
-                </p>
-                <p className="truncate text-[11px] text-[#64736f]">
-                  {user?.email ?? "Loading account"}
-                </p>
-              </div>
-            </div>
-
-            <Button
-              variant="ghost"
-              className="mt-1 h-8 w-full justify-start rounded-md px-2 text-xs font-semibold text-[#4a5653] hover:bg-white hover:text-[#151515]"
-              size="sm"
-              onClick={handleSignOut}
+          <div className="mt-7 grid gap-2 lg:mt-auto">
+            <Link
+              href="/dashboard#reminders"
+              className="flex min-h-[45px] w-full items-center gap-3 rounded-lg px-2.5 text-[16px] font-semibold text-black transition-colors hover:bg-[#efefec]"
             >
-              <LogOut />
-              Sign out
-            </Button>
+              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-[#e3edf7] text-[#536272]">
+                <CircleHelp className="size-4 stroke-[1.9]" />
+              </span>
+              <span className="min-w-0 truncate">Help</span>
+            </Link>
+            <Link
+              href={settingsItem.href}
+              className={cn(
+                "flex min-h-[45px] w-full items-center gap-3 rounded-lg px-2.5 text-[16px] font-semibold text-black transition-colors hover:bg-[#efefec]",
+                pathname === settingsItem.href &&
+                  "bg-[#efefec] text-[#050505] hover:bg-[#efefec]",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
+                  settingsItem.tone,
+                )}
+              >
+                <SettingsIcon className="size-4 stroke-[1.9]" />
+              </span>
+              <span className="min-w-0 truncate">{settingsItem.label}</span>
+            </Link>
+
+            <Separator className="my-4 bg-[#e8e8e4]" />
+            <div className="hidden lg:block">
+              <div className="flex min-w-0 items-center gap-3 px-2 py-2">
+                <span className="size-9 shrink-0 rounded-lg bg-[#050505]" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[#050505]">
+                    {workspace?.name ?? "Invoice workspace"}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-[#686b70]">
+                    {user?.email ?? "Loading account"}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                className="mt-2 h-9 w-full justify-start rounded-lg px-2.5 text-sm font-semibold text-[#505258] hover:bg-[#efefec] hover:text-[#050505]"
+                size="sm"
+                onClick={handleSignOut}
+              >
+                <LogOut />
+                Sign out
+              </Button>
+            </div>
           </div>
         </aside>
 
-        <section className="min-w-0 overflow-hidden bg-white">
+        <section className="min-w-0 overflow-hidden rounded-[18px] bg-[#f5f5f3]">
           {children}
         </section>
       </div>
