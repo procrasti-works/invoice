@@ -20,7 +20,7 @@ export function AuthShell({
     <main className="auth-page">
       <section className="auth-brand-panel" aria-label="Payvio overview">
         <Link href="/" aria-label="Payvio home">
-          <img src="/payvio-logo.png" alt="Payvio" className="h-12 w-auto" />
+          <img src="/payvio-logo.svg" alt="Payvio" className="h-12 w-auto" />
         </Link>
 
         <div className="auth-preview">
@@ -54,7 +54,7 @@ export function AuthShell({
       <section className="auth-form-panel" aria-labelledby="auth-title">
         <div className="auth-card">
           <Link href="/" aria-label="Payvio home">
-            <img src="/payvio-logo.png" alt="Payvio" className="h-12 w-auto mb-6" />
+            <img src="/payvio-logo.svg" alt="Payvio" className="h-12 w-auto mb-6" />
           </Link>
           <p className="auth-eyebrow">{eyebrow}</p>
           <h1 id="auth-title">{title}</h1>
