@@ -89,11 +89,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className="internal-app min-h-dvh bg-[#eef4fb] p-2 text-[#050505] sm:p-4">
+    <main className="internal-app min-h-dvh bg-[#f0f5fb] p-2 text-[#050505] sm:p-4">
       <div className="grid min-h-[calc(100dvh-1rem)] gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:min-h-[calc(100dvh-2rem)]">
 
         {/* ── Sidebar ── */}
-        <aside className="flex min-w-0 flex-col rounded-2xl bg-[#1a6fc4] px-3 py-4 shadow-lg lg:h-[calc(100dvh-2rem)]">
+        <aside className="flex min-w-0 flex-col rounded-2xl bg-[#0b1d3a] px-3 py-4 shadow-lg lg:h-[calc(100dvh-2rem)]">
 
           {/* Logo */}
           <Link
@@ -104,7 +104,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               src="/payvio-logo.svg"
               alt="Payvio"
               style={{ height: "51px" }}
-              className="w-auto brightness-0 invert"
+              className="w-auto"
             />
           </Link>
 
@@ -124,8 +124,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.label}
                   className={cn(
-                    "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/15 hover:text-white",
-                    isActive && "bg-white text-[#1a6fc4] shadow-sm hover:bg-white hover:text-[#1a6fc4]",
+                    "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white",
+                    isActive && "bg-white/15 text-white shadow-sm ring-1 ring-white/20 hover:bg-white/10 hover:text-white",
                   )}
                   href={item.href}
                   onClick={() => setActiveSection(item.sectionId)}
@@ -133,7 +133,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <span
                     className={cn(
                       "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
-                      isActive ? item.tone : "bg-white/20 text-white",
+                      isActive ? item.tone : "bg-white/15 text-white",
                     )}
                   >
                     <Icon className="size-4 stroke-[1.9]" />
@@ -152,9 +152,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
             <Link
               href="/dashboard#reminders"
-              className="flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/15 hover:text-white"
+              className="flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white"
             >
-              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-white/20 text-white">
+              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-white/15 text-white">
                 <CircleHelp className="size-4 stroke-[1.9]" />
               </span>
               <span className="min-w-0 truncate">Help</span>
@@ -163,15 +163,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <Link
               href={settingsItem.href}
               className={cn(
-                "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/15 hover:text-white",
+                "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white",
                 pathname === settingsItem.href &&
-                  "bg-white text-[#1a6fc4] shadow-sm hover:bg-white hover:text-[#1a6fc4]",
+                  "bg-white/15 text-white shadow-sm ring-1 ring-white/20 hover:bg-white/10 hover:text-white",
               )}
             >
               <span
                 className={cn(
                   "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
-                  pathname === settingsItem.href ? settingsItem.tone : "bg-white/20 text-white",
+                  pathname === settingsItem.href ? settingsItem.tone : "bg-white/15 text-white",
                 )}
               >
                 <SettingsIcon className="size-4 stroke-[1.9]" />
@@ -179,12 +179,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <span className="min-w-0 truncate">{settingsItem.label}</span>
             </Link>
 
-            <Separator className="my-3 bg-white/20" />
+            <Separator className="my-3 bg-white/15" />
 
             {/* User profile */}
             <div className="hidden lg:block">
               <div className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-2">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/20 text-sm font-bold text-white">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
                   {(workspace?.name ?? user?.email ?? "P").slice(0, 1).toUpperCase()}
                 </span>
                 <div className="min-w-0">
@@ -198,7 +198,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               </div>
               <Button
                 variant="ghost"
-                className="mt-1 h-9 w-full justify-start rounded-xl px-3 text-sm font-semibold text-white/70 hover:bg-white/15 hover:text-white"
+                className="mt-1 h-9 w-full justify-start rounded-xl px-3 text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white"
                 size="sm"
                 onClick={handleSignOut}
               >
