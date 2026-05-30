@@ -89,7 +89,7 @@ function Header() {
   return (
     <header className="site-header">
       <a href="#" aria-label="Payvio home">
-        <img src="/payvio-logo.svg" alt="Payvio" className="h-12 w-auto" />
+        <img src="/payvio-logo.svg" alt="Payvio" style={{height:"51px"}} className="w-auto" />
       </a>
 
       <nav className="desktop-nav" aria-label="Main navigation">
