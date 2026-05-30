@@ -66,18 +66,17 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <div className="grid min-h-[calc(100dvh-1rem)] overflow-hidden rounded-lg border border-[#dfe6e3] bg-white shadow-[0_20px_60px_rgb(17_17_17_/_0.08)] lg:grid-cols-[242px_minmax(0,1fr)]">
         <aside className="flex min-w-0 flex-col border-b border-[#dfe6e3] bg-[#f7faf9] p-3 lg:h-[calc(100dvh-1rem)] lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between gap-3 px-2 py-2">
-            <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-[#111] bg-[#111]">
-                <ReceiptText className="size-3.5 text-[#08dfc2]" />
-              </span>
-              <span className="min-w-0 truncate font-serif text-lg leading-none text-[#151515]">
-                Invoice Ledger
-              </span>
+            <Link href="/dashboard" className="flex min-w-0 items-center gap-2">
+              <img
+                src="/payvio-logo.png"
+                alt="Payvio"
+                className="h-8 w-auto shrink-0"
+              />
             </Link>
             <Link
               href="/"
               className="flex size-8 shrink-0 items-center justify-center rounded-md border border-[#dfe6e3] bg-white text-[#4a5653] transition-colors hover:bg-[#ccfbf2] hover:text-[#052b26]"
-              aria-label="Open Invoice Ledger landing page"
+              aria-label="Open Payvio landing page"
             >
               <MoreHorizontal className="size-4" />
             </Link>

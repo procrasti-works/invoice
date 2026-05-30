@@ -88,8 +88,8 @@ export default function Home() {
 function Header() {
   return (
     <header className="site-header">
-      <a href="#" className="wordmark" aria-label="Invoice Ledger home">
-        Invoice Ledger
+      <a href="#" aria-label="Payvio home">
+        <img src="/payvio-logo.png" alt="Payvio" className="h-10 w-auto" />
       </a>
 
       <nav className="desktop-nav" aria-label="Main navigation">
@@ -163,7 +163,7 @@ function Hero() {
   return (
     <section className="hero-section" aria-labelledby="hero-title">
       <a href="#close" className="news-pill">
-        NEW: Invoice Ledger Close - Receivables review workspace
+        NEW: Payvio Close - Receivables review workspace
       </a>
       <h1 id="hero-title">Invoice operations you will not outgrow.</h1>
       <p className="hero-copy">
@@ -180,7 +180,7 @@ function Hero() {
         </a>
       </div>
       <p className="fine-print">
-        Invoice Ledger is workflow software for invoice operations. Accounting,
+        Payvio is workflow software for invoice operations. Accounting,
         banking, and payment connections remain with your connected providers.
       </p>
     </section>
@@ -189,7 +189,7 @@ function Hero() {
 
 function ProductStage() {
   return (
-    <section className="product-stage" aria-label="Invoice Ledger product preview">
+    <section className="product-stage" aria-label="Payvio product preview">
       <div className="workflow-rail" aria-hidden="true">
         {workflowCards.map(([title, detail]) => (
           <article className="workflow-card" key={title}>
@@ -298,7 +298,7 @@ function FeatureSection() {
       <div className="section-heading">
         <h2 id="products-title">One platform for invoice operations</h2>
         <p>
-          The work around invoicing is where teams lose time. Invoice Ledger
+          The work around invoicing is where teams lose time. Payvio
           keeps creation, approval, collections, and close in the same flow.
         </p>
         <a href="/signup" className="mint-button">

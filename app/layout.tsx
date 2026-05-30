@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Invoice Ledger | Invoice operations that scale",
+  title: "Payvio | Invoice operations that scale",
   description:
     "Send invoices, manage approvals, collect payments, and reconcile receivables in one workspace.",
 };
