@@ -96,7 +96,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             href="/dashboard"
             className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-[#efefec]"
           >
-            <img src="/payvio-logo.png" alt="Payvio" className="h-8 w-auto" />
+            <img src="/payvio-logo.png" alt="Payvio" className="h-12 w-auto" />
           </Link>
 
           <nav className="mt-7 grid gap-2" aria-label="Invoice workspace">
