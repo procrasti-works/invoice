@@ -4,8 +4,8 @@ import { AuthForm } from "../_components/AuthForm";
 import { AuthShell } from "../_components/AuthShell";
 
 export const metadata: Metadata = {
-  title: "Open Ledger | Invoice Ledger",
-  description: "Create an Invoice Ledger workspace.",
+  title: "Open Ledger | Payvio",
+  description: "Create an Payvio workspace.",
 };
 
 export default function SignupPage() {

@@ -4,8 +4,8 @@ import { AuthForm } from "../_components/AuthForm";
 import { AuthShell } from "../_components/AuthShell";
 
 export const metadata: Metadata = {
-  title: "Login | Invoice Ledger",
-  description: "Log in to Invoice Ledger.",
+  title: "Login | Payvio",
+  description: "Log in to Payvio.",
 };
 
 export default function LoginPage() {
@@ -16,7 +16,7 @@ export default function LoginPage() {
       description="Access your invoice operations workspace."
       footer={
         <>
-          New to Invoice Ledger?{" "}
+          New to Payvio?{" "}
           <Link href="/signup">Open a ledger</Link>
         </>
       }

@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { AuthShell } from "../_components/AuthShell";
 
 export const metadata: Metadata = {
-  title: "Set New Password | Invoice Ledger",
-  description: "Set a new Invoice Ledger password.",
+  title: "Set New Password | Payvio",
+  description: "Set a new Payvio password.",
 };
 
 export default function ResetPasswordPage() {

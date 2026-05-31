@@ -26,9 +26,6 @@ const dayMs = 1000 * 60 * 60 * 24;
 const defaultPaymentInstructions =
   "Pay by bank transfer, card link, or the payment method agreed with the sender.";
 
-type Organization = Doc<"organizations">;
-type Invoice = Doc<"invoices">;
-
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }

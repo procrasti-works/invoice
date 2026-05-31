@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { DashboardPage } from "./_components/DashboardPage";
 
 export const metadata: Metadata = {
-  title: "Dashboard | Invoice Ledger",
-  description: "Invoice Ledger dashboard.",
+  title: "Dashboard | Payvio",
+  description: "Payvio dashboard.",
 };
 
 export default function Page() {

@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { AuthShell } from "../_components/AuthShell";
 
 export const metadata: Metadata = {
-  title: "Reset Password | Invoice Ledger",
-  description: "Request a password reset for Invoice Ledger.",
+  title: "Reset Password | Payvio",
+  description: "Request a password reset for Payvio.",
 };
 
 export default function ForgotPasswordPage() {
