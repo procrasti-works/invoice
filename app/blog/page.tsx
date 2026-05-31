@@ -92,7 +92,7 @@ const posts = [
 
       **How tokenized approval links protect you**
       Payvio generates a unique, encrypted public token for each invoice. The link looks like this:
-      `payvio.site/invoice/[unique-token]`
+      payvio.site/invoice/[unique-token]
 
       This link:
       - Can only be accessed by someone who has it
