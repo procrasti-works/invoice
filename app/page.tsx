@@ -8,22 +8,19 @@ const serviceCards = [
   {
     title: "Invoice Management",
     description: "Create, send, and track professional invoices in minutes. Full audit trail included.",
-    icon: "📄",
-    color: "#eef3ff",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80&fit=crop",
     accent: "#1a6fc4",
   },
   {
     title: "Client Approvals",
     description: "Route invoices to clients for approval with a secure one-click review link.",
-    icon: "✅",
-    color: "#eef9f4",
+    image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&q=80&fit=crop",
     accent: "#009b68",
   },
   {
     title: "Payment Tracking",
     description: "Monitor payment status, send reminders, and reconcile receivables effortlessly.",
-    icon: "💳",
-    color: "#fff8ec",
+    image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=600&q=80&fit=crop",
     accent: "#e07b00",
   },
 ];
@@ -57,11 +54,36 @@ const featureCards = [
 ];
 
 const workflowSteps = [
-  { step: "01", title: "Sign Up", description: "Create your Payvio workspace in under 2 minutes." },
-  { step: "02", title: "Add Client", description: "Add your client's name and email to get started." },
-  { step: "03", title: "Create Invoice", description: "Build a professional invoice with line items and terms." },
-  { step: "04", title: "Send & Approve", description: "Client receives a secure link to review and approve." },
-  { step: "05", title: "Get Paid", description: "Mark payment received and close the invoice." },
+  {
+    step: "01",
+    title: "Sign Up",
+    description: "Create your Payvio workspace in under 2 minutes.",
+    image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600&q=80&fit=crop",
+  },
+  {
+    step: "02",
+    title: "Add Client",
+    description: "Add your client's name and email to get started.",
+    image: "https://images.unsplash.com/photo-1556745757-8d76bdb6984b?w=600&q=80&fit=crop",
+  },
+  {
+    step: "03",
+    title: "Create Invoice",
+    description: "Build a professional invoice with line items and terms.",
+    image: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&q=80&fit=crop",
+  },
+  {
+    step: "04",
+    title: "Send & Approve",
+    description: "Client receives a secure link to review and approve.",
+    image: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80&fit=crop",
+  },
+  {
+    step: "05",
+    title: "Get Paid",
+    description: "Mark payment received and close the invoice.",
+    image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=600&q=80&fit=crop",
+  },
 ];
 
 const stats = [
@@ -263,8 +285,10 @@ function ServiceCards() {
       <p className="lp-section-sub">Cutting-edge features designed for your financial success.</p>
       <div className="lp-service-grid">
         {serviceCards.map((card) => (
-          <article key={card.title} className="lp-service-card" style={{ "--card-bg": card.color, "--card-accent": card.accent } as React.CSSProperties}>
-            <div className="lp-service-icon">{card.icon}</div>
+          <article key={card.title} className="lp-service-card">
+            <div className="lp-service-img-wrap">
+              <img src={card.image} alt={card.title} className="lp-service-img" />
+            </div>
             <h3>{card.title}</h3>
             <p>{card.description}</p>
             <a href="/signup" className="lp-service-link" style={{ color: card.accent }}>Learn more →</a>
@@ -317,10 +341,12 @@ function WorkflowSteps() {
       <div className="lp-section-label">How It Works</div>
       <h2 className="lp-section-title">From first invoice to final payment in 5 steps</h2>
       <div className="lp-workflow-steps">
-        {workflowSteps.map((step, i) => (
+        {workflowSteps.map((step) => (
           <div key={step.step} className="lp-workflow-step">
+            <div className="lp-workflow-img-wrap">
+              <img src={step.image} alt={step.title} className="lp-workflow-img" />
+            </div>
             <div className="lp-step-number">{step.step}</div>
-            {i < workflowSteps.length - 1 && <div className="lp-step-connector" />}
             <h3>{step.title}</h3>
             <p>{step.description}</p>
           </div>
