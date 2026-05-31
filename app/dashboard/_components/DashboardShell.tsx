@@ -5,215 +5,269 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import {
+  BarChart3,
   Bell,
+  BookOpen,
+  Building2,
+  ChevronDown,
   FileText,
+  HelpCircle,
+  Lock,
   LogOut,
-  CircleHelp,
-  ReceiptText,
+  Receipt,
+  Search,
   Settings,
+  Shield,
   Users,
+  X,
+  KeyRound,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
+import { PlanProvider, usePlan, PLAN_LABELS, PLAN_COLORS, type Feature } from "@/lib/plan";
 
-const navItems = [
-  {
-    label: "Invoices",
-    href: "/dashboard#invoices",
-    sectionId: "invoices",
-    icon: FileText,
-    tone: "bg-[#a8b4ff] text-[#3042a6]",
-  },
-  {
-    label: "Clients",
-    href: "/dashboard#clients",
-    sectionId: "clients",
-    icon: Users,
-    tone: "bg-[#5ce0a5] text-[#006b4a]",
-  },
-  {
-    label: "Reminders",
-    href: "/dashboard#reminders",
-    sectionId: "reminders",
-    icon: Bell,
-    tone: "bg-[#ffd13a] text-[#876600]",
-  },
-] as const;
-
-type DashboardSectionId = (typeof navItems)[number]["sectionId"];
-
-function isDashboardSectionId(value: string): value is DashboardSectionId {
-  return navItems.some((item) => item.sectionId === value);
-}
-
-const settingsItem = {
-  label: "Settings",
-  href: "/dashboard/settings",
-  icon: Settings,
-  tone: "bg-[#c49aff] text-[#6833b0]",
+type NavItem = {
+  label: string;
+  href: string;
+  icon: typeof FileText;
+  feature: Feature;
+  description: string;
 };
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Main",
+    items: [
+      { label: "Invoices", href: "/dashboard", icon: FileText, feature: "invoices", description: "Create & track invoices" },
+      { label: "Clients", href: "/dashboard/clients", icon: Users, feature: "clients", description: "Manage client records" },
+      { label: "Reminders", href: "/dashboard/reminders", icon: Bell, feature: "reminders", description: "Payment follow-ups" },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { label: "Reports & Analytics", href: "/dashboard/reports", icon: BarChart3, feature: "reports", description: "Revenue & cash flow" },
+      { label: "Invoice Ledger", href: "/dashboard/ledger", icon: BookOpen, feature: "ledger", description: "Full invoice history" },
+    ],
+  },
+  {
+    label: "Compliance",
+    items: [
+      { label: "VAT & NamRA", href: "/dashboard/vat", icon: Shield, feature: "vat", description: "Tax & e-invoicing" },
+    ],
+  },
+];
+
+function ShellInner({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [activeSection, setActiveSection] =
-    useState<DashboardSectionId>("invoices");
   const { signOut } = useAuthActions();
   const user = useQuery(api.users.current);
   const workspace = useQuery(api.invoices.workspace);
-  const SettingsIcon = settingsItem.icon;
+  const { plan, daysLeftInTrial, applyCode, canAccess } = usePlan();
 
-  useEffect(() => {
-    if (pathname !== "/dashboard") {
-      return;
-    }
-
-    function syncActiveSection() {
-      const hash = window.location.hash.slice(1);
-      setActiveSection(isDashboardSectionId(hash) ? hash : "invoices");
-    }
-
-    syncActiveSection();
-    window.addEventListener("hashchange", syncActiveSection);
-
-    return () => window.removeEventListener("hashchange", syncActiveSection);
-  }, [pathname]);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [codeValue, setCodeValue] = useState("");
+  const [codeError, setCodeError] = useState(false);
+  const [codeSuccess, setCodeSuccess] = useState(false);
+  const [showWorkspaceDrop, setShowWorkspaceDrop] = useState(false);
 
   async function handleSignOut() {
     await signOut();
     router.replace("/login");
   }
 
+  function handleApplyCode() {
+    const ok = applyCode(codeValue);
+    if (ok) {
+      setCodeSuccess(true);
+      setCodeError(false);
+      setTimeout(() => { setShowCodeInput(false); setCodeSuccess(false); setCodeValue(""); }, 1500);
+    } else {
+      setCodeError(true);
+      setCodeSuccess(false);
+    }
+  }
+
+  const planColor = PLAN_COLORS[plan];
+  const planLabel = PLAN_LABELS[plan];
+
   return (
-    <main className="internal-app min-h-dvh bg-[#0a1e35] p-2 text-[#050505] sm:p-4">
-      <div className="grid min-h-[calc(100dvh-1rem)] gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:min-h-[calc(100dvh-2rem)]">
+    <main className="db-root">
+      {/* ── Sidebar ── */}
+      <aside className="db-sidebar">
 
-        {/* ── Sidebar ── */}
-        <aside className="flex min-w-0 flex-col rounded-2xl bg-[#1a6fc4] px-3 py-4 shadow-lg lg:h-[calc(100dvh-2rem)]">
+        {/* Workspace switcher */}
+        <div className="db-workspace" onClick={() => setShowWorkspaceDrop(!showWorkspaceDrop)}>
+          <span className="db-workspace-avatar" style={{ background: planColor }}>
+            {(workspace?.name ?? user?.email ?? "P").slice(0, 1).toUpperCase()}
+          </span>
+          <div className="db-workspace-info">
+            <p className="db-workspace-name">{workspace?.name ?? "Payvio workspace"}</p>
+            <p className="db-workspace-email">{user?.email ?? "Loading..."}</p>
+          </div>
+          <ChevronDown className="db-workspace-chevron" />
+        </div>
 
-          {/* Logo */}
-          <Link
-            href="/dashboard"
-            className="flex min-w-0 items-center gap-2 rounded-xl px-2 py-2 transition-colors hover:bg-white/10"
-          >
-            <img
-              src="/payvio-logo.svg"
-              alt="Payvio"
-              style={{ height: "51px" }}
-              className="w-auto brightness-0 invert"
-            />
-          </Link>
+        {/* Plan badge */}
+        <div className="db-plan-badge" style={{ borderColor: planColor + "33", background: planColor + "11", color: planColor }}>
+          {plan === "trial" && daysLeftInTrial !== null ? (
+            <span>🕐 {daysLeftInTrial} days left in trial</span>
+          ) : (
+            <span>{planLabel}</span>
+          )}
+        </div>
 
-          {/* Nav label */}
-          <p className="mt-8 px-3 text-[11px] font-bold uppercase tracking-widest text-white/50">
-            Menu
-          </p>
-
-          {/* Main nav */}
-          <nav className="mt-2 grid gap-1" aria-label="Invoice workspace">
-            {navItems.map((item) => {
-              const isActive =
-                pathname === "/dashboard" && activeSection === item.sectionId;
-              const Icon = item.icon;
-
-              return (
-                <Link
-                  key={item.label}
-                  className={cn(
-                    "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white",
-                    isActive && "bg-white text-[#1a6fc4] shadow-sm hover:bg-white hover:text-[#1a6fc4]",
-                  )}
-                  href={item.href}
-                  onClick={() => setActiveSection(item.sectionId)}
-                >
-                  <span
+        {/* Nav groups */}
+        <nav className="db-nav">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="db-nav-group">
+              <p className="db-nav-group-label">{group.label}</p>
+              {group.items.map((item) => {
+                const locked = !canAccess(item.feature);
+                const active = pathname === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.label}
+                    href={locked ? "#" : item.href}
+                    onClick={locked ? (e) => e.preventDefault() : undefined}
                     className={cn(
-                      "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
-                      isActive ? item.tone : "bg-white/20 text-white",
+                      "db-nav-item",
+                      active && "db-nav-item-active",
+                      locked && "db-nav-item-locked",
                     )}
+                    title={locked ? `Upgrade to access ${item.label}` : item.description}
                   >
-                    <Icon className="size-4 stroke-[1.9]" />
-                  </span>
-                  <span className="min-w-0 truncate">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+                    <Icon className="db-nav-icon" />
+                    <span className="db-nav-label">{item.label}</span>
+                    {locked && <Lock className="db-nav-lock" />}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
 
-          {/* Bottom section */}
-          <div className="mt-auto grid gap-1">
-            <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-widest text-white/50">
-              Support
-            </p>
-
+          {/* Settings always visible */}
+          <div className="db-nav-group">
+            <p className="db-nav-group-label">Account</p>
             <Link
-              href="/dashboard#reminders"
-              className="flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white"
+              href="/dashboard/settings"
+              className={cn("db-nav-item", pathname === "/dashboard/settings" && "db-nav-item-active")}
             >
-              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-white/15 text-white">
-                <CircleHelp className="size-4 stroke-[1.9]" />
-              </span>
-              <span className="min-w-0 truncate">Help</span>
+              <Settings className="db-nav-icon" />
+              <span className="db-nav-label">Settings</span>
             </Link>
+            <a href="#" className="db-nav-item" onClick={(e) => { e.preventDefault(); handleSignOut(); }}>
+              <LogOut className="db-nav-icon" />
+              <span className="db-nav-label">Sign out</span>
+            </a>
+          </div>
+        </nav>
 
-            <Link
-              href={settingsItem.href}
-              className={cn(
-                "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white",
-                pathname === settingsItem.href &&
-                  "bg-white text-[#1a6fc4] shadow-sm hover:bg-white hover:text-[#1a6fc4]",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
-                  pathname === settingsItem.href ? settingsItem.tone : "bg-white/15 text-white",
-                )}
-              >
-                <SettingsIcon className="size-4 stroke-[1.9]" />
-              </span>
-              <span className="min-w-0 truncate">{settingsItem.label}</span>
-            </Link>
-
-            <Separator className="my-3 bg-white/15" />
-
-            {/* User profile */}
-            <div className="hidden lg:block">
-              <div className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-2">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-sm font-bold text-white">
-                  {(workspace?.name ?? user?.email ?? "P").slice(0, 1).toUpperCase()}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {workspace?.name ?? "Payvio workspace"}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-white/60">
-                    {user?.email ?? "Loading account"}
-                  </p>
-                </div>
+        {/* Access code entry */}
+        <div className="db-code-section">
+          {!showCodeInput ? (
+            <button className="db-code-btn" onClick={() => setShowCodeInput(true)}>
+              <KeyRound className="size-3.5" />
+              Enter access code
+            </button>
+          ) : (
+            <div className="db-code-form">
+              <div className="db-code-input-row">
+                <input
+                  className={cn("db-code-input", codeError && "db-code-input-error")}
+                  placeholder="e.g. BIZ-2026"
+                  value={codeValue}
+                  onChange={(e) => { setCodeValue(e.target.value); setCodeError(false); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleApplyCode()}
+                  autoFocus
+                />
+                <button className="db-code-apply" onClick={handleApplyCode}>Apply</button>
+                <button className="db-code-close" onClick={() => { setShowCodeInput(false); setCodeError(false); setCodeValue(""); }}>
+                  <X className="size-3" />
+                </button>
               </div>
-              <Button
-                variant="ghost"
-                className="mt-1 h-9 w-full justify-start rounded-xl px-3 text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white"
-                size="sm"
-                onClick={handleSignOut}
-              >
-                <LogOut className="size-4" />
-                Sign out
-              </Button>
+              {codeError && (
+                <p className="db-code-msg db-code-msg-error">
+                  <AlertCircle className="size-3" /> Invalid code
+                </p>
+              )}
+              {codeSuccess && (
+                <p className="db-code-msg db-code-msg-success">
+                  <CheckCircle2 className="size-3" /> Access granted!
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Help */}
+        <a href="#" className="db-help-link">
+          <HelpCircle className="size-3.5" />
+          Help & Support
+        </a>
+      </aside>
+
+      {/* ── Main content ── */}
+      <div className="db-main">
+        {/* Top bar */}
+        <div className="db-topbar">
+          <div className="db-topbar-left">
+            <Building2 className="size-4 text-[#9ca3af]" />
+            <span className="db-topbar-workspace">{workspace?.name ?? "Payvio"}</span>
+          </div>
+          <div className="db-topbar-center">
+            <div className="db-search">
+              <Search className="db-search-icon" />
+              <input className="db-search-input" placeholder="Search invoices, clients..." />
             </div>
           </div>
-        </aside>
+          <div className="db-topbar-right">
+            <button className="db-topbar-btn" title="Notifications">
+              <Bell className="size-4" />
+            </button>
+            <a href="#" className="db-topbar-support">
+              <HelpCircle className="size-4" />
+              Support
+            </a>
+          </div>
+        </div>
 
-        {/* ── Main content ── */}
-        <section className="min-w-0 overflow-hidden rounded-2xl bg-[#0f2a4a] shadow-sm">
+        {/* Page content */}
+        <div className="db-content">
           {children}
-        </section>
+        </div>
       </div>
     </main>
+  );
+}
+
+export function DashboardShell({ children }: { children: ReactNode }) {
+  return (
+    <PlanProvider>
+      <ShellInner>{children}</ShellInner>
+    </PlanProvider>
+  );
+}
+
+/* ── Locked page overlay (used by feature pages) ── */
+export function LockedPage({ feature, requiredPlan }: { feature: string; requiredPlan: string }) {
+  return (
+    <div className="db-locked-page">
+      <div className="db-locked-card">
+        <div className="db-locked-icon">
+          <Lock className="size-8 text-[#9ca3af]" />
+        </div>
+        <h2>Upgrade to access {feature}</h2>
+        <p>This feature is available on the <strong>{requiredPlan}</strong> plan and above.</p>
+        <Link href="/#pricing" className="db-locked-cta">View Plans & Pricing</Link>
+      </div>
+    </div>
   );
 }

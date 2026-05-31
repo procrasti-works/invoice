@@ -553,13 +553,13 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="h-[calc(100dvh-1rem)] min-h-0 overflow-y-auto bg-[#0f2a4a] lg:h-[calc(100dvh-2rem)]">
-      <header className="sticky top-0 z-10 flex min-w-0 items-center justify-between gap-4 bg-[#0f2a4a]/95 px-5 pb-5 pt-6 backdrop-blur sm:px-5">
+    <div className="min-h-0 overflow-y-auto bg-[#f9fafb]">
+      <header className="sticky top-0 z-10 flex min-w-0 items-center justify-between gap-4 bg-[#f9fafb]/95 px-5 pb-5 pt-6 backdrop-blur sm:px-5">
         <div className="min-w-0">
-          <p className="text-[15px] font-normal leading-5 text-white/60">
+          <p className="text-[15px] font-normal leading-5 text-[#9ca3af]">
             Invoice pipeline
           </p>
-          <h1 className="truncate text-[29px] font-semibold leading-[1.08] text-white">
+          <h1 className="truncate text-[29px] font-semibold leading-[1.08] text-[#111827]">
             Send, approve, and close client invoices
           </h1>
         </div>

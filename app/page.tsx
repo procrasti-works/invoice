@@ -51,6 +51,31 @@ const featureCards = [
     description: "Automated follow-up drafts for overdue invoices — ready to send in one click.",
     image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=600&q=80&fit=crop",
   },
+  {
+    title: "Reports & Analytics",
+    description: "Revenue reports, cash flow charts, overdue summaries and tax reports — all in one place.",
+    image: "https://images.unsplash.com/photo-1543286386-713bdd548da4?w=600&q=80&fit=crop",
+  },
+  {
+    title: "Invoice Ledger",
+    description: "Complete history of every invoice issued and received. 5-year NamRA-compliant archive built in.",
+    image: "https://images.unsplash.com/photo-1568992688065-536aad8a12f6?w=600&q=80&fit=crop",
+  },
+  {
+    title: "Purchase Management",
+    description: "Track supplier invoices and purchase orders alongside your sales invoices.",
+    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&q=80&fit=crop",
+  },
+  {
+    title: "VAT Auto-Calculation",
+    description: "15% VAT calculated and shown separately on every invoice. Always NamRA compliant.",
+    image: "https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=600&q=80&fit=crop",
+  },
+  {
+    title: "Cash Flow Visibility",
+    description: "See exactly what's owed to you vs. what you owe — in real time.",
+    image: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?w=600&q=80&fit=crop",
+  },
 ];
 
 const workflowSteps = [
