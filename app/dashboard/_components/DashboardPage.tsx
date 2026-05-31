@@ -72,7 +72,7 @@ const statusLabels: Record<InvoiceStatus, string> = {
 };
 
 const statusClasses: Record<InvoiceStatus, string> = {
-  draft: "border-[#e2e8f0] bg-white text-[#475569]",
+  draft: "border-[#e5e7eb] bg-white text-[#4b5563]",
   ready: "border-[#b9e7fb] bg-[#eef9fd] text-[#0874a8]",
   sent: "border-[#a8b4ff] bg-[#f1f3ff] text-[#3042a6]",
   viewed: "border-[#d9c7ff] bg-[#f7f1ff] text-[#6833b0]",
@@ -615,7 +615,7 @@ export function DashboardPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#e8eef7]"
+                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f3f4f6]"
                   onClick={() => copyText(clientLink)}
                 >
                   <Copy />
@@ -637,7 +637,7 @@ export function DashboardPage() {
                       asChild
                       size="sm"
                       variant="outline"
-                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#e8eef7]"
+                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f3f4f6]"
                     >
                       <a href={emailDraft.mailtoHref}>
                         <Mail />
@@ -648,7 +648,7 @@ export function DashboardPage() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#e8eef7]"
+                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f3f4f6]"
                       onClick={() =>
                         copyText(`${emailDraft.subject}\n\n${emailDraft.body}`)
                       }
@@ -662,7 +662,7 @@ export function DashboardPage() {
                   asChild
                   size="sm"
                   variant="outline"
-                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#e8eef7]"
+                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f3f4f6]"
                 >
                   <a href={clientLink} target="_blank" rel="noreferrer">
                     <ExternalLink />
@@ -676,13 +676,13 @@ export function DashboardPage() {
 
         <section
           id="new-invoice"
-          className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm"
+          className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm"
         >
-          <div className="flex min-h-[76px] flex-col justify-center border-b border-[#e2e8f0] bg-[#eef3fa] px-5 py-4 sm:px-5">
-              <p className="text-[16px] font-semibold leading-tight text-[#0b1d3a]">
+          <div className="flex min-h-[76px] flex-col justify-center border-b border-[#e5e7eb] bg-[#f9fafb] px-5 py-4 sm:px-5">
+              <p className="text-[16px] font-semibold leading-tight text-[#111827]">
                 {editingInvoiceId ? "Amend invoice" : "New Invoice"}
               </p>
-              <p className="mt-1 max-w-2xl text-[14px] font-normal leading-5 text-[#64748b]">
+              <p className="mt-1 max-w-2xl text-[14px] font-normal leading-5 text-[#6b7280]">
                 Create the packet, preview it, then prepare an email draft with the secure client link.
               </p>
           </div>
@@ -695,7 +695,7 @@ export function DashboardPage() {
                 <Input
                   value={clientName}
                   onChange={(event) => setClientName(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
               <Field label="Client email">
@@ -703,7 +703,7 @@ export function DashboardPage() {
                   type="email"
                   value={clientEmail}
                   onChange={(event) => setClientEmail(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
             </div>
@@ -713,7 +713,7 @@ export function DashboardPage() {
                 <Input
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
               <Field label="Qty">
@@ -721,7 +721,7 @@ export function DashboardPage() {
                   inputMode="decimal"
                   value={quantity}
                   onChange={(event) => setQuantity(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
               <Field label="Unit price">
@@ -729,7 +729,7 @@ export function DashboardPage() {
                   inputMode="decimal"
                   value={unitPrice}
                   onChange={(event) => setUnitPrice(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
             </div>
@@ -740,7 +740,7 @@ export function DashboardPage() {
                   type="date"
                   value={dueDate}
                   onChange={(event) => setDueDate(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
               <Field label="Payment link">
@@ -748,7 +748,7 @@ export function DashboardPage() {
                   value={paymentLink}
                   onChange={(event) => setPaymentLink(event.target.value)}
                   placeholder="https://pay.example.com/invoice"
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
             </div>
@@ -758,7 +758,7 @@ export function DashboardPage() {
                 value={paymentInstructions}
                 onChange={(event) => setPaymentInstructions(event.target.value)}
                 placeholder={workspace?.paymentInstructions ?? "Bank transfer or agreed payment method"}
-                className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
               />
             </Field>
 
@@ -767,14 +767,14 @@ export function DashboardPage() {
                 <Input
                   value={terms}
                   onChange={(event) => setTerms(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
               <Field label="Note">
                 <Input
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e2e8f0] px-3 text-[13px] font-normal"
+                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
                 />
               </Field>
             </div>
@@ -795,7 +795,7 @@ export function DashboardPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 w-full border-[#e2e8f0] bg-white sm:w-max hover:bg-[#e8eef7]"
+                className="h-10 w-full border-[#e5e7eb] bg-white sm:w-max hover:bg-[#f3f4f6]"
                 onClick={clearAmendment}
               >
                 Cancel amendment
@@ -823,25 +823,25 @@ export function DashboardPage() {
 
         <section
           id="invoices"
-          className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm"
+          className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm"
         >
-          <div className="flex min-h-[76px] flex-col gap-3 border-b border-[#e2e8f0] bg-[#eef3fa] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-h-[76px] flex-col gap-3 border-b border-[#e5e7eb] bg-[#f9fafb] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-[16px] font-semibold text-[#0b1d3a]">Invoices</p>
-              <p className="mt-1 text-[14px] font-normal leading-5 text-[#64748b]">
+              <p className="text-[16px] font-semibold text-[#111827]">Invoices</p>
+              <p className="mt-1 text-[14px] font-normal leading-5 text-[#6b7280]">
                 Track the exact client state from draft to paid.
               </p>
             </div>
-            <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-[#e8eef7] p-1">
+            <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-[#f3f4f6] p-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveView(tab.id)}
                   className={cn(
-                    "inline-flex min-h-8 shrink-0 items-center gap-2 rounded-lg px-3 text-[13px] font-semibold text-[#475569] transition-colors hover:bg-[#e2e8f0] hover:text-[#0b1d3a]",
+                    "inline-flex min-h-8 shrink-0 items-center gap-2 rounded-lg px-3 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#e2e8f0] hover:text-[#111827]",
                     activeView === tab.id &&
-                      "bg-[#f7f7f5] text-black ring-1 ring-[#d8d8d2] hover:bg-[#f7f7f5] hover:text-[#0b1d3a]",
+                      "bg-[#f7f7f5] text-black ring-1 ring-[#d8d8d2] hover:bg-[#f7f7f5] hover:text-[#111827]",
                   )}
                 >
                   {tab.label}
@@ -849,8 +849,8 @@ export function DashboardPage() {
                     className={cn(
                       "rounded-full px-1.5 py-0.5 text-[10px]",
                       activeView === tab.id
-                        ? "bg-[#e8eef7] text-[#475569]"
-                        : "bg-[#f4f4f1] text-[#475569]",
+                        ? "bg-[#f3f4f6] text-[#4b5563]"
+                        : "bg-[#f4f4f1] text-[#4b5563]",
                     )}
                   >
                     {tab.count}
@@ -863,19 +863,19 @@ export function DashboardPage() {
           {isLoading ? (
             <div className="grid gap-2 p-4">
               {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="h-12 rounded-lg bg-[#eef3fa]" />
+                <div key={index} className="h-12 rounded-lg bg-[#f9fafb]" />
               ))}
             </div>
           ) : filteredRows.length ? (
             <Table className="text-[13px]">
-              <TableHeader className="bg-[#eef3fa]">
-                <TableRow className="border-[#eeeeeb] hover:bg-transparent">
-                  <TableHead className="h-11 px-5 font-medium text-[#0b1d3a]">Invoice</TableHead>
-                  <TableHead className="h-11 font-medium text-[#0b1d3a]">Client</TableHead>
-                  <TableHead className="h-11 font-medium text-[#0b1d3a]">State</TableHead>
-                  <TableHead className="h-11 font-medium text-[#0b1d3a]">Last activity</TableHead>
-                  <TableHead className="h-11 font-medium text-right text-[#0b1d3a]">Amount</TableHead>
-                  <TableHead className="h-11 pr-5 font-medium text-right text-[#0b1d3a]">Action</TableHead>
+              <TableHeader className="bg-[#f9fafb]">
+                <TableRow className="border-[#f3f4f6] hover:bg-transparent">
+                  <TableHead className="h-11 px-5 font-medium text-[#111827]">Invoice</TableHead>
+                  <TableHead className="h-11 font-medium text-[#111827]">Client</TableHead>
+                  <TableHead className="h-11 font-medium text-[#111827]">State</TableHead>
+                  <TableHead className="h-11 font-medium text-[#111827]">Last activity</TableHead>
+                  <TableHead className="h-11 font-medium text-right text-[#111827]">Amount</TableHead>
+                  <TableHead className="h-11 pr-5 font-medium text-right text-[#111827]">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -885,21 +885,21 @@ export function DashboardPage() {
                   return (
                   <TableRow
                     key={invoice._id}
-                    className="border-[#e2e8f0] align-top hover:bg-[#eef3fa]"
+                    className="border-[#e5e7eb] align-top hover:bg-[#f9fafb]"
                   >
                     <TableCell className="px-5 py-4">
-                      <div className="font-medium text-[#0b1d3a]">
+                      <div className="font-medium text-[#111827]">
                         {invoice.invoiceNumber}
                       </div>
-                      <div className="mt-1 text-[11px] text-[#64748b]">
+                      <div className="mt-1 text-[11px] text-[#6b7280]">
                         Due {invoice.dueDate}
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="font-medium text-[#0b1d3a]">
+                      <div className="font-medium text-[#111827]">
                         {invoice.clientName ?? invoice.client ?? "Client"}
                       </div>
-                      <div className="mt-1 text-[11px] text-[#64748b]">
+                      <div className="mt-1 text-[11px] text-[#6b7280]">
                         {invoice.clientEmail ?? "No email"}
                       </div>
                     </TableCell>
@@ -911,10 +911,10 @@ export function DashboardPage() {
                         {statusLabels[invoice.status]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[230px] py-4 text-[#475569]">
+                    <TableCell className="max-w-[230px] py-4 text-[#4b5563]">
                       {events[0]?.message ?? "No activity yet."}
                     </TableCell>
-                    <TableCell className="py-4 text-right font-medium text-[#0b1d3a]">
+                    <TableCell className="py-4 text-right font-medium text-[#111827]">
                       {formatMoney(
                         invoice.amountTotal ?? invoice.amount ?? 0,
                         invoice.currency ?? workspace?.defaultCurrency ?? "USD",
@@ -942,13 +942,13 @@ export function DashboardPage() {
           ) : (
             <div className="grid min-h-[270px] place-items-center px-5 py-12 text-center">
               <div>
-              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#e8eef7] text-[#0b1d3a]">
+              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f3f4f6] text-[#111827]">
                 <FileText className="size-6 stroke-[1.8]" />
               </span>
-                <h3 className="mt-5 text-[20px] font-semibold text-[#0b1d3a]">
+                <h3 className="mt-5 text-[20px] font-semibold text-[#111827]">
                   No invoices in this view
                 </h3>
-                <p className="mt-3 text-[16px] text-[#64748b]">
+                <p className="mt-3 text-[16px] text-[#6b7280]">
                   Create one invoice and send the client link from this pipeline.
                 </p>
               </div>
@@ -957,42 +957,42 @@ export function DashboardPage() {
         </section>
 
         <div className="grid gap-5 xl:grid-cols-2">
-          <section id="clients" className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-            <div className="border-b border-[#e2e8f0] bg-[#eef3fa] px-5 py-4">
-              <p className="text-[16px] font-semibold text-[#0b1d3a]">Clients</p>
-              <p className="mt-1 text-[14px] font-normal leading-5 text-[#64748b]">
+          <section id="clients" className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
+            <div className="border-b border-[#e5e7eb] bg-[#f9fafb] px-5 py-4">
+              <p className="text-[16px] font-semibold text-[#111827]">Clients</p>
+              <p className="mt-1 text-[14px] font-normal leading-5 text-[#6b7280]">
                 Client records are created from sent invoices so the workflow stays fast.
               </p>
             </div>
             <div className={cn("p-5", clients.length ? "grid gap-3 md:grid-cols-2" : "grid min-h-[260px] place-items-center text-center")}>
               {clients.length ? (
                 clients.map((client) => (
-                  <article key={client.email} className="rounded-2xl border border-[#e2e8f0] bg-white shadow-sm p-4">
-                    <p className="truncate text-[14px] font-medium text-[#0b1d3a]">
+                  <article key={client.email} className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm p-4">
+                    <p className="truncate text-[14px] font-medium text-[#111827]">
                       {client.name}
                     </p>
-                    <p className="mt-1 truncate text-[13px] text-[#64748b]">{client.email}</p>
-                    <p className="mt-4 text-[13px] font-medium text-[#0b1d3a]">
+                    <p className="mt-1 truncate text-[13px] text-[#6b7280]">{client.email}</p>
+                    <p className="mt-4 text-[13px] font-medium text-[#111827]">
                       {formatMoney(client.value)} across {client.invoices} invoice{client.invoices === 1 ? "" : "s"}
                     </p>
                   </article>
                 ))
               ) : (
                 <div>
-                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#e8eef7] text-[#0b1d3a]">
+                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f3f4f6] text-[#111827]">
                     <Users className="size-6 stroke-[1.8]" />
                   </span>
-                  <p className="mt-5 text-[20px] font-semibold text-[#0b1d3a]">No clients found</p>
-                  <p className="mt-3 text-[16px] text-[#64748b]">Clients appear after the first draft.</p>
+                  <p className="mt-5 text-[20px] font-semibold text-[#111827]">No clients found</p>
+                  <p className="mt-3 text-[16px] text-[#6b7280]">Clients appear after the first draft.</p>
                 </div>
               )}
             </div>
           </section>
 
-          <section id="reminders" className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-            <div className="border-b border-[#e2e8f0] bg-[#eef3fa] px-5 py-4">
-              <p className="text-[16px] font-semibold text-[#0b1d3a]">Reminders</p>
-              <p className="mt-1 text-[14px] font-normal leading-5 text-[#64748b]">
+          <section id="reminders" className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
+            <div className="border-b border-[#e5e7eb] bg-[#f9fafb] px-5 py-4">
+              <p className="text-[16px] font-semibold text-[#111827]">Reminders</p>
+              <p className="mt-1 text-[14px] font-normal leading-5 text-[#6b7280]">
                 Open an email draft with a ready reminder or overdue note. The owner sends it from their email.
               </p>
             </div>
@@ -1000,20 +1000,20 @@ export function DashboardPage() {
               {rows.filter(({ invoice }) => isClientActive(invoice.status)).slice(0, 5).map(({ invoice }) => (
                 <div
                   key={invoice._id}
-                  className="flex flex-col gap-2 rounded-2xl border border-[#e2e8f0] bg-white shadow-sm p-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-2xl border border-[#e5e7eb] bg-white shadow-sm p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="text-[14px] font-medium text-[#0b1d3a]">
+                    <p className="text-[14px] font-medium text-[#111827]">
                       {invoice.invoiceNumber} - {invoice.clientName ?? invoice.client}
                     </p>
-                    <p className="text-[13px] text-[#64748b]">
+                    <p className="text-[13px] text-[#6b7280]">
                       {statusLabels[invoice.status]} - due {invoice.dueDate}
                     </p>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 border-[#e2e8f0] bg-white text-xs hover:bg-[#e8eef7]"
+                    className="h-8 border-[#e5e7eb] bg-white text-xs hover:bg-[#f3f4f6]"
                     onClick={() => handleReminder(invoice)}
                   >
                     <Bell />
@@ -1023,11 +1023,11 @@ export function DashboardPage() {
               ))}
               {!rows.some(({ invoice }) => isClientActive(invoice.status)) ? (
                 <div>
-                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#e8eef7] text-[#0b1d3a]">
+                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f3f4f6] text-[#111827]">
                     <Bell className="size-6 stroke-[1.8]" />
                   </span>
-                  <p className="mt-5 text-[20px] font-semibold text-[#0b1d3a]">No reminders found</p>
-                  <p className="mt-3 text-[16px] text-[#64748b]">
+                  <p className="mt-5 text-[20px] font-semibold text-[#111827]">No reminders found</p>
+                  <p className="mt-3 text-[16px] text-[#6b7280]">
                     Active sent invoices will show up here.
                   </p>
                 </div>
@@ -1071,9 +1071,9 @@ function MetricCard({
   }[tone];
 
   return (
-    <article className="h-[172px] overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-      <div className="flex h-[66px] items-center justify-between gap-3 border-b border-[#e2e8f0] bg-[#eef3fa] px-5">
-        <p className="text-[15px] font-medium leading-none text-[#475569]">{label}</p>
+    <article className="h-[172px] overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
+      <div className="flex h-[66px] items-center justify-between gap-3 border-b border-[#e5e7eb] bg-[#f9fafb] px-5">
+        <p className="text-[15px] font-medium leading-none text-[#4b5563]">{label}</p>
         <span
           className={cn(
             "flex size-[38px] items-center justify-center rounded-[9px]",
@@ -1084,10 +1084,10 @@ function MetricCard({
         </span>
       </div>
       <div className="px-5 pt-6">
-        <p className="text-[30px] font-semibold leading-none text-[#0b1d3a]">
+        <p className="text-[30px] font-semibold leading-none text-[#111827]">
           {value}
         </p>
-        <p className="mt-4 text-[18px] font-normal leading-none text-[#64748b]">{detail}</p>
+        <p className="mt-4 text-[18px] font-normal leading-none text-[#6b7280]">{detail}</p>
       </div>
     </article>
   );
@@ -1121,11 +1121,11 @@ function InvoicePreview({
   const total = Math.max(0, quantity) * Math.max(0, unitPrice);
 
   return (
-    <aside className="border-t border-[#e2e8f0] bg-[#eef3fa] p-5 xl:border-l xl:border-t-0">
-      <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-        <div className="flex h-[66px] items-center justify-between gap-4 border-b border-[#e2e8f0] bg-[#eef3fa] px-5">
+    <aside className="border-t border-[#e5e7eb] bg-[#f9fafb] p-5 xl:border-l xl:border-t-0">
+      <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
+        <div className="flex h-[66px] items-center justify-between gap-4 border-b border-[#e5e7eb] bg-[#f9fafb] px-5">
           <div>
-            <p className="text-[14px] font-medium text-[#475569]">Invoice preview</p>
+            <p className="text-[14px] font-medium text-[#4b5563]">Invoice preview</p>
           </div>
           <Badge variant="outline" className="border-[#bfe8d8] bg-[#ecf8f2] px-3 py-1 text-xs font-semibold text-[#006545]">
             Ready packet
@@ -1133,22 +1133,22 @@ function InvoicePreview({
         </div>
 
         <div className="p-5">
-          <h2 className="text-[28px] font-semibold leading-none text-[#0b1d3a]">Invoice</h2>
+          <h2 className="text-[28px] font-semibold leading-none text-[#111827]">Invoice</h2>
 
-          <div className="mt-7 grid gap-4 border-y border-[#e2e8f0] py-4 sm:grid-cols-2">
+          <div className="mt-7 grid gap-4 border-y border-[#e5e7eb] py-4 sm:grid-cols-2">
           <div>
-            <p className="text-xs text-[#64748b]">Bill to</p>
-            <p className="mt-2 text-[15px] font-medium leading-tight text-[#0b1d3a]">{clientName || "Client"}</p>
-            <p className="text-xs text-[#64748b]">{clientEmail || "client@email.com"}</p>
+            <p className="text-xs text-[#6b7280]">Bill to</p>
+            <p className="mt-2 text-[15px] font-medium leading-tight text-[#111827]">{clientName || "Client"}</p>
+            <p className="text-xs text-[#6b7280]">{clientEmail || "client@email.com"}</p>
           </div>
           <div className="sm:text-right">
-            <p className="text-xs text-[#64748b]">Due</p>
-            <p className="mt-2 text-[15px] font-medium leading-tight text-[#0b1d3a]">{dueDate}</p>
+            <p className="text-xs text-[#6b7280]">Due</p>
+            <p className="mt-2 text-[15px] font-medium leading-tight text-[#111827]">{dueDate}</p>
           </div>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-          <div className="grid grid-cols-[minmax(0,1fr)_64px_104px] border-b border-[#e2e8f0] bg-[#e8eef7] px-4 py-3 text-xs font-semibold text-[#374151]">
+        <div className="mt-5 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
+          <div className="grid grid-cols-[minmax(0,1fr)_64px_104px] border-b border-[#e5e7eb] bg-[#f3f4f6] px-4 py-3 text-xs font-semibold text-[#374151]">
             <span>Item</span>
             <span>Qty</span>
             <span className="text-right">Amount</span>
@@ -1162,23 +1162,27 @@ function InvoicePreview({
 
         <div className="mt-6 flex justify-end">
           <div className="w-full max-w-[240px]">
-            <div className="flex justify-between text-sm text-[#64748b]">
-              <span>Subtotal</span>
+            <div className="flex justify-between text-sm text-[#6b7280]">
+              <span>Subtotal (excl. VAT)</span>
               <span>{formatMoney(total, currency)}</span>
             </div>
-            <div className="mt-3 flex justify-between border-t border-[#e2e8f0] pt-3 text-[18px] font-semibold leading-none text-[#0b1d3a]">
-              <span>Total</span>
-              <span>{formatMoney(total, currency)}</span>
+            <div className="mt-2 flex justify-between text-sm text-[#6b7280]">
+              <span>VAT (15%)</span>
+              <span>{formatMoney(total * 0.15, currency)}</span>
+            </div>
+            <div className="mt-3 flex justify-between border-t border-[#e5e7eb] pt-3 text-[18px] font-semibold leading-none text-[#111827]">
+              <span>Total (incl. VAT)</span>
+              <span>{formatMoney(total * 1.15, currency)}</span>
             </div>
           </div>
         </div>
 
         <div className="mt-7 grid gap-3 text-sm leading-6 text-[#374151]">
           <p>
-            <span className="font-medium text-[#0b1d3a]">Terms:</span> {terms}
+            <span className="font-medium text-[#111827]">Terms:</span> {terms}
           </p>
           <p>
-            <span className="font-medium text-[#0b1d3a]">Payment:</span>{" "}
+            <span className="font-medium text-[#111827]">Payment:</span>{" "}
             {paymentLink ? "Payment button included." : paymentInstructions}
           </p>
           <p>{notes}</p>
@@ -1246,7 +1250,7 @@ function InvoiceActions({
           asChild
           size="sm"
           variant="outline"
-          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#e8eef7]"
+          className="h-8 border-[#e5e7eb] bg-white px-2 text-xs hover:bg-[#f3f4f6]"
         >
           <a href={`/invoice/${invoice.publicToken}`} target="_blank" rel="noreferrer">
             <ExternalLink />
@@ -1258,7 +1262,7 @@ function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#e8eef7]"
+          className="h-8 border-[#e5e7eb] bg-white px-2 text-xs hover:bg-[#f3f4f6]"
           onClick={() => onEmail(invoice)}
         >
           <Mail />
@@ -1282,7 +1286,7 @@ function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#e8eef7]"
+          className="h-8 border-[#e5e7eb] bg-white px-2 text-xs hover:bg-[#f3f4f6]"
           onClick={() => onReminder(invoice)}
           disabled={reminding}
         >

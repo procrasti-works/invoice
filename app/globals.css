@@ -1277,6 +1277,13 @@ main {
   padding: 0 0 16px;
 }
 
+/* Logo */
+.db-sidebar-logo {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.db-logo-img { height: 38px; width: auto; }
+
 /* Workspace switcher */
 .db-workspace {
   display: flex;

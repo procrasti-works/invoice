@@ -128,7 +128,7 @@ export default function VatPage() {
             <button className="db-outline-btn"><Download className="size-4" /> Export All Invoices</button>
           </div>
           <div className="db-notice" style={{ marginTop: "16px", background: "#fef9c3", borderColor: "#fde68a", color: "#92400e" }}>
-            <AlertCircle className="size-4" /> Backend integration for direct ITAS submission coming soon. Your brother will wire this up.
+            <AlertCircle className="size-4" /> Backend integration for direct ITAS submission coming soon. Your partner should wire this up.
           </div>
         </div>
       )}

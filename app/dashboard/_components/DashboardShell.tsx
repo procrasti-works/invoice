@@ -102,6 +102,11 @@ function ShellInner({ children }: { children: ReactNode }) {
       {/* ── Sidebar ── */}
       <aside className="db-sidebar">
 
+        {/* Logo */}
+        <div className="db-sidebar-logo">
+          <img src="/payvio-logo.svg" alt="Payvio" className="db-logo-img" />
+        </div>
+
         {/* Workspace switcher */}
         <div className="db-workspace" onClick={() => setShowWorkspaceDrop(!showWorkspaceDrop)}>
           <span className="db-workspace-avatar" style={{ background: planColor }}>
@@ -182,7 +187,7 @@ function ShellInner({ children }: { children: ReactNode }) {
               <div className="db-code-input-row">
                 <input
                   className={cn("db-code-input", codeError && "db-code-input-error")}
-                  placeholder="e.g. BIZ-2026"
+                  placeholder="e.g. XXXX-0000"
                   value={codeValue}
                   onChange={(e) => { setCodeValue(e.target.value); setCodeError(false); }}
                   onKeyDown={(e) => e.key === "Enter" && handleApplyCode()}

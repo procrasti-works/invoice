@@ -112,7 +112,7 @@ export default function LedgerPage() {
           <div className="db-empty" style={{ minHeight: "200px" }}>
             <ShoppingCart className="size-10 text-[#d1d5db]" />
             <h3>No purchase records yet</h3>
-            <p>Record supplier invoices and purchase orders here. Your brother will wire up the backend for this section.</p>
+            <p>Record supplier invoices and purchase orders here. Your partner should wire up the backend for this section.</p>
             <button className="db-primary-btn" style={{ marginTop: "12px" }}><FileText className="size-4" /> Add Purchase Record</button>
           </div>
         </div>

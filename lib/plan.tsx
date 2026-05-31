@@ -21,8 +21,8 @@ const FEATURE_REQUIREMENTS: Record<Feature, PlanLevel[]> = {
   clients:   ["trial", "starter", "business", "professional", "enterprise", "admin"],
   reminders: ["trial", "starter", "business", "professional", "enterprise", "admin"],
   settings:  ["trial", "starter", "business", "professional", "enterprise", "admin"],
-  reports:   ["business", "professional", "enterprise", "admin"],
-  ledger:    ["business", "professional", "enterprise", "admin"],
+  reports:   ["starter", "business", "professional", "enterprise", "admin"],
+  ledger:    ["starter", "business", "professional", "enterprise", "admin"],
   vat:       ["professional", "enterprise", "admin"],
 };
 
