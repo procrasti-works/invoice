@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 
-const navLinks = ["Home", "About", "Blog", "Contact"];
+const navLinks = [
+  { label: "Home", href: "/" },
+  { label: "About", href: "/about" },
+  { label: "Blog", href: "/blog" },
+  { label: "Contact", href: "/contact" },
+];
 
 const serviceCards = [
   {
@@ -268,7 +273,7 @@ function SiteHeader() {
       </a>
       <nav className="lp-nav" aria-label="Main navigation">
         {navLinks.map((link) => (
-          <a key={link} href="#" className="lp-nav-link">{link}</a>
+          <a key={link.label} href={link.href} className="lp-nav-link">{link.label}</a>
         ))}
       </nav>
       <div className="lp-header-actions">
