@@ -28,6 +28,12 @@ const serviceCards = [
     image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=600&q=80&fit=crop",
     accent: "#e07b00",
   },
+  {
+    title: "Scan Paper Invoices",
+    description: "Photograph old paper invoices and digitise them instantly. Data extracted, images deleted. Your records, finally online.",
+    image: "https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=600&q=80&fit=crop",
+    accent: "#7c3aed",
+  },
 ];
 
 const featureCards = [
@@ -80,6 +86,11 @@ const featureCards = [
     title: "Cash Flow Visibility",
     description: "See exactly what's owed to you vs. what you owe — in real time.",
     image: "https://images.unsplash.com/photo-1579621970795-87facc2f976d?w=600&q=80&fit=crop",
+  },
+  {
+    title: "Scan Paper Invoices",
+    description: "Take a photo of any paper invoice and we'll extract the data automatically. No more lost records. Trial users get 50 free scans.",
+    image: "https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=600&q=80&fit=crop",
   },
 ];
 
@@ -160,6 +171,7 @@ const pricingPlans = [
       "Basic reports",
       "1 user",
       "15% VAT auto-calculation",
+      "50 paper invoice scans (trial only)",
     ],
     cta: "Get Started",
     highlight: false,
@@ -177,6 +189,7 @@ const pricingPlans = [
       "3 users",
       "Purchase tracking",
       "NAD + USD + ZAR support",
+      "Unlimited paper invoice scanning",
     ],
     cta: "Start Free Trial",
     highlight: true,
@@ -189,6 +202,7 @@ const pricingPlans = [
     description: "For medium businesses and growing SMEs.",
     features: [
       "All Business features",
+      "Unlimited paper invoice scanning",
       "NamRA ITAS export tools",
       "API access",
       "10 users",

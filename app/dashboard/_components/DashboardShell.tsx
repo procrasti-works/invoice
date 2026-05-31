@@ -54,7 +54,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { label: "Reports & Analytics", href: "/dashboard/reports", icon: BarChart3, feature: "reports", description: "Revenue & cash flow" },
       { label: "Invoice Ledger", href: "/dashboard/ledger", icon: BookOpen, feature: "ledger", description: "Full invoice history" },
-      { label: "Scan Paper Invoice", href: "/dashboard/scan", icon: ScanLine, feature: "ledger", description: "Digitise paper invoices" },
+      { label: "Scan Paper Invoice", href: "/dashboard/scan", icon: ScanLine, feature: "scan", description: "Digitise paper invoices" },
     ],
   },
   {

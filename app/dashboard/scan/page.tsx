@@ -64,8 +64,9 @@
  */
 
 import { useState, useRef } from "react";
-import { ScanLine, Upload, X, CheckCircle2, AlertCircle, FileText, Loader2, Trash2 } from "lucide-react";
-import { usePlan } from "@/lib/plan";
+import { ScanLine, Upload, X, CheckCircle2, AlertCircle, FileText, Loader2, Trash2, Lock } from "lucide-react";
+import Link from "next/link";
+import { usePlan, TRIAL_SCAN_LIMIT } from "@/lib/plan";
 import { LockedPage } from "../_components/DashboardShell";
 
 type ScanResult = {
@@ -95,13 +96,15 @@ type UploadedFile = {
 };
 
 export default function ScanInvoicePage() {
-  const { canAccess } = usePlan();
+  const { canAccess, plan, scanCount, scanLimitReached, incrementScanCount } = usePlan();
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [scanning, setScanning] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!canAccess("ledger")) return <LockedPage feature="Scan Invoice" requiredPlan="Business" />;
+  if (!canAccess("scan")) return <LockedPage feature="Scan Paper Invoice" requiredPlan="Business" />;
+
+  const scansRemaining = plan === "trial" ? Math.max(0, TRIAL_SCAN_LIMIT - scanCount) : null;
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? []);
@@ -136,14 +139,32 @@ export default function ScanInvoicePage() {
     const pending = files.filter((f) => f.status === "pending");
     if (pending.length === 0) return;
 
+    // Enforce trial scan limit
+    if (plan === "trial") {
+      if (scanLimitReached) {
+        setNotice("You've used all 50 trial scans. Upgrade to Business to scan unlimited invoices.");
+        return;
+      }
+      const allowed = Math.min(pending.length, TRIAL_SCAN_LIMIT - scanCount);
+      if (allowed < pending.length) {
+        setNotice(`Trial limit: only ${allowed} more scan${allowed !== 1 ? "s" : ""} remaining. Upgrade to Business for unlimited.`);
+      }
+    }
+
     setScanning(true);
     setNotice(null);
 
-    const formData = new FormData();
-    pending.forEach((f) => formData.append("images", f.file));
+    // For trial, only send allowed count
+    const toScan = plan === "trial"
+      ? pending.slice(0, Math.max(0, TRIAL_SCAN_LIMIT - scanCount))
+      : pending;
 
-    // Mark all pending as scanning
-    setFiles((prev) => prev.map((f) => f.status === "pending" ? { ...f, status: "scanning" } : f));
+    const formData = new FormData();
+    toScan.forEach((f) => formData.append("images", f.file));
+
+    setFiles((prev) => prev.map((f) =>
+      toScan.includes(f) ? { ...f, status: "scanning" } : f
+    ));
 
     try {
       const res = await fetch("/api/scan-invoice", {
@@ -159,13 +180,13 @@ export default function ScanInvoicePage() {
         prev.map((f) => {
           const result = results.find((r) => r.fileName === f.file.name);
           if (!result) return f;
-          // Revoke preview URL — image no longer needed on client
           URL.revokeObjectURL(f.preview);
           return { ...f, preview: "", status: result.success ? "done" : "error", result };
         })
       );
 
       const successCount = results.filter((r) => r.success).length;
+      incrementScanCount(successCount);
       setNotice(`${successCount} of ${results.length} invoice${results.length !== 1 ? "s" : ""} extracted successfully. Images deleted from memory.`);
     } catch (err) {
       setFiles((prev) => prev.map((f) => f.status === "scanning" ? { ...f, status: "error" } : f));
@@ -202,6 +223,28 @@ export default function ScanInvoicePage() {
         </div>
         <span className="db-compliance-badge" style={{ background: "#1a6fc4" }}>Privacy Safe</span>
       </div>
+
+      {/* Trial scan limit banner */}
+      {plan === "trial" && (
+        <div className={`db-notice ${scanLimitReached ? "db-notice-warn" : ""}`} style={{
+          marginBottom: "20px",
+          background: scanLimitReached ? "#fef9c3" : "#f0fdf4",
+          borderColor: scanLimitReached ? "#fde68a" : "#bbf7d0",
+          color: scanLimitReached ? "#92400e" : "#16a34a",
+        }}>
+          {scanLimitReached ? <Lock className="size-4" /> : <CheckCircle2 className="size-4" />}
+          <span>
+            {scanLimitReached
+              ? `You've used all ${TRIAL_SCAN_LIMIT} trial scans. `
+              : `Trial plan: ${scansRemaining} of ${TRIAL_SCAN_LIMIT} scans remaining. `}
+          </span>
+          {scanLimitReached && (
+            <Link href="/#pricing" style={{ fontWeight: 700, textDecoration: "underline" }}>
+              Upgrade to Business for unlimited scanning →
+            </Link>
+          )}
+        </div>
+      )}
 
       {notice && (
         <div className="db-notice" style={{ marginBottom: "20px" }}>
@@ -262,9 +305,9 @@ export default function ScanInvoicePage() {
 
             <div style={{ display: "flex", gap: "10px", marginTop: "20px", alignItems: "center" }}>
               {hasPending && (
-                <button className="db-primary-btn" onClick={handleScan} disabled={scanning}>
+                <button className="db-primary-btn" onClick={handleScan} disabled={scanning || scanLimitReached}>
                   {scanning ? <Loader2 className="size-4 animate-spin" /> : <ScanLine className="size-4" />}
-                  {scanning ? "Scanning..." : `Scan ${files.filter((f) => f.status === "pending").length} invoice${files.filter((f) => f.status === "pending").length !== 1 ? "s" : ""}`}
+                  {scanning ? "Scanning..." : scanLimitReached ? "Scan limit reached" : `Scan ${files.filter((f) => f.status === "pending").length} invoice${files.filter((f) => f.status === "pending").length !== 1 ? "s" : ""}`}
                 </button>
               )}
               <button className="db-outline-btn" onClick={clearAll} disabled={scanning}>
