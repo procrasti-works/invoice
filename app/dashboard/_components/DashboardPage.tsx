@@ -553,13 +553,13 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="h-[calc(100dvh-1rem)] min-h-0 overflow-y-auto bg-[#f0f5fb] lg:h-[calc(100dvh-2rem)]">
-      <header className="sticky top-0 z-10 flex min-w-0 items-center justify-between gap-4 bg-[#f0f5fb]/95 px-5 pb-5 pt-6 backdrop-blur sm:px-5">
+    <div className="h-[calc(100dvh-1rem)] min-h-0 overflow-y-auto bg-[#0f2a4a] lg:h-[calc(100dvh-2rem)]">
+      <header className="sticky top-0 z-10 flex min-w-0 items-center justify-between gap-4 bg-[#0f2a4a]/95 px-5 pb-5 pt-6 backdrop-blur sm:px-5">
         <div className="min-w-0">
-          <p className="text-[15px] font-normal leading-5 text-[#64748b]">
+          <p className="text-[15px] font-normal leading-5 text-white/60">
             Invoice pipeline
           </p>
-          <h1 className="truncate text-[29px] font-semibold leading-[1.08] text-[#0b1d3a]">
+          <h1 className="truncate text-[29px] font-semibold leading-[1.08] text-white">
             Send, approve, and close client invoices
           </h1>
         </div>
@@ -574,7 +574,7 @@ export function DashboardPage() {
         </Button>
       </header>
 
-      <div className="grid gap-5 px-5 pb-6 sm:px-5">
+      <div className="grid gap-5 px-5 pb-6 sm:px-5 pt-2">
         <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
             icon={WalletCards}
@@ -615,7 +615,7 @@ export function DashboardPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f1f5f9]"
+                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#e8eef7]"
                   onClick={() => copyText(clientLink)}
                 >
                   <Copy />
@@ -637,7 +637,7 @@ export function DashboardPage() {
                       asChild
                       size="sm"
                       variant="outline"
-                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f1f5f9]"
+                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#e8eef7]"
                     >
                       <a href={emailDraft.mailtoHref}>
                         <Mail />
@@ -648,7 +648,7 @@ export function DashboardPage() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f1f5f9]"
+                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#e8eef7]"
                       onClick={() =>
                         copyText(`${emailDraft.subject}\n\n${emailDraft.body}`)
                       }
@@ -662,7 +662,7 @@ export function DashboardPage() {
                   asChild
                   size="sm"
                   variant="outline"
-                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f1f5f9]"
+                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#e8eef7]"
                 >
                   <a href={clientLink} target="_blank" rel="noreferrer">
                     <ExternalLink />
@@ -678,7 +678,7 @@ export function DashboardPage() {
           id="new-invoice"
           className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm"
         >
-          <div className="flex min-h-[76px] flex-col justify-center border-b border-[#e2e8f0] bg-[#f8fafc] px-5 py-4 sm:px-5">
+          <div className="flex min-h-[76px] flex-col justify-center border-b border-[#e2e8f0] bg-[#eef3fa] px-5 py-4 sm:px-5">
               <p className="text-[16px] font-semibold leading-tight text-[#0b1d3a]">
                 {editingInvoiceId ? "Amend invoice" : "New Invoice"}
               </p>
@@ -795,7 +795,7 @@ export function DashboardPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 w-full border-[#e2e8f0] bg-white sm:w-max hover:bg-[#f1f5f9]"
+                className="h-10 w-full border-[#e2e8f0] bg-white sm:w-max hover:bg-[#e8eef7]"
                 onClick={clearAmendment}
               >
                 Cancel amendment
@@ -825,14 +825,14 @@ export function DashboardPage() {
           id="invoices"
           className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm"
         >
-          <div className="flex min-h-[76px] flex-col gap-3 border-b border-[#e2e8f0] bg-[#f8fafc] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-h-[76px] flex-col gap-3 border-b border-[#e2e8f0] bg-[#eef3fa] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <p className="text-[16px] font-semibold text-[#0b1d3a]">Invoices</p>
               <p className="mt-1 text-[14px] font-normal leading-5 text-[#64748b]">
                 Track the exact client state from draft to paid.
               </p>
             </div>
-            <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-[#f1f5f9] p-1">
+            <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-[#e8eef7] p-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -849,7 +849,7 @@ export function DashboardPage() {
                     className={cn(
                       "rounded-full px-1.5 py-0.5 text-[10px]",
                       activeView === tab.id
-                        ? "bg-[#f1f5f9] text-[#475569]"
+                        ? "bg-[#e8eef7] text-[#475569]"
                         : "bg-[#f4f4f1] text-[#475569]",
                     )}
                   >
@@ -863,12 +863,12 @@ export function DashboardPage() {
           {isLoading ? (
             <div className="grid gap-2 p-4">
               {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="h-12 rounded-lg bg-[#f8fafc]" />
+                <div key={index} className="h-12 rounded-lg bg-[#eef3fa]" />
               ))}
             </div>
           ) : filteredRows.length ? (
             <Table className="text-[13px]">
-              <TableHeader className="bg-[#f8fafc]">
+              <TableHeader className="bg-[#eef3fa]">
                 <TableRow className="border-[#eeeeeb] hover:bg-transparent">
                   <TableHead className="h-11 px-5 font-medium text-[#0b1d3a]">Invoice</TableHead>
                   <TableHead className="h-11 font-medium text-[#0b1d3a]">Client</TableHead>
@@ -885,7 +885,7 @@ export function DashboardPage() {
                   return (
                   <TableRow
                     key={invoice._id}
-                    className="border-[#e2e8f0] align-top hover:bg-[#f8fafc]"
+                    className="border-[#e2e8f0] align-top hover:bg-[#eef3fa]"
                   >
                     <TableCell className="px-5 py-4">
                       <div className="font-medium text-[#0b1d3a]">
@@ -942,7 +942,7 @@ export function DashboardPage() {
           ) : (
             <div className="grid min-h-[270px] place-items-center px-5 py-12 text-center">
               <div>
-              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f1f5f9] text-[#0b1d3a]">
+              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#e8eef7] text-[#0b1d3a]">
                 <FileText className="size-6 stroke-[1.8]" />
               </span>
                 <h3 className="mt-5 text-[20px] font-semibold text-[#0b1d3a]">
@@ -958,7 +958,7 @@ export function DashboardPage() {
 
         <div className="grid gap-5 xl:grid-cols-2">
           <section id="clients" className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-            <div className="border-b border-[#e2e8f0] bg-[#f8fafc] px-5 py-4">
+            <div className="border-b border-[#e2e8f0] bg-[#eef3fa] px-5 py-4">
               <p className="text-[16px] font-semibold text-[#0b1d3a]">Clients</p>
               <p className="mt-1 text-[14px] font-normal leading-5 text-[#64748b]">
                 Client records are created from sent invoices so the workflow stays fast.
@@ -979,7 +979,7 @@ export function DashboardPage() {
                 ))
               ) : (
                 <div>
-                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f1f5f9] text-[#0b1d3a]">
+                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#e8eef7] text-[#0b1d3a]">
                     <Users className="size-6 stroke-[1.8]" />
                   </span>
                   <p className="mt-5 text-[20px] font-semibold text-[#0b1d3a]">No clients found</p>
@@ -990,7 +990,7 @@ export function DashboardPage() {
           </section>
 
           <section id="reminders" className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-            <div className="border-b border-[#e2e8f0] bg-[#f8fafc] px-5 py-4">
+            <div className="border-b border-[#e2e8f0] bg-[#eef3fa] px-5 py-4">
               <p className="text-[16px] font-semibold text-[#0b1d3a]">Reminders</p>
               <p className="mt-1 text-[14px] font-normal leading-5 text-[#64748b]">
                 Open an email draft with a ready reminder or overdue note. The owner sends it from their email.
@@ -1013,7 +1013,7 @@ export function DashboardPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 border-[#e2e8f0] bg-white text-xs hover:bg-[#f1f5f9]"
+                    className="h-8 border-[#e2e8f0] bg-white text-xs hover:bg-[#e8eef7]"
                     onClick={() => handleReminder(invoice)}
                   >
                     <Bell />
@@ -1023,7 +1023,7 @@ export function DashboardPage() {
               ))}
               {!rows.some(({ invoice }) => isClientActive(invoice.status)) ? (
                 <div>
-                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f1f5f9] text-[#0b1d3a]">
+                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#e8eef7] text-[#0b1d3a]">
                     <Bell className="size-6 stroke-[1.8]" />
                   </span>
                   <p className="mt-5 text-[20px] font-semibold text-[#0b1d3a]">No reminders found</p>
@@ -1072,7 +1072,7 @@ function MetricCard({
 
   return (
     <article className="h-[172px] overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-      <div className="flex h-[66px] items-center justify-between gap-3 border-b border-[#e2e8f0] bg-[#f8fafc] px-5">
+      <div className="flex h-[66px] items-center justify-between gap-3 border-b border-[#e2e8f0] bg-[#eef3fa] px-5">
         <p className="text-[15px] font-medium leading-none text-[#475569]">{label}</p>
         <span
           className={cn(
@@ -1121,9 +1121,9 @@ function InvoicePreview({
   const total = Math.max(0, quantity) * Math.max(0, unitPrice);
 
   return (
-    <aside className="border-t border-[#e2e8f0] bg-[#f8fafc] p-5 xl:border-l xl:border-t-0">
+    <aside className="border-t border-[#e2e8f0] bg-[#eef3fa] p-5 xl:border-l xl:border-t-0">
       <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-        <div className="flex h-[66px] items-center justify-between gap-4 border-b border-[#e2e8f0] bg-[#f8fafc] px-5">
+        <div className="flex h-[66px] items-center justify-between gap-4 border-b border-[#e2e8f0] bg-[#eef3fa] px-5">
           <div>
             <p className="text-[14px] font-medium text-[#475569]">Invoice preview</p>
           </div>
@@ -1148,7 +1148,7 @@ function InvoicePreview({
         </div>
 
         <div className="mt-5 overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-          <div className="grid grid-cols-[minmax(0,1fr)_64px_104px] border-b border-[#e2e8f0] bg-[#f1f5f9] px-4 py-3 text-xs font-semibold text-[#374151]">
+          <div className="grid grid-cols-[minmax(0,1fr)_64px_104px] border-b border-[#e2e8f0] bg-[#e8eef7] px-4 py-3 text-xs font-semibold text-[#374151]">
             <span>Item</span>
             <span>Qty</span>
             <span className="text-right">Amount</span>
@@ -1246,7 +1246,7 @@ function InvoiceActions({
           asChild
           size="sm"
           variant="outline"
-          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#f1f5f9]"
+          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#e8eef7]"
         >
           <a href={`/invoice/${invoice.publicToken}`} target="_blank" rel="noreferrer">
             <ExternalLink />
@@ -1258,7 +1258,7 @@ function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#f1f5f9]"
+          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#e8eef7]"
           onClick={() => onEmail(invoice)}
         >
           <Mail />
@@ -1282,7 +1282,7 @@ function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#f1f5f9]"
+          className="h-8 border-[#e2e8f0] bg-white px-2 text-xs hover:bg-[#e8eef7]"
           onClick={() => onReminder(invoice)}
           disabled={reminding}
         >

@@ -89,11 +89,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className="internal-app min-h-dvh bg-[#f0f5fb] p-2 text-[#050505] sm:p-4">
+    <main className="internal-app min-h-dvh bg-[#0a1e35] p-2 text-[#050505] sm:p-4">
       <div className="grid min-h-[calc(100dvh-1rem)] gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:min-h-[calc(100dvh-2rem)]">
 
         {/* ── Sidebar ── */}
-        <aside className="flex min-w-0 flex-col rounded-2xl bg-[#0b1d3a] px-3 py-4 shadow-lg lg:h-[calc(100dvh-2rem)]">
+        <aside className="flex min-w-0 flex-col rounded-2xl bg-[#1a6fc4] px-3 py-4 shadow-lg lg:h-[calc(100dvh-2rem)]">
 
           {/* Logo */}
           <Link
@@ -104,7 +104,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               src="/payvio-logo.svg"
               alt="Payvio"
               style={{ height: "51px" }}
-              className="w-auto"
+              className="w-auto brightness-0 invert"
             />
           </Link>
 
@@ -210,7 +210,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </aside>
 
         {/* ── Main content ── */}
-        <section className="min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm">
+        <section className="min-w-0 overflow-hidden rounded-2xl bg-[#0f2a4a] shadow-sm">
           {children}
         </section>
       </div>
