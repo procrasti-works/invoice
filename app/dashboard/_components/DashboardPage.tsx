@@ -553,489 +553,232 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-0 overflow-y-auto bg-[#f9fafb]">
-      <header className="sticky top-0 z-10 flex min-w-0 items-center justify-between gap-4 bg-[#f9fafb]/95 px-5 pb-5 pt-6 backdrop-blur sm:px-5">
-        <div className="min-w-0">
-          <p className="text-[15px] font-normal leading-5 text-[#9ca3af]">
-            Invoice pipeline
-          </p>
-          <h1 className="truncate text-[29px] font-semibold leading-[1.08] text-[#111827]">
-            Send, approve, and close client invoices
-          </h1>
+    <div className="db-page">
+      {/* Header */}
+      <div className="db-page-header">
+        <div>
+          <p className="db-page-eyebrow">Invoice pipeline</p>
+          <h1 className="db-page-title">Invoices</h1>
         </div>
-        <Button
-          asChild
-          className="h-9 shrink-0 bg-[#009b68] px-4 text-[13px] font-semibold text-white hover:bg-[#00875b] hover:text-white"
-        >
-          <a href="#new-invoice">
-            <FileText />
-            New Invoice
-          </a>
-        </Button>
-      </header>
+        <a href="#new-invoice" className="db-primary-btn" style={{ background: "#009b68" }}>
+          <FileText className="size-4" />
+          New Invoice
+        </a>
+      </div>
 
-      <div className="grid gap-5 px-5 pb-6 sm:px-5 pt-2">
-        <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            icon={WalletCards}
-            label="Outstanding"
-            value={formatMoney(stats?.totalOutstanding ?? 0)}
-            detail={`${stats?.awaitingClientCount ?? 0} with the client`}
-            tone="mint"
-          />
-          <MetricCard
-            icon={CheckCircle2}
-            label="Paid"
-            value={formatMoney(stats?.totalPaid ?? 0)}
-            detail={`${stats?.paidCount ?? 0} closed invoices`}
-            tone="blue"
-          />
-          <MetricCard
-            icon={Mail}
-            label="Active"
-            value={String(stats?.invoiceCount ?? 0)}
-            detail="Drafts through paid"
-            tone="yellow"
-          />
-          <MetricCard
-            icon={Clock3}
-            label="Overdue"
-            value={String(stats?.overdueCount ?? 0)}
-            detail="Needs follow-up"
-            tone="pink"
-          />
-        </section>
+      {/* Metric cards */}
+      <div className="db-stat-row db-stat-row-4">
+        <div className="db-stat-card">
+          <div className="db-stat-icon" style={{ background: "#dcfce7", color: "#16a34a" }}><WalletCards className="size-4" /></div>
+          <p className="db-stat-label">Outstanding</p>
+          <p className="db-stat-value">{formatMoney(stats?.totalOutstanding ?? 0)}</p>
+          <p className="db-stat-sub">{stats?.awaitingClientCount ?? 0} with the client</p>
+        </div>
+        <div className="db-stat-card">
+          <div className="db-stat-icon" style={{ background: "#dbeafe", color: "#1a6fc4" }}><CheckCircle2 className="size-4" /></div>
+          <p className="db-stat-label">Paid</p>
+          <p className="db-stat-value">{formatMoney(stats?.totalPaid ?? 0)}</p>
+          <p className="db-stat-sub">{stats?.paidCount ?? 0} closed invoices</p>
+        </div>
+        <div className="db-stat-card">
+          <div className="db-stat-icon" style={{ background: "#fef9c3", color: "#ca8a04" }}><Mail className="size-4" /></div>
+          <p className="db-stat-label">Active</p>
+          <p className="db-stat-value">{stats?.invoiceCount ?? 0}</p>
+          <p className="db-stat-sub">Drafts through paid</p>
+        </div>
+        <div className="db-stat-card">
+          <div className="db-stat-icon" style={{ background: "#fee2e2", color: "#dc2626" }}><Clock3 className="size-4" /></div>
+          <p className="db-stat-label">Overdue</p>
+          <p className="db-stat-value">{stats?.overdueCount ?? 0}</p>
+          <p className="db-stat-sub">Needs follow-up</p>
+        </div>
+      </div>
 
-        {notice || clientLink ? (
-          <section className="flex flex-col gap-2 rounded-lg border border-[#bfe8d8] bg-[#f0fdf4] rounded-2xl p-3 text-sm text-[#006545] sm:flex-row sm:items-center sm:justify-between">
-            <span className="min-w-0 break-words">{notice ?? clientLink}</span>
-            {clientLink ? (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f3f4f6]"
-                  onClick={() => copyText(clientLink)}
-                >
-                  <Copy />
-                  Copy
-                </Button>
-                {emailDraft ? (
-                  <>
-                    <Button
-                      asChild
-                      size="sm"
-                      className="h-8 bg-[#009b68] text-white hover:bg-[#00875b]"
-                    >
-                      <a href={emailDraft.gmailHref} target="_blank" rel="noreferrer">
-                        <Mail />
-                        Open email
-                      </a>
-                    </Button>
-                    <Button
-                      asChild
-                      size="sm"
-                      variant="outline"
-                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f3f4f6]"
-                    >
-                      <a href={emailDraft.mailtoHref}>
-                        <Mail />
-                        Email app
-                      </a>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f3f4f6]"
-                      onClick={() =>
-                        copyText(`${emailDraft.subject}\n\n${emailDraft.body}`)
-                      }
-                    >
-                      <Copy />
-                      Copy email
-                    </Button>
-                  </>
-                ) : null}
-                <Button
-                  asChild
-                  size="sm"
-                  variant="outline"
-                  className="h-8 border-[#bfe8d8] bg-white text-[#006545] hover:bg-[#f3f4f6]"
-                >
-                  <a href={clientLink} target="_blank" rel="noreferrer">
-                    <ExternalLink />
-                    Open
-                  </a>
-                </Button>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section
-          id="new-invoice"
-          className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm"
-        >
-          <div className="flex min-h-[76px] flex-col justify-center border-b border-[#e5e7eb] bg-[#f9fafb] px-5 py-4 sm:px-5">
-              <p className="text-[16px] font-semibold leading-tight text-[#111827]">
-                {editingInvoiceId ? "Amend invoice" : "New Invoice"}
-              </p>
-              <p className="mt-1 max-w-2xl text-[14px] font-normal leading-5 text-[#6b7280]">
-                Create the packet, preview it, then prepare an email draft with the secure client link.
-              </p>
-          </div>
-
-          <div className="grid xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.72fr)]">
-          <form onSubmit={handleCreate} className="grid content-start gap-4 p-5 sm:p-6">
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Client name">
-                <Input
-                  value={clientName}
-                  onChange={(event) => setClientName(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-              <Field label="Client email">
-                <Input
-                  type="email"
-                  value={clientEmail}
-                  onChange={(event) => setClientEmail(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px_150px]">
-              <Field label="Line item">
-                <Input
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-              <Field label="Qty">
-                <Input
-                  inputMode="decimal"
-                  value={quantity}
-                  onChange={(event) => setQuantity(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-              <Field label="Unit price">
-                <Input
-                  inputMode="decimal"
-                  value={unitPrice}
-                  onChange={(event) => setUnitPrice(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Due date">
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-              <Field label="Payment link">
-                <Input
-                  value={paymentLink}
-                  onChange={(event) => setPaymentLink(event.target.value)}
-                  placeholder="https://pay.example.com/invoice"
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-            </div>
-
-            <Field label="Payment instructions">
-              <Input
-                value={paymentInstructions}
-                onChange={(event) => setPaymentInstructions(event.target.value)}
-                placeholder={workspace?.paymentInstructions ?? "Bank transfer or agreed payment method"}
-                className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-              />
-            </Field>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Terms">
-                <Input
-                  value={terms}
-                  onChange={(event) => setTerms(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-              <Field label="Note">
-                <Input
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  className="h-10 border-[#d7d7d1] bg-white border-[#e5e7eb] px-3 text-[13px] font-normal"
-                />
-              </Field>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={pendingAction === "create"}
-              className="h-10 w-full bg-[#009b68] px-4 text-[13px] font-semibold text-white hover:bg-[#00875b] hover:text-white sm:w-max"
-            >
-              {pendingAction === "create" ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <ReceiptText />
+      {/* Notice banner */}
+      {notice || clientLink ? (
+        <div className="db-notice" style={{ marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+          <span style={{ flex: 1, minWidth: 0, wordBreak: "break-word" }}>{notice ?? clientLink}</span>
+          {clientLink && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              <button className="db-outline-btn" style={{ height: "30px", fontSize: "0.78rem" }} onClick={() => copyText(clientLink)}><Copy className="size-3" /> Copy</button>
+              {emailDraft && (
+                <>
+                  <a href={emailDraft.gmailHref} target="_blank" rel="noreferrer" className="db-primary-btn" style={{ height: "30px", fontSize: "0.78rem", background: "#009b68" }}><Mail className="size-3" /> Open email</a>
+                  <a href={emailDraft.mailtoHref} className="db-outline-btn" style={{ height: "30px", fontSize: "0.78rem" }}><Mail className="size-3" /> Email app</a>
+                  <button className="db-outline-btn" style={{ height: "30px", fontSize: "0.78rem" }} onClick={() => copyText(`${emailDraft.subject}\n\n${emailDraft.body}`)}><Copy className="size-3" /> Copy email</button>
+                </>
               )}
-              {editingInvoiceId ? "Save amendment" : "Create draft"}
-            </Button>
-            {editingInvoiceId ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 w-full border-[#e5e7eb] bg-white sm:w-max hover:bg-[#f3f4f6]"
-                onClick={clearAmendment}
-              >
-                Cancel amendment
-              </Button>
-            ) : null}
-          </form>
+              <a href={clientLink} target="_blank" rel="noreferrer" className="db-outline-btn" style={{ height: "30px", fontSize: "0.78rem" }}><ExternalLink className="size-3" /> Open</a>
+            </div>
+          )}
+        </div>
+      ) : null}
 
+      {/* New Invoice form */}
+      <div className="db-card" id="new-invoice" style={{ marginBottom: "20px" }}>
+        <div className="db-card-title" style={{ borderBottom: "1px solid #f3f4f6", paddingBottom: "16px", marginBottom: "20px" }}>
+          <ReceiptText className="size-4" />
+          {editingInvoiceId ? "Amend invoice" : "New Invoice"}
+          <span style={{ fontWeight: 400, fontSize: "0.82rem", color: "#9ca3af", marginLeft: "8px" }}>
+            Create the packet, preview it, then prepare an email draft with the secure client link.
+          </span>
+        </div>
+        <div className="grid xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.72fr)] gap-6">
+          <form onSubmit={handleCreate} className="grid content-start gap-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Client name"><Input value={clientName} onChange={(e) => setClientName(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+              <Field label="Client email"><Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px_150px]">
+              <Field label="Line item"><Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+              <Field label="Qty"><Input inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+              <Field label="Unit price"><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Due date"><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+              <Field label="Payment link"><Input value={paymentLink} onChange={(e) => setPaymentLink(e.target.value)} placeholder="https://pay.example.com/invoice" className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+            </div>
+            <Field label="Payment instructions"><Input value={paymentInstructions} onChange={(e) => setPaymentInstructions(e.target.value)} placeholder={workspace?.paymentInstructions ?? "Bank transfer or agreed method"} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Terms"><Input value={terms} onChange={(e) => setTerms(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+              <Field label="Note"><Input value={notes} onChange={(e) => setNotes(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+            </div>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button type="submit" disabled={pendingAction === "create"} className="db-primary-btn" style={{ background: "#009b68" }}>
+                {pendingAction === "create" ? <Loader2 className="animate-spin size-4" /> : <ReceiptText className="size-4" />}
+                {editingInvoiceId ? "Save amendment" : "Create draft"}
+              </button>
+              {editingInvoiceId && (
+                <button type="button" className="db-outline-btn" onClick={clearAmendment}>Cancel amendment</button>
+              )}
+            </div>
+          </form>
           <InvoicePreview
-            clientName={clientName}
-            clientEmail={clientEmail}
-            description={description}
-            quantity={Number(quantity) || 0}
-            unitPrice={Number(unitPrice) || 0}
-            dueDate={dueDate}
-            terms={terms}
-            notes={notes}
-            paymentInstructions={
-              paymentInstructions || workspace?.paymentInstructions || "Payment instructions appear here."
-            }
+            clientName={clientName} clientEmail={clientEmail} description={description}
+            quantity={Number(quantity) || 0} unitPrice={Number(unitPrice) || 0}
+            dueDate={dueDate} terms={terms} notes={notes}
+            paymentInstructions={paymentInstructions || workspace?.paymentInstructions || "Payment instructions appear here."}
             paymentLink={paymentLink || workspace?.paymentLink || ""}
             currency={workspace?.defaultCurrency ?? "USD"}
           />
+        </div>
+      </div>
+
+      {/* Invoice table */}
+      <div className="db-card" id="invoices">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", borderBottom: "1px solid #f3f4f6", paddingBottom: "16px", marginBottom: "16px", flexWrap: "wrap" }}>
+          <div>
+            <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827" }}>Invoice Pipeline</p>
+            <p style={{ fontSize: "0.82rem", color: "#9ca3af", marginTop: "2px" }}>Track the exact client state from draft to paid.</p>
           </div>
-        </section>
-
-        <section
-          id="invoices"
-          className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm"
-        >
-          <div className="flex min-h-[76px] flex-col gap-3 border-b border-[#e5e7eb] bg-[#f9fafb] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <p className="text-[16px] font-semibold text-[#111827]">Invoices</p>
-              <p className="mt-1 text-[14px] font-normal leading-5 text-[#6b7280]">
-                Track the exact client state from draft to paid.
-              </p>
-            </div>
-            <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-[#f3f4f6] p-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveView(tab.id)}
-                  className={cn(
-                    "inline-flex min-h-8 shrink-0 items-center gap-2 rounded-lg px-3 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#e2e8f0] hover:text-[#111827]",
-                    activeView === tab.id &&
-                      "bg-[#f7f7f5] text-black ring-1 ring-[#d8d8d2] hover:bg-[#f7f7f5] hover:text-[#111827]",
-                  )}
-                >
-                  {tab.label}
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 py-0.5 text-[10px]",
-                      activeView === tab.id
-                        ? "bg-[#f3f4f6] text-[#4b5563]"
-                        : "bg-[#f4f4f1] text-[#4b5563]",
-                    )}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
-            </div>
+          <div className="db-tabs" style={{ margin: 0 }}>
+            {tabs.map((tab) => (
+              <button key={tab.id} type="button" onClick={() => setActiveView(tab.id)}
+                className={`db-tab${activeView === tab.id ? " db-tab-active" : ""}`}>
+                {tab.label}
+                <span style={{ fontSize: "0.7rem", background: activeView === tab.id ? "#eff6ff" : "#f3f4f6", color: "#6b7280", padding: "1px 6px", borderRadius: "999px", marginLeft: "4px" }}>{tab.count}</span>
+              </button>
+            ))}
           </div>
-
-          {isLoading ? (
-            <div className="grid gap-2 p-4">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="h-12 rounded-lg bg-[#f9fafb]" />
-              ))}
-            </div>
-          ) : filteredRows.length ? (
-            <Table className="text-[13px]">
-              <TableHeader className="bg-[#f9fafb]">
-                <TableRow className="border-[#f3f4f6] hover:bg-transparent">
-                  <TableHead className="h-11 px-5 font-medium text-[#111827]">Invoice</TableHead>
-                  <TableHead className="h-11 font-medium text-[#111827]">Client</TableHead>
-                  <TableHead className="h-11 font-medium text-[#111827]">State</TableHead>
-                  <TableHead className="h-11 font-medium text-[#111827]">Last activity</TableHead>
-                  <TableHead className="h-11 font-medium text-right text-[#111827]">Amount</TableHead>
-                  <TableHead className="h-11 pr-5 font-medium text-right text-[#111827]">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRows.map((row) => {
-                  const { invoice, events } = row;
-
-                  return (
-                  <TableRow
-                    key={invoice._id}
-                    className="border-[#e5e7eb] align-top hover:bg-[#f9fafb]"
-                  >
-                    <TableCell className="px-5 py-4">
-                      <div className="font-medium text-[#111827]">
-                        {invoice.invoiceNumber}
-                      </div>
-                      <div className="mt-1 text-[11px] text-[#6b7280]">
-                        Due {invoice.dueDate}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <div className="font-medium text-[#111827]">
-                        {invoice.clientName ?? invoice.client ?? "Client"}
-                      </div>
-                      <div className="mt-1 text-[11px] text-[#6b7280]">
-                        {invoice.clientEmail ?? "No email"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <Badge
-                        variant="outline"
-                        className={cn("border", statusClasses[invoice.status])}
-                      >
-                        {statusLabels[invoice.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[230px] py-4 text-[#4b5563]">
-                      {events[0]?.message ?? "No activity yet."}
-                    </TableCell>
-                    <TableCell className="py-4 text-right font-medium text-[#111827]">
-                      {formatMoney(
-                        invoice.amountTotal ?? invoice.amount ?? 0,
-                        invoice.currency ?? workspace?.defaultCurrency ?? "USD",
-                      )}
-                    </TableCell>
-                    <TableCell className="py-4 pr-5">
-                      <InvoiceActions
-                        invoice={invoice}
-                        row={row}
-                        pendingAction={pendingAction}
-                        onSend={handleSend}
-                        onEmail={openEmailTemplate}
-                        onMarkSent={handleMarkSent}
-                        onAmend={handleAmend}
-                        onReminder={handleReminder}
-                        onMarkPaid={handleMarkPaid}
-                        onOverdue={handleOverdue}
-                      />
-                    </TableCell>
-                  </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="grid min-h-[270px] place-items-center px-5 py-12 text-center">
-              <div>
-              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f3f4f6] text-[#111827]">
-                <FileText className="size-6 stroke-[1.8]" />
-              </span>
-                <h3 className="mt-5 text-[20px] font-semibold text-[#111827]">
-                  No invoices in this view
-                </h3>
-                <p className="mt-3 text-[16px] text-[#6b7280]">
-                  Create one invoice and send the client link from this pipeline.
-                </p>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <div className="grid gap-5 xl:grid-cols-2">
-          <section id="clients" className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
-            <div className="border-b border-[#e5e7eb] bg-[#f9fafb] px-5 py-4">
-              <p className="text-[16px] font-semibold text-[#111827]">Clients</p>
-              <p className="mt-1 text-[14px] font-normal leading-5 text-[#6b7280]">
-                Client records are created from sent invoices so the workflow stays fast.
-              </p>
-            </div>
-            <div className={cn("p-5", clients.length ? "grid gap-3 md:grid-cols-2" : "grid min-h-[260px] place-items-center text-center")}>
-              {clients.length ? (
-                clients.map((client) => (
-                  <article key={client.email} className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm p-4">
-                    <p className="truncate text-[14px] font-medium text-[#111827]">
-                      {client.name}
-                    </p>
-                    <p className="mt-1 truncate text-[13px] text-[#6b7280]">{client.email}</p>
-                    <p className="mt-4 text-[13px] font-medium text-[#111827]">
-                      {formatMoney(client.value)} across {client.invoices} invoice{client.invoices === 1 ? "" : "s"}
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <div>
-                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f3f4f6] text-[#111827]">
-                    <Users className="size-6 stroke-[1.8]" />
-                  </span>
-                  <p className="mt-5 text-[20px] font-semibold text-[#111827]">No clients found</p>
-                  <p className="mt-3 text-[16px] text-[#6b7280]">Clients appear after the first draft.</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section id="reminders" className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
-            <div className="border-b border-[#e5e7eb] bg-[#f9fafb] px-5 py-4">
-              <p className="text-[16px] font-semibold text-[#111827]">Reminders</p>
-              <p className="mt-1 text-[14px] font-normal leading-5 text-[#6b7280]">
-                Open an email draft with a ready reminder or overdue note. The owner sends it from their email.
-              </p>
-            </div>
-            <div className={cn("p-5", rows.some(({ invoice }) => isClientActive(invoice.status)) ? "grid gap-3" : "grid min-h-[260px] place-items-center text-center")}>
-              {rows.filter(({ invoice }) => isClientActive(invoice.status)).slice(0, 5).map(({ invoice }) => (
-                <div
-                  key={invoice._id}
-                  className="flex flex-col gap-2 rounded-2xl border border-[#e5e7eb] bg-white shadow-sm p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <p className="text-[14px] font-medium text-[#111827]">
-                      {invoice.invoiceNumber} - {invoice.clientName ?? invoice.client}
-                    </p>
-                    <p className="text-[13px] text-[#6b7280]">
-                      {statusLabels[invoice.status]} - due {invoice.dueDate}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 border-[#e5e7eb] bg-white text-xs hover:bg-[#f3f4f6]"
-                    onClick={() => handleReminder(invoice)}
-                  >
-                    <Bell />
-                    Email reminder
-                  </Button>
-                </div>
-              ))}
-              {!rows.some(({ invoice }) => isClientActive(invoice.status)) ? (
-                <div>
-                  <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f3f4f6] text-[#111827]">
-                    <Bell className="size-6 stroke-[1.8]" />
-                  </span>
-                  <p className="mt-5 text-[20px] font-semibold text-[#111827]">No reminders found</p>
-                  <p className="mt-3 text-[16px] text-[#6b7280]">
-                    Active sent invoices will show up here.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </section>
         </div>
 
+        {isLoading ? (
+          <div style={{ display: "grid", gap: "8px", padding: "8px 0" }}>
+            {Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ height: "48px", borderRadius: "8px", background: "#f3f4f6" }} />)}
+          </div>
+        ) : filteredRows.length ? (
+          <div className="db-table-wrap">
+            <table className="db-table">
+              <thead>
+                <tr>
+                  <th>Invoice</th><th>Client</th><th>Status</th><th>Last activity</th><th style={{ textAlign: "right" }}>Amount</th><th style={{ textAlign: "right" }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => {
+                  const { invoice, events } = row;
+                  return (
+                    <tr key={invoice._id}>
+                      <td>
+                        <span className="db-inv-num">{invoice.invoiceNumber}</span>
+                        <span style={{ display: "block", fontSize: "0.72rem", color: "#9ca3af", marginTop: "2px" }}>Due {invoice.dueDate}</span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600, color: "#111827" }}>{invoice.clientName ?? invoice.client ?? "Client"}</span>
+                        <span style={{ display: "block", fontSize: "0.72rem", color: "#9ca3af", marginTop: "2px" }}>{invoice.clientEmail ?? "No email"}</span>
+                      </td>
+                      <td>
+                        <Badge variant="outline" className={cn("border", statusClasses[invoice.status])}>
+                          {statusLabels[invoice.status]}
+                        </Badge>
+                      </td>
+                      <td style={{ maxWidth: "220px", color: "#6b7280", fontSize: "0.82rem" }}>{events[0]?.message ?? "No activity yet."}</td>
+                      <td style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(invoice.amountTotal ?? invoice.amount ?? 0, invoice.currency ?? workspace?.defaultCurrency ?? "USD")}</td>
+                      <td style={{ textAlign: "right" }}>
+                        <InvoiceActions invoice={invoice} row={row} pendingAction={pendingAction}
+                          onSend={handleSend} onEmail={openEmailTemplate} onMarkSent={handleMarkSent}
+                          onAmend={handleAmend} onReminder={handleReminder} onMarkPaid={handleMarkPaid} onOverdue={handleOverdue} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="db-empty">
+            <FileText className="size-10 text-[#d1d5db]" />
+            <h3>No invoices in this view</h3>
+            <p>Create an invoice above and send the secure client link from this pipeline.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Clients + Reminders quick view */}
+      <div style={{ display: "grid", gap: "20px", gridTemplateColumns: "repeat(2, minmax(0,1fr))" }}>
+        <div className="db-card" id="clients">
+          <p className="db-card-title"><Users className="size-4" /> Clients</p>
+          {clients.length ? (
+            <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "1fr 1fr" }}>
+              {clients.map((client) => (
+                <div key={client.email} className="db-client-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
+                  <p style={{ fontWeight: 600, fontSize: "0.88rem", color: "#111827" }}>{client.name}</p>
+                  <p style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{client.email}</p>
+                  <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#111827", marginTop: "4px" }}>{formatMoney(client.value)} · {client.invoices} inv.</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="db-empty" style={{ minHeight: "160px" }}>
+              <Users className="size-8 text-[#d1d5db]" />
+              <p style={{ margin: "8px 0 0" }}>Clients appear after the first draft.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="db-card" id="reminders">
+          <p className="db-card-title"><Bell className="size-4" /> Reminders</p>
+          {rows.some(({ invoice }) => isClientActive(invoice.status)) ? (
+            <div style={{ display: "grid", gap: "8px" }}>
+              {rows.filter(({ invoice }) => isClientActive(invoice.status)).slice(0, 4).map(({ invoice }) => (
+                <div key={invoice._id} className="db-reminder-item">
+                  <div>
+                    <p className="db-reminder-inv">{invoice.invoiceNumber} — {invoice.clientName ?? invoice.client}</p>
+                    <p className="db-reminder-meta">{statusLabels[invoice.status]} · due {invoice.dueDate}</p>
+                  </div>
+                  <button className="db-reminder-btn" onClick={() => handleReminder(invoice)}>
+                    <Bell className="size-3" /> Remind
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="db-empty" style={{ minHeight: "160px" }}>
+              <Bell className="size-8 text-[#d1d5db]" />
+              <p style={{ margin: "8px 0 0" }}>Active sent invoices will show up here.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
