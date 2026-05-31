@@ -125,7 +125,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   key={item.label}
                   className={cn(
                     "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white",
-                    isActive && "bg-white/15 text-white shadow-sm ring-1 ring-white/20 hover:bg-white/10 hover:text-white",
+                    isActive && "bg-white text-[#1a6fc4] shadow-sm hover:bg-white hover:text-[#1a6fc4]",
                   )}
                   href={item.href}
                   onClick={() => setActiveSection(item.sectionId)}
@@ -133,7 +133,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   <span
                     className={cn(
                       "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
-                      isActive ? item.tone : "bg-white/15 text-white",
+                      isActive ? item.tone : "bg-white/20 text-white",
                     )}
                   >
                     <Icon className="size-4 stroke-[1.9]" />
@@ -165,7 +165,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               className={cn(
                 "flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white",
                 pathname === settingsItem.href &&
-                  "bg-white/15 text-white shadow-sm ring-1 ring-white/20 hover:bg-white/10 hover:text-white",
+                  "bg-white text-[#1a6fc4] shadow-sm hover:bg-white hover:text-[#1a6fc4]",
               )}
             >
               <span
