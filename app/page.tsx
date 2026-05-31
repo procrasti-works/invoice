@@ -32,27 +32,27 @@ const featureCards = [
   {
     title: "Bank-grade Security",
     description: "Every invoice and client interaction is encrypted and access-controlled.",
-    icon: "🔒",
+    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&q=80&fit=crop",
   },
   {
     title: "Real-Time Tracking",
     description: "Know the moment a client opens, approves, or rejects your invoice.",
-    icon: "📊",
+    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80&fit=crop",
   },
   {
     title: "Global Payments",
-    description: "Multi-currency support so you can invoice clients anywhere in the world.",
-    icon: "🌍",
+    description: "Multi-currency support — NAD, USD, ZAR — invoice clients anywhere in the world.",
+    image: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=600&q=80&fit=crop",
   },
   {
     title: "Team Collaboration",
     description: "Add team members with roles so everyone stays in the loop.",
-    icon: "👥",
+    image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&q=80&fit=crop",
   },
   {
     title: "Smart Reminders",
     description: "Automated follow-up drafts for overdue invoices — ready to send in one click.",
-    icon: "🔔",
+    image: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=600&q=80&fit=crop",
   },
 ];
 
@@ -98,29 +98,69 @@ const testimonials = [
 const pricingPlans = [
   {
     name: "Starter",
-    monthlyPrice: "$0",
-    annualPrice: "$0",
-    description: "Perfect for freelancers and solo operators.",
-    features: ["Up to 5 invoices/month", "1 workspace", "Client approval links", "Basic reminders", "Email support"],
-    cta: "Get Started Free",
+    monthlyPrice: "N$150",
+    annualPrice: "N$1,500/yr",
+    description: "For micro businesses, freelancers and sole traders.",
+    features: [
+      "Up to 50 invoices/month",
+      "5 clients",
+      "Email invoice delivery",
+      "Basic reports",
+      "1 user",
+      "15% VAT auto-calculation",
+    ],
+    cta: "Get Started",
     highlight: false,
   },
   {
-    name: "Growth",
-    monthlyPrice: "$29",
-    annualPrice: "$19",
-    description: "For growing teams that invoice regularly.",
-    features: ["Unlimited invoices", "3 workspaces", "Team members (up to 5)", "Smart reminders", "Priority support", "Multi-currency"],
+    name: "Business",
+    monthlyPrice: "N$350",
+    annualPrice: "N$3,500/yr",
+    description: "For small businesses, consultants and retailers.",
+    features: [
+      "Unlimited invoices",
+      "Unlimited clients",
+      "Automated payment reminders",
+      "Full financial reports",
+      "3 users",
+      "Purchase tracking",
+      "NAD + USD + ZAR support",
+    ],
     cta: "Start Free Trial",
     highlight: true,
     badge: "Most Popular",
   },
   {
-    name: "Business",
-    monthlyPrice: "$79",
-    annualPrice: "$59",
-    description: "For finance teams managing high invoice volume.",
-    features: ["Unlimited everything", "Unlimited workspaces", "Unlimited team members", "Advanced reporting", "Dedicated support", "Custom branding", "API access"],
+    name: "Professional",
+    monthlyPrice: "N$750",
+    annualPrice: "N$7,500/yr",
+    description: "For medium businesses and growing SMEs.",
+    features: [
+      "All Business features",
+      "NamRA ITAS export tools",
+      "API access",
+      "10 users",
+      "Custom branding",
+      "Priority support",
+      "5-year invoice record storage",
+    ],
+    cta: "Start Free Trial",
+    highlight: false,
+  },
+  {
+    name: "Enterprise",
+    monthlyPrice: "N$2,000",
+    annualPrice: "Custom",
+    description: "For large businesses and government contractors.",
+    features: [
+      "All Professional features",
+      "Multi-branch management",
+      "SLA guarantee",
+      "Unlimited users",
+      "Custom NamRA integrations",
+      "Dedicated account manager",
+      "Local bank integrations",
+    ],
     cta: "Contact Sales",
     highlight: false,
   },
@@ -132,21 +172,21 @@ const blogPosts = [
     date: "May 20, 2026",
     title: "How to Cut Your Invoice-to-Payment Cycle in Half",
     excerpt: "Practical steps finance teams can take today to speed up approvals and collections.",
-    color: "#1a6fc4",
+    image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80&fit=crop",
   },
   {
     category: "Tips",
     date: "May 12, 2026",
     title: "The 5 Invoice Mistakes That Delay Client Payments",
     excerpt: "Small errors in your invoicing workflow cost you time and cash flow. Here's what to fix.",
-    color: "#009b68",
+    image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80&fit=crop",
   },
   {
     category: "Security",
     date: "Apr 28, 2026",
     title: "Why Secure Client Approval Links Matter More Than Ever",
     excerpt: "Invoice fraud is rising. Learn how secure, tokenized links protect your business.",
-    color: "#7c3aed",
+    image: "https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=600&q=80&fit=crop",
   },
 ];
 
@@ -256,7 +296,9 @@ function FeatureGrid() {
       <div className="lp-feature-grid">
         {featureCards.map((card) => (
           <article key={card.title} className="lp-feature-card">
-            <div className="lp-feature-icon">{card.icon}</div>
+            <div className="lp-feature-img-wrap">
+              <img src={card.image} alt={card.title} className="lp-feature-img" />
+            </div>
             <h3>{card.title}</h3>
             <p>{card.description}</p>
           </article>
@@ -343,7 +385,7 @@ function Pricing() {
             <h3>{plan.name}</h3>
             <div className="lp-price">
               {annual ? plan.annualPrice : plan.monthlyPrice}
-              {plan.monthlyPrice !== "$0" && <span>/mo</span>}
+              {!annual && plan.monthlyPrice !== "Custom" && <span>/mo</span>}
             </div>
             <p className="lp-plan-desc">{plan.description}</p>
             <ul className="lp-plan-features">
@@ -367,8 +409,8 @@ function BlogSection() {
       <div className="lp-blog-grid">
         {blogPosts.map((post) => (
           <article key={post.title} className="lp-blog-card">
-            <div className="lp-blog-img" style={{ background: post.color }}>
-              <img src="/payvio-logo.svg" alt="" className="lp-blog-logo" />
+            <div className="lp-blog-img">
+              <img src={post.image} alt={post.title} className="lp-blog-cover" />
             </div>
             <div className="lp-blog-body">
               <div className="lp-blog-meta">
