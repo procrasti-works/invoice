@@ -41,7 +41,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
+    <form className="new-auth-form" onSubmit={handleSubmit}>
       {mode === "signUp" ? (
         <AuthField
           id="name"
@@ -68,16 +68,14 @@ export function AuthForm({ mode }: AuthFormProps) {
       />
 
       {error ? (
-        <p className="auth-error">
-          {error}
-        </p>
+        <p className="new-auth-error">{error}</p>
       ) : null}
 
-      <button type="submit" className="auth-submit" disabled={pending}>
+      <button type="submit" className="new-auth-submit" disabled={pending}>
         {pending
           ? "Working..."
           : mode === "signUp"
-            ? "Open Ledger"
+            ? "Create Account"
             : "Login"}
       </button>
     </form>
