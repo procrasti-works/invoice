@@ -8,6 +8,7 @@ import {
   FileText,
   Landmark,
   ReceiptText,
+  ScanLine,
   Send,
   ShieldCheck,
   Users,
@@ -45,6 +46,12 @@ const productNavItems: NavItem[] = [
     href: "/#vat",
     body: "Keep VAT-ready totals in one place.",
     icon: ReceiptText,
+  },
+  {
+    label: "Scan Paper Invoices",
+    href: "/#scan",
+    body: "Turn paper invoices into digital records instantly.",
+    icon: ScanLine,
   },
 ];
 
@@ -222,6 +229,7 @@ export function MarketingFooter() {
             <FooterLink href="/#clients">Clients</FooterLink>
             <FooterLink href="/#ledger">Ledger</FooterLink>
             <FooterLink href="/#vat">VAT records</FooterLink>
+            <FooterLink href="/#scan">Scan invoices</FooterLink>
           </div>
         </div>
         <div>
