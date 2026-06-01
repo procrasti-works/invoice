@@ -210,7 +210,7 @@ export function MarketingFooter() {
     <footer className="bg-[#0d141c] py-16 text-white">
       <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-6">
         <div>
-          <Image src="/payvio-logo.svg" alt="Payvio" width={40} height={40} />
+          <Image src="/payvio-logo.svg" alt="Payvio" width={40} height={40} style={{ filter: "brightness(0) invert(1)" }} />
           <p className="mt-6 text-sm leading-7 text-white/65">
             Invoice and ledger software for Namibian businesses.
           </p>
