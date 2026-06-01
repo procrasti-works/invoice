@@ -6,8 +6,15 @@ import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/s
 import {
   getOrganizationForUser,
   listOrganizationMemberships,
+  membershipCan,
   setActiveOrganization,
 } from "./organizationContext";
+import {
+  assignableMemberRoleValidator,
+  defaultOrganizationPermissionPolicy,
+  normalizeOrganizationPermissionPolicy,
+  organizationPermissionPolicyValidator,
+} from "./organizationPermissions";
 
 const dayMs = 1000 * 60 * 60 * 24;
 const trialDays = 14;
@@ -34,13 +41,6 @@ const entityTypeValidator = v.union(
   v.literal("partnership"),
   v.literal("ngo"),
   v.literal("other"),
-);
-
-const invitableRoleValidator = v.union(
-  v.literal("admin"),
-  v.literal("finance"),
-  v.literal("viewer"),
-  v.literal("member"),
 );
 
 const invitationStatusValidator = v.union(
@@ -118,10 +118,6 @@ async function requireOrganization(
   };
 }
 
-function canManageTeam(role: Doc<"memberships">["role"]) {
-  return role === "owner" || role === "admin";
-}
-
 async function pendingInvitationsForEmail(ctx: QueryCtx, email: string) {
   const invitations = await ctx.db
     .query("organizationInvitations")
@@ -134,17 +130,21 @@ async function pendingInvitationsForEmail(ctx: QueryCtx, email: string) {
     invitations.map(async (invitation) => {
       const organization = await ctx.db.get(invitation.organizationId);
 
+      if (!organization || organization.deletedAt) {
+        return null;
+      }
+
       return {
         _id: invitation._id,
         organizationId: invitation.organizationId,
-        organizationName: organization?.name ?? "Workspace",
+        organizationName: organization.name,
         email: invitation.email,
         role: invitation.role,
         expiresAt: invitation.expiresAt,
         expired: invitation.expiresAt <= Date.now(),
       };
     }),
-  );
+  ).then((items) => items.filter((item) => item !== null));
 }
 
 async function createOrganizationMembership(
@@ -160,6 +160,7 @@ async function createOrganizationMembership(
 
   const now = Date.now();
   const tradingName = clean(input.tradingName, name);
+  const vatRegistered = input.vatRegistered ?? false;
   const organizationId = await ctx.db.insert("organizations", {
     name,
     legalName: maybeString(input.legalName),
@@ -167,11 +168,20 @@ async function createOrganizationMembership(
     ...(input.entityType ? { entityType: input.entityType } : {}),
     region: maybeString(input.region),
     vatNumber: maybeString(input.vatNumber),
-    vatRegistered: input.vatRegistered ?? false,
+    vatRegistered,
+    vatRegistrationType: vatRegistered ? "mandatory" : "not_registered",
+    vatFilingFrequency: "monthly",
+    vatReturnDueDay: 25,
+    vatRecordRetentionYears: 5,
+    vatDefaultTaxMode: vatRegistered ? "vat_15" : "no_vat",
+    vedEnabled: vatRegistered,
+    vedTransmissionMode: "manual_export",
+    itasRegistered: false,
     ownerUserId: userId,
     defaultCurrency: cleanCurrency(input.defaultCurrency),
     paymentInstructions: defaultPaymentInstructions,
     brandColor: "#111111",
+    permissionPolicy: defaultOrganizationPermissionPolicy,
     defaultTerms,
     invoicePrefix: "INV",
     nextInvoiceSequence: 1,
@@ -221,6 +231,12 @@ async function acceptInvitationDoc(
 
   if (invitation.email !== userEmail) {
     throw new Error("Sign in with the invited email address to join this organization");
+  }
+
+  const organization = await ctx.db.get(invitation.organizationId);
+
+  if (!organization || organization.deletedAt) {
+    throw new Error("Organization not found");
   }
 
   const existingOrgMembership = await ctx.db
@@ -332,6 +348,75 @@ export const switcherState = query({
   },
 });
 
+export const settingsState = query({
+  args: {},
+  handler: async (ctx) => {
+    const { userId, user } = await requireUser(ctx);
+    const { membership, organization } = await requireOrganization(ctx, userId);
+    const permissionPolicy = normalizeOrganizationPermissionPolicy(
+      organization.permissionPolicy,
+    );
+    const permissions = {
+      canManageSettings: membershipCan(membership, organization, "manageSettings"),
+      canManageMembers: membershipCan(membership, organization, "manageMembers"),
+      canManageRoles: membershipCan(membership, organization, "manageRoles"),
+      canDeleteOrganization: membershipCan(
+        membership,
+        organization,
+        "deleteOrganization",
+      ),
+    };
+    const memberships = await ctx.db
+      .query("memberships")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", organization._id),
+      )
+      .take(100);
+    const members = await Promise.all(
+      memberships.map(async (member) => {
+        const account = await ctx.db.get(member.userId);
+
+        return {
+          membership: member,
+          current: member.userId === userId,
+          user: {
+            name:
+              account && typeof account.name === "string" ? account.name : "",
+            email:
+              account && typeof account.email === "string" ? account.email : "",
+          },
+        };
+      }),
+    );
+    const pendingInvitations = permissions.canManageMembers
+      ? await ctx.db
+          .query("organizationInvitations")
+          .withIndex("by_organizationId_and_status", (q) =>
+            q.eq("organizationId", organization._id).eq("status", "pending"),
+          )
+          .order("desc")
+          .take(100)
+      : [];
+
+    return {
+      user: {
+        name: typeof user.name === "string" ? user.name : "",
+        email: typeof user.email === "string" ? user.email : "",
+      },
+      membership,
+      organization,
+      permissionPolicy,
+      permissions,
+      members,
+      pendingInvitations: pendingInvitations.map((invitation) => ({
+        ...invitation,
+        token: invitation.expiresAt > Date.now() ? invitation.token : "",
+        expired: invitation.expiresAt <= Date.now(),
+      })),
+    };
+  },
+});
+
 export const createFromOnboarding = mutation({
   args: {
     name: v.string(),
@@ -413,6 +498,11 @@ export const invitationByToken = query({
     }
 
     const organization = await ctx.db.get(invitation.organizationId);
+
+    if (!organization || organization.deletedAt) {
+      return null;
+    }
+
     const expired =
       invitation.status === "pending" && invitation.expiresAt <= Date.now();
 
@@ -422,7 +512,7 @@ export const invitationByToken = query({
       role: invitation.role,
       status: expired ? "expired" : invitation.status,
       expiresAt: invitation.expiresAt,
-      organizationName: organization?.name ?? "Workspace",
+      organizationName: organization.name,
     };
   },
 });
@@ -435,7 +525,7 @@ export const listInvitations = query({
     const { userId } = await requireUser(ctx);
     const { membership, organization } = await requireOrganization(ctx, userId);
 
-    if (!canManageTeam(membership.role)) {
+    if (!membershipCan(membership, organization, "manageMembers")) {
       return [];
     }
 
@@ -468,14 +558,14 @@ export const listInvitations = query({
 export const createInvitation = mutation({
   args: {
     email: v.string(),
-    role: invitableRoleValidator,
+    role: assignableMemberRoleValidator,
   },
   handler: async (ctx, args) => {
     const { userId } = await requireUser(ctx);
     const { membership, organization } = await requireOrganization(ctx, userId);
 
-    if (!canManageTeam(membership.role)) {
-      throw new Error("Only organization owners and admins can invite users");
+    if (!membershipCan(membership, organization, "manageMembers")) {
+      throw new Error("You do not have permission to invite users");
     }
 
     const email = cleanEmail(args.email);
@@ -541,8 +631,8 @@ export const revokeInvitation = mutation({
     const { userId } = await requireUser(ctx);
     const { membership, organization } = await requireOrganization(ctx, userId);
 
-    if (!canManageTeam(membership.role)) {
-      throw new Error("Only organization owners and admins can revoke invitations");
+    if (!membershipCan(membership, organization, "manageMembers")) {
+      throw new Error("You do not have permission to revoke invitations");
     }
 
     const invitation = await ctx.db.get(args.invitationId);
@@ -561,6 +651,141 @@ export const revokeInvitation = mutation({
       revokedAt: now,
       updatedAt: now,
     });
+  },
+});
+
+export const updatePermissionPolicy = mutation({
+  args: {
+    permissionPolicy: organizationPermissionPolicyValidator,
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireUser(ctx);
+    const { membership, organization } = await requireOrganization(ctx, userId);
+
+    if (!membershipCan(membership, organization, "manageRoles")) {
+      throw new Error("You do not have permission to update role rules");
+    }
+
+    const permissionPolicy = normalizeOrganizationPermissionPolicy(
+      args.permissionPolicy,
+    );
+
+    await ctx.db.patch(organization._id, {
+      permissionPolicy,
+      updatedAt: Date.now(),
+    });
+
+    return permissionPolicy;
+  },
+});
+
+export const updateMemberRole = mutation({
+  args: {
+    membershipId: v.id("memberships"),
+    role: assignableMemberRoleValidator,
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireUser(ctx);
+    const { membership, organization } = await requireOrganization(ctx, userId);
+
+    if (!membershipCan(membership, organization, "manageRoles")) {
+      throw new Error("You do not have permission to update member roles");
+    }
+
+    const target = await ctx.db.get(args.membershipId);
+
+    if (!target || target.organizationId !== organization._id) {
+      throw new Error("Member not found");
+    }
+
+    if (target.userId === userId) {
+      throw new Error("You cannot change your own role");
+    }
+
+    if (target.role === "owner") {
+      throw new Error("The organization owner role cannot be changed");
+    }
+
+    await ctx.db.patch(target._id, {
+      role: args.role,
+    });
+
+    return target._id;
+  },
+});
+
+export const removeMember = mutation({
+  args: {
+    membershipId: v.id("memberships"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireUser(ctx);
+    const { membership, organization } = await requireOrganization(ctx, userId);
+
+    if (!membershipCan(membership, organization, "manageMembers")) {
+      throw new Error("You do not have permission to remove members");
+    }
+
+    const target = await ctx.db.get(args.membershipId);
+
+    if (!target || target.organizationId !== organization._id) {
+      throw new Error("Member not found");
+    }
+
+    if (target.userId === userId) {
+      throw new Error("You cannot remove yourself from the organization");
+    }
+
+    if (target.role === "owner") {
+      throw new Error("The organization owner cannot be removed");
+    }
+
+    await ctx.db.delete(target._id);
+    return target._id;
+  },
+});
+
+export const deleteOrganization = mutation({
+  args: {
+    confirmationName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireUser(ctx);
+    const { membership, organization } = await requireOrganization(ctx, userId);
+
+    if (!membershipCan(membership, organization, "deleteOrganization")) {
+      throw new Error("You do not have permission to delete this organization");
+    }
+
+    if (clean(args.confirmationName) !== organization.name) {
+      throw new Error("Enter the organization name to confirm deletion");
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(organization._id, {
+      deletedAt: now,
+      deletedByUserId: userId,
+      updatedAt: now,
+    });
+
+    const pendingInvitations = await ctx.db
+      .query("organizationInvitations")
+      .withIndex("by_organizationId_and_status", (q) =>
+        q.eq("organizationId", organization._id).eq("status", "pending"),
+      )
+      .take(100);
+
+    await Promise.all(
+      pendingInvitations.map((invitation) =>
+        ctx.db.patch(invitation._id, {
+          status: "revoked",
+          revokedAt: now,
+          updatedAt: now,
+        }),
+      ),
+    );
+
+    return { deleted: true };
   },
 });
 

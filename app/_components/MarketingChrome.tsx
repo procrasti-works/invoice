@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   BarChart3,
@@ -15,6 +14,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { PayvioMark } from "./PayvioMark";
+
 type NavItem = {
   body: string;
   href: string;
@@ -28,6 +29,12 @@ const productNavItems: NavItem[] = [
     href: "/#invoices",
     body: "Create and send clean client invoices.",
     icon: FileText,
+  },
+  {
+    label: "Scan",
+    href: "/#scan",
+    body: "Extract supplier invoices into purchase records.",
+    icon: ScanLine,
   },
   {
     label: "Client approvals",
@@ -46,12 +53,6 @@ const productNavItems: NavItem[] = [
     href: "/#vat",
     body: "Keep VAT-ready totals in one place.",
     icon: ReceiptText,
-  },
-  {
-    label: "Scan Paper Invoices",
-    href: "/#scan",
-    body: "Turn paper invoices into digital records instantly.",
-    icon: ScanLine,
   },
 ];
 
@@ -163,7 +164,10 @@ export function MarketingHeader() {
     <header className="il-header">
       <div className="il-header-shell">
         <Link aria-label="Payvio home" className="il-header-logo" href="/">
-          <Image src="/payvio-logo.svg" alt="Payvio" width={120} height={48} priority style={{ objectFit: "contain" }} />
+          <span className="il-wordmark">
+            <PayvioMark className="il-wordmark-mark" />
+            <span>Payvio</span>
+          </span>
         </Link>
 
         <nav aria-label="Primary" className="il-header-nav">
@@ -217,7 +221,10 @@ export function MarketingFooter() {
     <footer className="bg-[#0d141c] py-16 text-white">
       <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-6">
         <div>
-          <Image src="/payvio-logo.svg" alt="Payvio" width={120} height={48} style={{ objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+          <span className="il-footer-wordmark">
+            <PayvioMark className="il-footer-mark" />
+            <span>Payvio</span>
+          </span>
           <p className="mt-6 text-sm leading-7 text-white/65">
             Invoice and ledger software for Namibian businesses.
           </p>
@@ -226,10 +233,10 @@ export function MarketingFooter() {
           <h3 className="font-black">Product</h3>
           <div className="mt-4 grid gap-2 text-sm text-white/65">
             <FooterLink href="/#invoices">Invoices</FooterLink>
+            <FooterLink href="/#scan">Scan</FooterLink>
             <FooterLink href="/#clients">Clients</FooterLink>
             <FooterLink href="/#ledger">Ledger</FooterLink>
             <FooterLink href="/#vat">VAT records</FooterLink>
-            <FooterLink href="/#scan">Scan invoices</FooterLink>
           </div>
         </div>
         <div>

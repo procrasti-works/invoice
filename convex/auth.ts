@@ -1,6 +1,7 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 import Google, { type GoogleProfile } from "@auth/core/providers/google";
+import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
@@ -56,6 +57,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       const emailVerified =
         args.profile.emailVerified === true || args.type === "email";
       const now = Date.now();
+      const envRole = roleForEmail(email);
       const userData = {
         email,
         name,
@@ -66,6 +68,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       const appCtx = ctx as MutationCtx;
 
       if (args.existingUserId !== null) {
+        const existingUser = await appCtx.db.get(args.existingUserId);
         const existingUserWithEmail = await uniqueUserByEmail(appCtx, email);
 
         if (
@@ -75,7 +78,10 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
           throw new Error("Another account already uses this email address");
         }
 
-        await appCtx.db.patch(args.existingUserId, userData);
+        await appCtx.db.patch(args.existingUserId, {
+          ...userData,
+          ...rolePatchForExisting(existingUser, envRole),
+        });
         return args.existingUserId;
       }
 
@@ -90,7 +96,10 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
           throw new Error("An account with this email already exists");
         }
 
-        await appCtx.db.patch(existingUser._id, userData);
+        await appCtx.db.patch(existingUser._id, {
+          ...userData,
+          ...rolePatchForExisting(existingUser, envRole),
+        });
         return existingUser._id;
       }
 
@@ -98,7 +107,10 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         throw new Error("Google account email must be verified");
       }
 
-      return await appCtx.db.insert("users", userData);
+      return await appCtx.db.insert("users", {
+        ...userData,
+        role: envRole,
+      });
     },
   },
 });
@@ -127,4 +139,24 @@ async function uniqueUserByEmail(
   }
 
   return users[0] ?? null;
+}
+
+function roleForEmail(email: string) {
+  const admins = (process.env.PLATFORM_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((item) => normalizeEmail(item))
+    .filter(Boolean);
+
+  return admins.includes(email) ? "admin" : "user";
+}
+
+function rolePatchForExisting(
+  user: Doc<"users"> | null,
+  envRole: "user" | "admin",
+) {
+  if (envRole === "admin") {
+    return { role: "admin" as const };
+  }
+
+  return user?.role ? {} : { role: "user" as const };
 }

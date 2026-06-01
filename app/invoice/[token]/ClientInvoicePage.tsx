@@ -56,6 +56,7 @@ export function ClientInvoicePage({ token }: { token: string }) {
   const [bankReference, setBankReference] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [submittedToken, setSubmittedToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!data || viewedRef.current) {
@@ -70,6 +71,8 @@ export function ClientInvoicePage({ token }: { token: string }) {
   const snapshot = data?.snapshot;
   const organization = data?.organization;
   const lineItems = useMemo(() => data?.lineItems ?? [], [data?.lineItems]);
+  const supplierSnapshot = snapshot?.supplierSnapshot ?? invoice?.supplierSnapshot ?? null;
+  const clientSnapshot = snapshot?.clientSnapshot ?? invoice?.clientSnapshot ?? null;
   const invoiceNumber = snapshot?.invoiceNumber ?? invoice?.invoiceNumber ?? "Invoice";
   const clientName =
     snapshot?.clientName ?? invoice?.clientName ?? invoice?.client ?? "Client";
@@ -78,9 +81,14 @@ export function ClientInvoicePage({ token }: { token: string }) {
   const subtotal = snapshot?.subtotal ?? invoice?.subtotal ?? snapshot?.amountTotal ?? invoice?.amountTotal ?? invoice?.amount ?? 0;
   const vatAmount = snapshot?.vatAmount ?? invoice?.vatAmount ?? 0;
   const total = snapshot?.total ?? snapshot?.amountTotal ?? invoice?.total ?? invoice?.amountTotal ?? invoice?.amount ?? 0;
+  const taxMode = snapshot?.taxMode ?? invoice?.taxMode ?? "no_vat";
+  const isTaxInvoice = Boolean(supplierSnapshot?.vatRegistered && taxMode !== "no_vat");
   const balanceDue = snapshot?.balanceDue ?? invoice?.balanceDue ?? (invoice?.status === "paid" ? 0 : total);
   const bankDetails = snapshot?.bankDetails ?? invoice?.bankDetails ?? null;
-  const submittedProofs = data?.paymentProofs?.filter((proof) => proof.status === "submitted") ?? [];
+  const requiresApproval = snapshot?.requiresApproval ?? invoice?.requiresApproval ?? false;
+  const paymentProofs = data?.paymentProofs ?? [];
+  const latestPaymentProof = paymentProofs[0] ?? null;
+  const hasSubmittedPaymentDetails = submittedToken === token || paymentProofs.length > 0;
 
   async function handleApprove() {
     setPending(true);
@@ -135,7 +143,8 @@ export function ClientInvoicePage({ token }: { token: string }) {
       });
       setProofFile(null);
       setBankReference("");
-      setNotice("Proof submitted. The sender will review it and confirm payment.");
+      setSubmittedToken(token);
+      setNotice("Payment details submitted. The business will review them and confirm payment.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to submit payment proof.");
     } finally {
@@ -187,89 +196,132 @@ export function ClientInvoicePage({ token }: { token: string }) {
     );
   }
 
+  const approvalComplete =
+    invoice.status === "approved" ||
+    invoice.status === "awaiting_payment" ||
+    invoice.status === "paid";
+  const approvalOpen =
+    requiresApproval &&
+    !approvalComplete &&
+    invoice.status !== "rejected" &&
+    invoice.status !== "paid";
+  const paymentReady = !requiresApproval || approvalComplete;
+  const canSubmitProof =
+    paymentReady &&
+    !hasSubmittedPaymentDetails &&
+    invoice.status !== "paid" &&
+    invoice.status !== "rejected";
+  const paymentLink = snapshot?.paymentLink ?? invoice.paymentLink;
+
   return (
-    <main className="min-h-dvh bg-[#f5f5f7] p-3 text-[#1d1d1f] sm:p-6">
-      <section className="mx-auto grid w-full max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <article className="rounded-lg border border-[#e5e5ea] bg-white">
-          <div className="flex flex-col gap-4 border-b border-[#e5e5ea] p-5 sm:flex-row sm:items-start sm:justify-between">
+    <main className="public-invoice-page min-h-dvh bg-[#f6f7f9] p-4 text-[#17181c] sm:p-6">
+      <section className="public-invoice-layout mx-auto grid w-full max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <article className="public-invoice-document overflow-hidden rounded-2xl border border-[#e3e6eb] bg-white">
+          <div className="flex flex-col gap-4 border-b border-[#edf0f3] p-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-medium text-[#6e6e73]">
+              <p className="text-sm font-medium text-[#697180]">
                 {organization?.name ?? "Invoice Ledger"}
               </p>
-              <h1 className="mt-2 text-3xl font-medium text-[#1d1d1f]">
-                {invoiceNumber}
+              <h1 className="mt-3 text-4xl font-semibold tracking-normal text-[#111318]">
+                {isTaxInvoice ? "Tax Invoice" : "Invoice"}
               </h1>
-              <p className="mt-1 text-sm text-[#6e6e73]">
-                Sent to {clientName}
+              <p className="mt-2 text-sm text-[#697180]">
+                {invoiceNumber} sent to {clientName}
               </p>
             </div>
-            <Badge variant="outline" className="w-max border-cyan-300 bg-cyan-50 text-cyan-800">
+            <Badge variant="outline" className="w-max rounded-full border-[#e3e6eb] bg-[#f8f9fb] px-3 py-1 text-[#4e5663]">
               {statusLabel(invoice.status)}
             </Badge>
           </div>
 
-          <div className="grid gap-4 border-b border-[#e5e5ea] p-5 sm:grid-cols-3">
-            <Fact label="Client" value={clientName} detail={clientEmail} />
+          <div className="grid gap-4 border-b border-[#edf0f3] p-6 sm:grid-cols-2">
+            <Fact
+              label="Supplier"
+              value={supplierSnapshot?.name ?? organization?.name ?? "Supplier"}
+              detail={[
+                supplierSnapshot?.address,
+                supplierSnapshot?.vatNumber ? `VAT ${supplierSnapshot.vatNumber}` : "",
+              ].filter(Boolean).join(" | ")}
+            />
+            <Fact
+              label="Customer"
+              value={clientName}
+              detail={[
+                clientEmail,
+                clientSnapshot?.address,
+                clientSnapshot?.vatNumber ? `VAT ${clientSnapshot.vatNumber}` : "",
+              ].filter(Boolean).join(" | ")}
+            />
+          </div>
+
+          <div className="grid gap-4 border-b border-[#edf0f3] p-6 sm:grid-cols-3">
+            <Fact label="Invoice number" value={invoiceNumber} />
             <Fact label="Issued" value={snapshot?.issueDate ?? invoice.issueDate ?? "-"} />
             <Fact label="Due" value={snapshot?.dueDate ?? invoice.dueDate} />
           </div>
 
-          <div className="p-5">
-            <div className="overflow-hidden rounded-md border border-[#e5e5ea]">
-              <div className="grid grid-cols-[minmax(0,1fr)_80px_120px] border-b border-[#e5e5ea] bg-[#fbfbfd] px-3 py-2 text-xs font-medium text-[#424245]">
-                <span>Item</span>
-                <span>Qty</span>
-                <span className="text-right">Amount</span>
-              </div>
-              {lineItems.map((item) => (
-                <div
-                  key={item._id}
-                  className="grid grid-cols-[minmax(0,1fr)_80px_120px] border-b border-[#f2f2f7] px-3 py-3 text-sm last:border-b-0"
-                >
-                  <span className="min-w-0 truncate">{item.description}</span>
-                  <span>{item.quantity}</span>
-                  <span className="text-right font-medium">
-                    {formatMoney(item.lineTotal, currency)}
-                  </span>
+          <div className="p-6">
+            <div className="public-invoice-lines overflow-x-auto rounded-xl border border-[#e3e6eb]">
+              <div className="public-invoice-lines-table min-w-[680px]">
+                <div className="public-invoice-lines-head grid grid-cols-[minmax(0,1fr)_70px_120px_110px_120px] border-b border-[#edf0f3] bg-[#f8f9fb] px-4 py-3 text-xs font-medium text-[#5f6876]">
+                  <span>Description</span>
+                  <span>Qty</span>
+                  <span className="text-right">Unit price</span>
+                  <span className="text-right">VAT</span>
+                  <span className="text-right">Line total</span>
                 </div>
-              ))}
+                {lineItems.map((item) => (
+                  <div
+                    key={item._id}
+                    className="public-invoice-line-row grid grid-cols-[minmax(0,1fr)_70px_120px_110px_120px] border-b border-[#f2f4f7] px-4 py-4 text-sm last:border-b-0"
+                  >
+                    <span className="min-w-0 truncate">{item.description}</span>
+                    <span>{item.quantity}</span>
+                    <span className="text-right">{formatMoney(item.unitPrice, currency)}</span>
+                    <span className="text-right">{formatMoney(item.vatAmount ?? 0, currency)}</span>
+                    <span className="text-right font-medium">
+                      {formatMoney(item.lineTotal, currency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-5 flex justify-end">
-              <div className="w-full max-w-[260px]">
-                <div className="flex justify-between text-sm text-[#6e6e73]">
-                <span>Subtotal</span>
+              <div className="w-full max-w-[280px] rounded-xl border border-[#edf0f3] bg-[#fbfcfd] p-4">
+                <div className="flex justify-between text-sm text-[#697180]">
+                  <span>Subtotal</span>
                   <span>{formatMoney(subtotal, currency)}</span>
                 </div>
-                <div className="mt-2 flex justify-between text-sm text-[#6e6e73]">
+                <div className="mt-2 flex justify-between text-sm text-[#697180]">
                   <span>VAT</span>
                   <span>{formatMoney(vatAmount, currency)}</span>
                 </div>
-                <div className="mt-2 flex justify-between border-t border-[#e5e5ea] pt-3 text-xl font-medium text-[#1d1d1f]">
+                <div className="mt-3 flex justify-between border-t border-[#e3e6eb] pt-3 text-xl font-semibold text-[#111318]">
                   <span>Total</span>
                   <span>{formatMoney(total, currency)}</span>
                 </div>
-                <div className="mt-2 flex justify-between text-sm font-medium text-[#006545]">
+                <div className="mt-2 flex justify-between text-sm font-medium text-[#0b6b4f]">
                   <span>Balance due</span>
                   <span>{formatMoney(balanceDue, currency)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 rounded-md border border-[#e5e5ea] bg-[#fbfbfd] p-4 text-sm text-[#424245]">
+            <div className="mt-6 grid gap-3 rounded-xl border border-[#e3e6eb] bg-[#fbfcfd] p-4 text-sm text-[#4e5663]">
               <p>
-                <span className="font-medium text-[#1d1d1f]">Terms:</span>{" "}
+                <span className="font-medium text-[#111318]">Terms:</span>{" "}
                 {snapshot?.terms ?? invoice.terms ?? "Due on receipt."}
               </p>
               <p>
-                <span className="font-medium text-[#1d1d1f]">Payment:</span>{" "}
+                <span className="font-medium text-[#111318]">Payment:</span>{" "}
                 {snapshot?.paymentInstructions ??
                   invoice.paymentInstructions ??
                   "Pay by EFT or bank transfer using the invoice number as reference."}
               </p>
               {bankDetails ? (
-                <div className="grid gap-1 rounded-md border border-[#e5e5ea] bg-white p-3">
-                  <p className="font-medium text-[#1d1d1f]">EFT details</p>
+                <div className="grid gap-1 rounded-lg border border-[#e3e6eb] bg-white p-3">
+                  <p className="font-medium text-[#111318]">EFT details</p>
                   {bankDetails.bankName ? <p>Bank: {bankDetails.bankName}</p> : null}
                   {bankDetails.accountName ? <p>Account name: {bankDetails.accountName}</p> : null}
                   {bankDetails.accountNumber ? <p>Account number: {bankDetails.accountNumber}</p> : null}
@@ -285,161 +337,220 @@ export function ClientInvoicePage({ token }: { token: string }) {
           </div>
         </article>
 
-        <aside className="grid h-max gap-3 rounded-lg border border-[#e5e5ea] bg-white p-4">
-          <div>
-            <p className="text-sm font-medium text-[#1d1d1f]">Invoice actions</p>
-            <p className="mt-1 text-sm text-[#6e6e73]">
-              Approve if the invoice is correct. Reject if it needs changes.
-              Payment remains separate and is tracked by the sender.
-            </p>
-          </div>
+        <aside className="public-invoice-actions h-max overflow-hidden rounded-2xl border border-[#e3e6eb] bg-white lg:sticky lg:top-6">
+          {requiresApproval ? (
+            <section className="grid gap-3 border-b border-[#edf0f3] p-5">
+              <div>
+                <p className="text-sm font-semibold text-[#111318]">Approval</p>
+                <p className="mt-1 text-sm text-[#697180]">
+                  {approvalComplete
+                    ? "Approved. Payment can be sent now."
+                    : invoice.status === "rejected"
+                      ? "Changes were requested on this invoice."
+                      : "Approve this invoice before payment."}
+                </p>
+              </div>
 
-          {notice ? (
-            <p className="rounded-md border border-[#b8d9ff] bg-[#f0f7ff] p-3 text-sm text-[#004b9b]">
-              {notice}
-            </p>
+              {approvalOpen ? (
+                <Button
+                  type="button"
+                  disabled={pending || rejecting}
+                  className="h-11 rounded-xl bg-[#111318] text-white hover:bg-[#2b2f36] hover:text-white"
+                  onClick={handleApprove}
+                >
+                  {pending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                  Approve invoice
+                </Button>
+              ) : null}
+
+              {approvalComplete ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                  Invoice approved.
+                </div>
+              ) : null}
+
+              {invoice.status === "rejected" ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                  {invoice.rejectionReason ??
+                    "You rejected this invoice. The sender will amend it and send it back."}
+                </div>
+              ) : null}
+
+              {approvalOpen ? (
+                <div className="grid gap-2">
+                  <label
+                    htmlFor="rejection-reason"
+                    className="text-xs font-medium text-[#4e5663]"
+                  >
+                    Request changes
+                  </label>
+                  <textarea
+                    id="rejection-reason"
+                    value={rejectionReason}
+                    onChange={(event) => setRejectionReason(event.target.value)}
+                    placeholder="Tell the sender what needs to change."
+                    className="min-h-24 resize-none rounded-xl border border-[#e3e6eb] bg-[#fbfcfd] p-3 text-sm outline-none focus:border-[#5e6ad2] focus:ring-2 focus:ring-[#5e6ad2]/20"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending || rejecting}
+                    className="h-10 rounded-xl border-rose-200 bg-white text-rose-700 hover:bg-rose-50"
+                    onClick={handleReject}
+                  >
+                    {rejecting ? <Loader2 className="animate-spin" /> : <XCircle />}
+                    Send request
+                  </Button>
+                </div>
+              ) : null}
+            </section>
           ) : null}
 
-          <Button
-            type="button"
-            disabled={
-              pending ||
-              rejecting ||
-              invoice.status === "approved" ||
-              invoice.status === "awaiting_payment" ||
-              invoice.status === "rejected" ||
-              invoice.status === "paid"
-            }
-            className="h-10 bg-[#0071e3] text-white hover:bg-[#005bb5] hover:text-white"
-            onClick={handleApprove}
-          >
-            {pending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-            {invoice.status === "approved" ||
-            invoice.status === "awaiting_payment" ||
-            invoice.status === "paid"
-              ? "Invoice approved"
-              : invoice.status === "rejected"
-                ? "Invoice rejected"
-              : "Approve invoice"}
-          </Button>
-
-          {invoice.status === "rejected" ? (
-            <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-              {invoice.rejectionReason ??
-                "You rejected this invoice. The sender will amend it and send it back."}
-            </div>
-          ) : null}
-
-          {invoice.status !== "approved" &&
-          invoice.status !== "awaiting_payment" &&
-          invoice.status !== "rejected" &&
-          invoice.status !== "paid" ? (
-            <div className="grid gap-2">
-              <label
-                htmlFor="rejection-reason"
-                className="text-xs font-medium text-[#424245]"
-              >
-                Rejection reason
-              </label>
-              <textarea
-                id="rejection-reason"
-                value={rejectionReason}
-                onChange={(event) => setRejectionReason(event.target.value)}
-                placeholder="Tell the sender what needs to change."
-                className="min-h-24 resize-none rounded-md border border-[#e5e5ea] bg-[#fbfbfd] p-3 text-sm outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={pending || rejecting}
-                className="h-10 border-rose-200 bg-white text-rose-700 hover:bg-rose-50"
-                onClick={handleReject}
-              >
-                {rejecting ? <Loader2 className="animate-spin" /> : <XCircle />}
-                Reject and request changes
-              </Button>
-            </div>
-          ) : null}
-
-          {(snapshot?.paymentLink ?? invoice.paymentLink) ? (
-            <Button
-              asChild
-              variant="outline"
-              className="h-10 border-[#e5e5ea] bg-white"
-            >
-              <a
-                href={snapshot?.paymentLink ?? invoice.paymentLink}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink />
-                Open payment link
-              </a>
-            </Button>
-          ) : null}
-
-          <form onSubmit={handleSubmitProof} className="grid gap-3 rounded-md border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+          <section className="grid gap-4 p-5">
             <div>
-              <p className="text-sm font-medium text-[#1d1d1f]">Submit proof of payment</p>
-              <p className="mt-1 text-xs text-[#6e6e73]">
-                Uploading proof does not mark this invoice paid. The sender confirms it after checking their bank account.
+              <p className="text-sm font-semibold text-[#111318]">Payment</p>
+              <p className="mt-1 text-sm text-[#697180]">
+                {hasSubmittedPaymentDetails
+                  ? "Payment details have been sent. The invoice remains available to view."
+                  : paymentReady
+                    ? "Use the payment details, then submit proof."
+                    : "Payment unlocks after approval."}
               </p>
             </div>
-            {submittedProofs.length ? (
-              <p className="rounded-md border border-[#f7e09b] bg-[#fff9df] p-2 text-xs text-[#7d6000]">
-                Proof already submitted and waiting for sender review.
+
+            {notice ? (
+              <p className="rounded-xl border border-[#bed8ff] bg-[#f3f8ff] p-3 text-sm text-[#0c4d9a]">
+                {notice}
               </p>
             ) : null}
-            <label className="grid gap-1 text-xs font-medium text-[#424245]">
-              Payer name
-              <input value={payerName} onChange={(event) => setPayerName(event.target.value)} placeholder={clientName} className="h-9 rounded-md border border-[#e5e5ea] bg-white px-3 text-sm outline-none" />
-            </label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <label className="grid gap-1 text-xs font-medium text-[#424245]">
-                Amount
-                <input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder={String(balanceDue || total)} className="h-9 rounded-md border border-[#e5e5ea] bg-white px-3 text-sm outline-none" />
-              </label>
-              <label className="grid gap-1 text-xs font-medium text-[#424245]">
-                Payment date
-                <input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} className="h-9 rounded-md border border-[#e5e5ea] bg-white px-3 text-sm outline-none" />
-              </label>
-            </div>
-            <label className="grid gap-1 text-xs font-medium text-[#424245]">
-              Bank reference
-              <input value={bankReference} onChange={(event) => setBankReference(event.target.value)} className="h-9 rounded-md border border-[#e5e5ea] bg-white px-3 text-sm outline-none" />
-            </label>
-            <label className="grid gap-1 text-xs font-medium text-[#424245]">
-              Proof file
-              <input type="file" accept="image/*,.pdf" onChange={(event) => setProofFile(event.target.files?.[0] ?? null)} className="rounded-md border border-[#e5e5ea] bg-white px-3 py-2 text-sm" />
-            </label>
-            <Button type="submit" disabled={submittingProof || invoice.status === "paid"} className="h-10 bg-[#009b68] text-white hover:bg-[#00875b] hover:text-white">
-              {submittingProof ? <Loader2 className="animate-spin" /> : <Upload />}
-              Submit proof
+
+            {paymentLink && paymentReady && !hasSubmittedPaymentDetails ? (
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 rounded-xl border-[#e3e6eb] bg-white"
+              >
+                <a href={paymentLink} target="_blank" rel="noreferrer">
+                  <ExternalLink />
+                  Open payment link
+                </a>
+              </Button>
+            ) : null}
+
+            {hasSubmittedPaymentDetails ? (
+              <div className="rounded-xl border border-[#d9eadf] bg-[#f4fbf6] p-4 text-sm text-[#28533b]">
+                <p className="font-semibold text-[#173d2a]">Payment details submitted</p>
+                <p className="mt-1">
+                  The business has received the payment details. This invoice is now view-only.
+                </p>
+                {latestPaymentProof ? (
+                  <dl className="mt-4 grid gap-2 text-[#344054]">
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-[#667085]">Amount</dt>
+                      <dd className="font-medium">
+                        {formatMoney(latestPaymentProof.amount, latestPaymentProof.currency ?? currency)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-[#667085]">Date</dt>
+                      <dd className="font-medium">{latestPaymentProof.paymentDate}</dd>
+                    </div>
+                    {latestPaymentProof.bankReference ? (
+                      <div className="flex items-center justify-between gap-3">
+                        <dt className="text-[#667085]">Reference</dt>
+                        <dd className="truncate font-medium">{latestPaymentProof.bankReference}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                ) : null}
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitProof} className="grid gap-3">
+                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
+                  Payer name
+                  <input
+                    value={payerName}
+                    onChange={(event) => setPayerName(event.target.value)}
+                    placeholder={clientName}
+                    disabled={!canSubmitProof}
+                    className="h-11 rounded-xl border border-[#e3e6eb] bg-white px-3 text-sm outline-none disabled:opacity-50"
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
+                  Amount
+                  <input
+                    inputMode="decimal"
+                    value={paymentAmount}
+                    onChange={(event) => setPaymentAmount(event.target.value)}
+                    placeholder={String(balanceDue || total)}
+                    disabled={!canSubmitProof}
+                    className="h-11 rounded-xl border border-[#e3e6eb] bg-white px-3 text-sm outline-none disabled:opacity-50"
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
+                  Payment date
+                  <input
+                    type="date"
+                    value={paymentDate}
+                    onChange={(event) => setPaymentDate(event.target.value)}
+                    disabled={!canSubmitProof}
+                    className="h-11 rounded-xl border border-[#e3e6eb] bg-white px-3 text-sm outline-none disabled:opacity-50"
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
+                  Bank reference
+                  <input
+                    value={bankReference}
+                    onChange={(event) => setBankReference(event.target.value)}
+                    disabled={!canSubmitProof}
+                    className="h-11 rounded-xl border border-[#e3e6eb] bg-white px-3 text-sm outline-none disabled:opacity-50"
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
+                  Proof file
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    disabled={!canSubmitProof}
+                    onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
+                    className="w-full rounded-xl border border-[#e3e6eb] bg-white px-3 py-2 text-sm disabled:opacity-50"
+                  />
+                </label>
+                <Button
+                  type="submit"
+                  disabled={submittingProof || !canSubmitProof}
+                  className="h-12 rounded-xl bg-[#0b6b4f] text-base text-white hover:bg-[#075b42] hover:text-white"
+                >
+                  {submittingProof ? <Loader2 className="animate-spin" /> : <Upload />}
+                  Submit proof
+                </Button>
+              </form>
+            )}
+          </section>
+
+          <section className="grid gap-3 border-t border-[#edf0f3] bg-[#fbfcfd] p-5">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-xl border-[#e3e6eb] bg-white"
+              onClick={() => window.print()}
+            >
+              <Download />
+              Download / print
             </Button>
-          </form>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 border-[#e5e5ea] bg-white"
-            onClick={() => window.print()}
-          >
-            <Download />
-            Download / print
-          </Button>
+            <a
+              href={`mailto:?subject=${encodeURIComponent(`${invoiceNumber} question`)}`}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#e3e6eb] bg-white px-4 text-sm font-medium transition-colors hover:bg-[#f6f7f9]"
+            >
+              <Mail className="size-4" />
+              Contact sender
+            </a>
 
-          <a
-            href={`mailto:?subject=${encodeURIComponent(`${invoiceNumber} question`)}`}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#e5e5ea] bg-white px-4 text-sm font-medium transition-colors hover:bg-[#f2f2f7]"
-          >
-            <Mail className="size-4" />
-            Contact sender
-          </a>
-
-          <div className="mt-2 rounded-md bg-[#f5f5f7] p-3 text-xs text-[#6e6e73]">
-            This secure link does not create a login. The sender marks the
-            invoice paid only after payment is received.
-          </div>
+            <p className="rounded-xl bg-white p-3 text-xs text-[#697180]">
+              Secure invoice link. Payment is confirmed by the sender.
+            </p>
+          </section>
         </aside>
       </section>
     </main>
@@ -457,9 +568,9 @@ function Fact({
 }) {
   return (
     <div>
-      <p className="text-xs text-[#6e6e73]">{label}</p>
-      <p className="mt-1 font-medium text-[#1d1d1f]">{value}</p>
-      {detail ? <p className="text-xs text-[#6e6e73]">{detail}</p> : null}
+      <p className="text-xs font-medium text-[#697180]">{label}</p>
+      <p className="mt-1 font-semibold text-[#111318]">{value}</p>
+      {detail ? <p className="text-xs text-[#697180]">{detail}</p> : null}
     </div>
   );
 }

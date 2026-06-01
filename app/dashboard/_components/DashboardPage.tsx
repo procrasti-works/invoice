@@ -27,6 +27,7 @@ type InvoiceRow = {
 type PaymentProofRow = {
   proof: PaymentProof;
   invoice: Invoice | null;
+  proofFileUrl?: string | null;
 };
 type DraftLineItem = {
   id: string;
@@ -34,6 +35,7 @@ type DraftLineItem = {
   quantity: string;
   unitPrice: string;
 };
+type TaxMode = "no_vat" | "vat_15" | "zero_rated" | "exempt";
 type ViewFilter =
   | "all"
   | "drafts"
@@ -130,6 +132,22 @@ function invoiceDisplayTotal(invoice: Invoice) {
   return invoice.total ?? invoice.amountTotal ?? invoice.amount ?? 0;
 }
 
+function taxModeLabel(taxMode: TaxMode) {
+  if (taxMode === "vat_15") {
+    return "VAT 15%";
+  }
+
+  if (taxMode === "zero_rated") {
+    return "Zero-rated";
+  }
+
+  if (taxMode === "exempt") {
+    return "Exempt";
+  }
+
+  return "No VAT";
+}
+
 function newLineItem(): DraftLineItem {
   return {
     id: crypto.randomUUID(),
@@ -142,13 +160,16 @@ function newLineItem(): DraftLineItem {
 function buildEmailDraft(invoice: Invoice, invoiceUrl: string, senderName: string) {
   const clientName = invoice.clientName ?? invoice.client ?? "there";
   const subject = `${invoice.invoiceNumber} from ${senderName}`;
+  const reviewCopy = invoice.requiresApproval
+    ? "Approve the invoice if everything looks correct. Approval does not mark it paid; payment stays due by the agreed terms."
+    : "Please review the invoice and arrange payment by the agreed terms.";
   const body = [
     `Hi ${clientName},`,
     "",
     `Please review ${invoice.invoiceNumber} here:`,
     invoiceUrl,
     "",
-    "Approve the invoice if everything looks correct. Approval does not mark it paid; payment stays due by the agreed terms.",
+    reviewCopy,
     "",
     "Thanks,",
     senderName,
@@ -244,13 +265,15 @@ export function DashboardPage() {
       unitPrice: "1250",
     },
   ]);
-  const [taxMode, setTaxMode] = useState<"no_vat" | "vat_15">("no_vat");
+  const [taxMode, setTaxMode] = useState<TaxMode>("vat_15");
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [paymentLink, setPaymentLink] = useState("");
   const [paymentInstructions, setPaymentInstructions] = useState("");
   const [terms, setTerms] = useState("Due on receipt unless otherwise agreed.");
   const [notes, setNotes] = useState("Thank you for your business.");
+  const [requiresApproval, setRequiresApproval] = useState(false);
   const [editingInvoiceId, setEditingInvoiceId] = useState<Id<"invoices"> | null>(null);
+  const [taxModeTouched, setTaxModeTouched] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [clientLink, setClientLink] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
@@ -269,9 +292,15 @@ export function DashboardPage() {
     () => (proofRows ?? []) as PaymentProofRow[],
     [proofRows],
   );
-  const isLoading = invoiceRows === undefined || stats === undefined;
   const vatRegistered = workspace?.vatRegistered ?? false;
-  const effectiveTaxMode = vatRegistered ? taxMode : "no_vat";
+  const defaultTaxMode = vatRegistered
+    ? workspace?.vatDefaultTaxMode ?? "vat_15"
+    : "no_vat";
+  const effectiveTaxMode = vatRegistered
+    ? editingInvoiceId || taxModeTouched
+      ? taxMode
+      : defaultTaxMode
+    : "no_vat";
 
   const filteredRows = useMemo(() => {
     if (activeView === "drafts") {
@@ -454,6 +483,7 @@ export function DashboardPage() {
       paymentLink: paymentLink || workspace?.paymentLink || "",
       terms,
       notes,
+      requiresApproval,
       lineItems: draftLineItems.map((item) => ({
         description: item.description,
         quantity: Number(item.quantity) || 1,
@@ -510,12 +540,14 @@ export function DashboardPage() {
               },
             ],
       );
-      setTaxMode(invoice.taxMode === "vat_15" ? "vat_15" : "no_vat");
+      setTaxMode((invoice.taxMode ?? "no_vat") as TaxMode);
+      setTaxModeTouched(true);
       setDueDate(invoice.dueDate || defaultDueDate());
       setPaymentLink(invoice.paymentLink ?? "");
       setPaymentInstructions(invoice.paymentInstructions ?? "");
       setTerms(invoice.terms ?? "Due on receipt unless otherwise agreed.");
       setNotes(invoice.notes ?? "Updated after client feedback.");
+      setRequiresApproval(invoice.requiresApproval ?? false);
       setNotice(`Amending ${invoice.invoiceNumber}. Save the amendment, then send it again.`);
       setClientLink(null);
       setEmailDraft(null);
@@ -529,6 +561,7 @@ export function DashboardPage() {
 
   function clearAmendment() {
     setEditingInvoiceId(null);
+    setTaxModeTouched(false);
     setNotice(null);
   }
 
@@ -869,17 +902,34 @@ export function DashboardPage() {
                 <select
                   value={effectiveTaxMode}
                   disabled={!vatRegistered}
-                  onChange={(event) => setTaxMode(event.target.value === "vat_15" ? "vat_15" : "no_vat")}
+                  onChange={(event) => {
+                    setTaxMode(event.target.value as TaxMode);
+                    setTaxModeTouched(true);
+                  }}
                   className="db-field-input"
                 >
-                  <option value="no_vat">No VAT</option>
                   <option value="vat_15">VAT 15%</option>
+                  <option value="zero_rated">Zero-rated</option>
+                  <option value="exempt">Exempt</option>
+                  <option value="no_vat">No VAT</option>
                 </select>
               </Field>
               <Field label="Payment link">
                 <Input value={paymentLink} onChange={(e) => setPaymentLink(e.target.value)} placeholder="https://pay.example.com/invoice" className="db-field-input" />
               </Field>
             </div>
+
+            <label className="db-approval-toggle">
+              <input
+                type="checkbox"
+                checked={requiresApproval}
+                onChange={(event) => setRequiresApproval(event.target.checked)}
+              />
+              <span>
+                <strong>Ask client to approve this invoice</strong>
+                <small>Off by default. Use it when the client must confirm before payment.</small>
+              </span>
+            </label>
 
             <Field label="Payment instructions">
               <Input value={paymentInstructions} onChange={(e) => setPaymentInstructions(e.target.value)} placeholder={workspace?.paymentInstructions ?? "Bank transfer or agreed method"} className="db-field-input" />
@@ -917,6 +967,7 @@ export function DashboardPage() {
             notes={notes}
             paymentInstructions={paymentInstructions || workspace?.paymentInstructions || "Payment instructions appear here."}
             paymentLink={paymentLink || workspace?.paymentLink || ""}
+            requiresApproval={requiresApproval}
             currency={workspace?.defaultCurrency ?? "NAD"}
           />
         </div>
@@ -943,13 +994,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="db-skeleton-list" aria-label="Loading invoices">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <span key={index} />
-            ))}
-          </div>
-        ) : filteredRows.length ? (
+        {filteredRows.length ? (
           <div className="db-table-wrap">
             <table className="db-table db-invoice-table">
               <thead>
@@ -1023,11 +1068,7 @@ export function DashboardPage() {
           <div className="db-panel-header db-panel-header-small">
             <h2>Clients</h2>
           </div>
-          {clientRows === undefined ? (
-            <div className="db-empty db-empty-plain db-empty-small">
-              <p>Loading clients.</p>
-            </div>
-          ) : clientSummaries.length ? (
+          {clientSummaries.length ? (
             <div className="db-mini-grid">
               {clientSummaries.map((summary) => {
                 const client = {
@@ -1037,11 +1078,19 @@ export function DashboardPage() {
                 };
 
                 return (
-                <div key={client._id} className="db-client-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
-                  <p style={{ fontWeight: 600, fontSize: "0.88rem", color: "#111827" }}>{client.name}</p>
-                  <p style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{client.email || "No email"}</p>
-                  <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#111827", marginTop: "4px" }}>{formatMoney(client.value)} - {client.invoices} inv.</p>
-                </div>
+                  <div key={client._id} className="db-client-card db-client-card-compact">
+                    <span className="db-client-mini-avatar" aria-hidden="true">
+                      {client.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="db-client-mini-main">
+                      <span className="db-client-name">{client.name}</span>
+                      <span className="db-client-email">{client.email || "No email"}</span>
+                    </span>
+                    <span className="db-client-value">
+                      <strong>{formatMoney(client.value)}</strong>
+                      <small>{client.invoices} inv.</small>
+                    </span>
+                  </div>
                 );
               })}
             </div>
@@ -1063,9 +1112,17 @@ export function DashboardPage() {
             <div className="db-reminder-list">
               {rows.filter(({ invoice }) => isClientActive(invoice.status)).slice(0, 4).map(({ invoice }) => (
                 <div key={invoice._id} className="db-reminder-item">
-                  <div>
-                    <p className="db-reminder-inv">{invoice.invoiceNumber} — {invoice.clientName ?? invoice.client}</p>
-                    <p className="db-reminder-meta">{statusLabels[invoice.status]} · due {invoice.dueDate}</p>
+                  <span
+                    className={`db-reminder-status-dot ${statusToneClasses[invoice.status]}`}
+                    aria-hidden="true"
+                  />
+                  <div className="db-reminder-main">
+                    <p className="db-reminder-inv">
+                      {invoice.invoiceNumber} - {invoice.clientName ?? invoice.client}
+                    </p>
+                    <p className="db-reminder-meta">
+                      {statusLabels[invoice.status]} - due {invoice.dueDate}
+                    </p>
                   </div>
                   <button type="button" className="db-reminder-btn" onClick={() => handleReminder(invoice)}>
                     Remind
@@ -1104,17 +1161,19 @@ function InvoicePreview({
   notes,
   paymentInstructions,
   paymentLink,
+  requiresApproval,
   currency,
 }: {
   clientName: string;
   clientEmail: string;
   lineItems: DraftLineItem[];
-  taxMode: "no_vat" | "vat_15";
+  taxMode: TaxMode;
   dueDate: string;
   terms: string;
   notes: string;
   paymentInstructions: string;
   paymentLink: string;
+  requiresApproval: boolean;
   currency: string;
 }) {
   const subtotal = lineItems.reduce(
@@ -1129,10 +1188,6 @@ function InvoicePreview({
     <aside className="db-preview-panel">
       <div className="db-preview-top">
         <p>Invoice preview</p>
-        <Badge variant="outline" className="db-status-badge db-status-success">
-          <span aria-hidden="true" />
-          Ready packet
-        </Badge>
       </div>
 
       <div className="db-preview-body">
@@ -1175,7 +1230,7 @@ function InvoicePreview({
             <strong>{formatMoney(subtotal, currency)}</strong>
           </div>
           <div>
-            <span>{taxMode === "vat_15" ? "VAT (15%)" : "VAT"}</span>
+            <span>{taxMode === "vat_15" ? "VAT (15%)" : taxModeLabel(taxMode)}</span>
             <strong>{formatMoney(vatAmount, currency)}</strong>
           </div>
           <div>
@@ -1185,6 +1240,9 @@ function InvoicePreview({
         </div>
 
         <div className="db-preview-notes">
+          {requiresApproval ? (
+            <p><strong>Approval:</strong> Client approval requested before payment.</p>
+          ) : null}
           <p><strong>Terms:</strong> {terms}</p>
           <p><strong>Payment:</strong> {paymentLink ? "Payment button included." : paymentInstructions}</p>
           <p>{notes}</p>
@@ -1211,7 +1269,7 @@ function PaymentProofQueue({
         <h2>Proofs to review</h2>
       </div>
       <div className="db-proof-list">
-        {rows.slice(0, 5).map(({ proof, invoice }) => (
+        {rows.slice(0, 5).map(({ proof, invoice, proofFileUrl }) => (
           <div key={proof._id} className="db-proof-row">
             <div>
               <p className="db-proof-title">
@@ -1220,9 +1278,20 @@ function PaymentProofQueue({
               <p className="db-proof-meta">
                 {formatMoney(proof.amount, proof.currency ?? currency)} paid on {proof.paymentDate}
                 {proof.bankReference ? ` - Ref ${proof.bankReference}` : ""}
+                {proof.fileName ? ` - ${proof.fileName}` : ""}
               </p>
             </div>
             <div className="db-proof-actions">
+              {proofFileUrl ? (
+                <a
+                  href={proofFileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="db-outline-btn"
+                >
+                  Open proof
+                </a>
+              ) : null}
               <button
                 type="button"
                 className="db-primary-btn"

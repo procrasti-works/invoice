@@ -1,6 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+
+import { PayvioMark } from "@/app/_components/PayvioMark";
 
 type AuthShellProps = {
   title: string;
@@ -21,7 +22,7 @@ export function AuthShell({
     <main className="payvio-auth-screen">
       <section className="payvio-auth-panel" aria-labelledby="auth-title">
         <Link href="/" className="payvio-auth-logo" aria-label="Payvio home">
-          <PayvioAuthMark />
+          <PayvioMark className="payvio-auth-mark" />
         </Link>
         <div className="payvio-auth-heading">
           <h1 id="auth-title">{title}</h1>
@@ -35,10 +36,6 @@ export function AuthShell({
       </section>
     </main>
   );
-}
-
-function PayvioAuthMark() {
-  return <Image src="/payvio-logo.svg" alt="Payvio" width={120} height={54} priority style={{ objectFit: "contain" }} />;
 }
 
 export function AuthField({

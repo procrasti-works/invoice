@@ -1,9 +1,12 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
-import type { Doc } from "./_generated/dataModel";
-import { query } from "./_generated/server";
-import { getExistingOrganization } from "./organizationContext";
+import type { Doc, Id } from "./_generated/dataModel";
+import { query, type QueryCtx } from "./_generated/server";
+import {
+  getExistingOrganization,
+  requireOrganizationPermission,
+} from "./organizationContext";
 
 function invoiceTotal(invoice: Doc<"invoices">) {
   return invoice.total ?? invoice.amountTotal ?? invoice.amount ?? 0;
@@ -24,6 +27,52 @@ function insidePeriod(date: string | undefined, from?: string, to?: string) {
     return false;
   }
   return true;
+}
+
+async function loadPeriodInvoices(
+  ctx: QueryCtx,
+  organizationId: Id<"organizations">,
+  from?: string,
+  to?: string,
+) {
+  if (from && to) {
+    return await ctx.db
+      .query("invoices")
+      .withIndex("by_organizationId_and_issueDate", (q) =>
+        q.eq("organizationId", organizationId).gte("issueDate", from).lte("issueDate", to),
+      )
+      .order("desc")
+      .take(500);
+  }
+
+  return await ctx.db
+    .query("invoices")
+    .withIndex("by_organizationId", (q) => q.eq("organizationId", organizationId))
+    .order("desc")
+    .take(500);
+}
+
+async function loadPeriodPurchases(
+  ctx: QueryCtx,
+  organizationId: Id<"organizations">,
+  from?: string,
+  to?: string,
+) {
+  if (from && to) {
+    return await ctx.db
+      .query("purchases")
+      .withIndex("by_organizationId_and_issueDate", (q) =>
+        q.eq("organizationId", organizationId).gte("issueDate", from).lte("issueDate", to),
+      )
+      .order("desc")
+      .take(500);
+  }
+
+  return await ctx.db
+    .query("purchases")
+    .withIndex("by_organizationId", (q) => q.eq("organizationId", organizationId))
+    .order("desc")
+    .take(500);
 }
 
 export const summary = query({
@@ -54,14 +103,10 @@ export const summary = query({
       return empty;
     }
 
-    const invoices = await ctx.db
-      .query("invoices")
-      .withIndex("by_organizationId", (q) => q.eq("organizationId", organization._id))
-      .take(500);
-    const purchases = await ctx.db
-      .query("purchases")
-      .withIndex("by_organizationId", (q) => q.eq("organizationId", organization._id))
-      .take(500);
+    const [invoices, purchases] = await Promise.all([
+      loadPeriodInvoices(ctx, organization._id, args.from, args.to),
+      loadPeriodPurchases(ctx, organization._id, args.from, args.to),
+    ]);
 
     const totals = {
       ...empty,
@@ -110,20 +155,16 @@ export const ledgerExport = query({
       return [];
     }
 
-    const organization = await getExistingOrganization(ctx, userId);
+    const { organization } = await requireOrganizationPermission(
+      ctx,
+      userId,
+      "exportReports",
+    );
 
-    if (!organization) {
-      return [];
-    }
-
-    const invoices = await ctx.db
-      .query("invoices")
-      .withIndex("by_organizationId", (q) => q.eq("organizationId", organization._id))
-      .take(500);
-    const purchases = await ctx.db
-      .query("purchases")
-      .withIndex("by_organizationId", (q) => q.eq("organizationId", organization._id))
-      .take(500);
+    const [invoices, purchases] = await Promise.all([
+      loadPeriodInvoices(ctx, organization._id, args.from, args.to),
+      loadPeriodPurchases(ctx, organization._id, args.from, args.to),
+    ]);
     const invoiceRows = invoices
       .filter((invoice) => insidePeriod(invoice.issueDate, args.from, args.to))
       .map((invoice) => ({

@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PayvioMark } from "@/app/_components/PayvioMark";
 import { api } from "@/convex/_generated/api";
 
 export function JoinInvitationPage({ token }: { token: string }) {
@@ -62,7 +63,7 @@ export function JoinInvitationPage({ token }: { token: string }) {
       <div className="grid gap-5">
         <header className="grid justify-items-center gap-4 text-center">
           <div className="grid size-12 place-items-center rounded-2xl border border-[#e6e7ec] bg-white shadow-sm">
-            <img src="/payvio-logo.svg" alt="Payvio" className="size-8 object-contain" />
+            <PayvioMark className="size-8 text-[#009b68]" />
           </div>
           <div className="grid gap-1">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#868891]">
@@ -158,7 +159,7 @@ function JoinShell({
         {loading ? (
           <div className="grid justify-items-center gap-3 text-center">
             <div className="grid size-12 place-items-center rounded-2xl border border-[#e6e7ec] bg-white shadow-sm">
-              <img src="/payvio-logo.svg" alt="Payvio" className="size-8 object-contain" />
+              <PayvioMark className="size-8 text-[#009b68]" />
             </div>
             <Loader2 className="size-5 animate-spin text-[#17181c]" />
             <p className="text-sm text-[#6f727b]">Loading invitation...</p>

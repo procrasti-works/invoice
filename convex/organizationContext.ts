@@ -1,5 +1,9 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import {
+  canRolePerform,
+  type PermissionKey,
+} from "./organizationPermissions";
 
 type OrganizationCtx = QueryCtx | MutationCtx;
 
@@ -29,7 +33,9 @@ export async function listOrganizationMemberships(
   const organizations = await Promise.all(
     memberships.map(async (membership) => {
       const organization = await ctx.db.get(membership.organizationId);
-      return organization ? { membership, organization } : null;
+      return organization && !organization.deletedAt
+        ? { membership, organization }
+        : null;
     }),
   );
 
@@ -88,6 +94,10 @@ export async function setActiveOrganization(
     throw new Error("Organization not found");
   }
 
+  if (organization.deletedAt) {
+    throw new Error("Organization not found");
+  }
+
   const now = Date.now();
   const preference = await activePreference(ctx, userId);
 
@@ -105,4 +115,34 @@ export async function setActiveOrganization(
   }
 
   return { membership, organization };
+}
+
+export function membershipCan(
+  membership: Doc<"memberships">,
+  organization: Doc<"organizations">,
+  permission: PermissionKey,
+) {
+  return canRolePerform(
+    membership.role,
+    organization.permissionPolicy,
+    permission,
+  );
+}
+
+export async function requireOrganizationPermission(
+  ctx: OrganizationCtx,
+  userId: Id<"users">,
+  permission: PermissionKey,
+) {
+  const current = await getOrganizationForUser(ctx, userId);
+
+  if (!current.membership || !current.organization) {
+    throw new Error("Organization setup required");
+  }
+
+  if (!membershipCan(current.membership, current.organization, permission)) {
+    throw new Error("You do not have permission for this organization action");
+  }
+
+  return current;
 }

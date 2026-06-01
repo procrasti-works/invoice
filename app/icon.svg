@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Payvio">
   <defs>
-    <mask id="payvio-logo-mask" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+    <mask id="payvio-icon-mask" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
       <rect width="256" height="256" fill="black"/>
       <circle cx="128" cy="128" r="102.4" fill="white"/>
       <g transform="rotate(-45 128 128)" stroke="black" stroke-linecap="butt" stroke-width="25.2">
@@ -10,5 +10,5 @@
       </g>
     </mask>
   </defs>
-  <circle cx="128" cy="128" r="102.4" fill="#070708" mask="url(#payvio-logo-mask)"/>
+  <circle cx="128" cy="128" r="102.4" fill="#070708" mask="url(#payvio-icon-mask)"/>
 </svg>

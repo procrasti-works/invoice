@@ -11,7 +11,11 @@ const isAuthRoute = createRouteMatcher([
   "/reset-password",
 ]);
 
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/onboarding(.*)"]);
+const isProtectedRoute = createRouteMatcher([
+  "/admin(.*)",
+  "/dashboard(.*)",
+  "/onboarding(.*)",
+]);
 
 const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password"];
 

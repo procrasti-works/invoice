@@ -3,7 +3,12 @@ import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { getExistingOrganization } from "./organizationContext";
+import {
+  getExistingOrganization,
+  getOrganizationForUser,
+  requireOrganizationPermission,
+} from "./organizationContext";
+import type { PermissionKey } from "./organizationPermissions";
 
 const taxModeValidator = v.union(
   v.literal("no_vat"),
@@ -32,6 +37,23 @@ const entityTypeValidator = v.union(
   v.literal("partnership"),
   v.literal("ngo"),
   v.literal("other"),
+);
+
+const vatRegistrationTypeValidator = v.union(
+  v.literal("not_registered"),
+  v.literal("voluntary"),
+  v.literal("mandatory"),
+);
+
+const vatFilingFrequencyValidator = v.union(
+  v.literal("monthly"),
+  v.literal("bi_monthly"),
+);
+
+const vedTransmissionModeValidator = v.union(
+  v.literal("manual_export"),
+  v.literal("near_real_time"),
+  v.literal("real_time"),
 );
 
 const lineItemValidator = v.object({
@@ -72,6 +94,17 @@ const reminderInvoiceStatuses: Array<Doc<"invoices">["status"]> = [
   "approved",
   "viewed",
   "sent",
+];
+const statsInvoiceStatuses: Array<Doc<"invoices">["status"]> = [
+  "draft",
+  "ready",
+  "sent",
+  "viewed",
+  "approved",
+  "awaiting_payment",
+  "rejected",
+  "paid",
+  "overdue",
 ];
 const defaultPaymentInstructions =
   "Pay by EFT or bank transfer using the invoice number as reference.";
@@ -223,12 +256,13 @@ function buildClientSnapshot(input: {
 function normalizeTaxMode(
   requested: TaxMode | undefined,
   vatRegistered: boolean | undefined,
+  defaultTaxMode?: TaxMode,
 ) {
   if (!vatRegistered) {
     return "no_vat" as const;
   }
 
-  return requested ?? "vat_15";
+  return requested ?? (defaultTaxMode && defaultTaxMode !== "no_vat" ? defaultTaxMode : "vat_15");
 }
 
 function calculateLines(
@@ -240,13 +274,18 @@ function calculateLines(
   }>,
   requestedTaxMode: TaxMode | undefined,
   vatRegistered: boolean | undefined,
+  defaultTaxMode?: TaxMode,
 ) {
-  const fallbackTaxMode = normalizeTaxMode(requestedTaxMode, vatRegistered);
+  const fallbackTaxMode = normalizeTaxMode(requestedTaxMode, vatRegistered, defaultTaxMode);
   const source = rawLineItems.length
     ? rawLineItems
     : [{ description: "Professional services", quantity: 1, unitPrice: 0 }];
   const lines: CalculatedLine[] = source.slice(0, 30).map((item, index) => {
-    const itemTaxMode = normalizeTaxMode(item.taxMode ?? fallbackTaxMode, vatRegistered);
+    const itemTaxMode = normalizeTaxMode(
+      item.taxMode ?? fallbackTaxMode,
+      vatRegistered,
+      defaultTaxMode,
+    );
     const cleanQuantity = quantity(item.quantity || 1);
     const cleanUnitPrice = money(item.unitPrice);
     const lineSubtotal = money(cleanQuantity * cleanUnitPrice);
@@ -300,9 +339,15 @@ async function seedNextInvoiceSequence(
   return existingInvoices.length + 1;
 }
 
-async function requireOrganization(ctx: QueryCtx | MutationCtx) {
+async function requireOrganization(
+  ctx: QueryCtx | MutationCtx,
+  permission?: PermissionKey,
+) {
   const userId = await requireUserId(ctx);
-  const organization = await getExistingOrganization(ctx, userId);
+  const current = permission
+    ? await requireOrganizationPermission(ctx, userId, permission)
+    : await getOrganizationForUser(ctx, userId);
+  const organization = current.organization;
 
   if (!organization) {
     throw new Error("Organization setup required");
@@ -314,8 +359,9 @@ async function requireOrganization(ctx: QueryCtx | MutationCtx) {
 async function requireOwnedInvoice(
   ctx: QueryCtx | MutationCtx,
   invoiceId: Id<"invoices">,
+  permission?: PermissionKey,
 ) {
-  const { userId, organization } = await requireOrganization(ctx);
+  const { userId, organization } = await requireOrganization(ctx, permission);
   const invoice = await ctx.db.get(invoiceId);
 
   if (!invoice || invoice.organizationId !== organization._id) {
@@ -523,6 +569,16 @@ async function invoiceProofs(ctx: QueryCtx | MutationCtx, invoiceId: Id<"invoice
     .take(10);
 }
 
+async function latestInvoiceProof(ctx: QueryCtx | MutationCtx, invoiceId: Id<"invoices">) {
+  const proofs = await ctx.db
+    .query("paymentProofs")
+    .withIndex("by_invoiceId", (q) => q.eq("invoiceId", invoiceId))
+    .order("desc")
+    .take(1);
+
+  return proofs[0] ?? null;
+}
+
 async function publicInvoiceByToken(ctx: QueryCtx | MutationCtx, token: string) {
   return await ctx.db
     .query("invoices")
@@ -667,6 +723,14 @@ export const updateWorkspace = mutation({
     taxId: v.optional(v.string()),
     vatNumber: v.optional(v.string()),
     vatRegistered: v.optional(v.boolean()),
+    vatRegistrationType: v.optional(vatRegistrationTypeValidator),
+    vatFilingFrequency: v.optional(vatFilingFrequencyValidator),
+    vatReturnDueDay: v.optional(v.number()),
+    vatRecordRetentionYears: v.optional(v.number()),
+    vatDefaultTaxMode: v.optional(taxModeValidator),
+    vedEnabled: v.optional(v.boolean()),
+    vedTransmissionMode: v.optional(vedTransmissionModeValidator),
+    itasRegistered: v.optional(v.boolean()),
     defaultCurrency: v.string(),
     defaultTerms: v.optional(v.string()),
     invoicePrefix: v.optional(v.string()),
@@ -679,14 +743,10 @@ export const updateWorkspace = mutation({
     swiftCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    const organization = await getExistingOrganization(ctx, userId);
-
-    if (!organization) {
-      throw new Error("Organization setup required");
-    }
+    const { organization } = await requireOrganization(ctx, "manageSettings");
 
     const now = Date.now();
+    const vatRegistered = args.vatRegistered ?? organization.vatRegistered ?? false;
 
     await ctx.db.patch(organization._id, {
       name: clean(args.name, organization.name),
@@ -698,7 +758,24 @@ export const updateWorkspace = mutation({
       phone: clean(args.phone ?? "", organization.phone ?? ""),
       taxId: clean(args.taxId ?? "", organization.taxId ?? ""),
       vatNumber: clean(args.vatNumber ?? "", organization.vatNumber ?? ""),
-      vatRegistered: args.vatRegistered ?? organization.vatRegistered ?? false,
+      vatRegistered,
+      vatRegistrationType: vatRegistered
+        ? args.vatRegistrationType ?? organization.vatRegistrationType ?? "mandatory"
+        : "not_registered",
+      vatFilingFrequency:
+        args.vatFilingFrequency ?? organization.vatFilingFrequency ?? "monthly",
+      vatReturnDueDay: args.vatReturnDueDay ?? organization.vatReturnDueDay ?? 25,
+      vatRecordRetentionYears:
+        args.vatRecordRetentionYears ?? organization.vatRecordRetentionYears ?? 5,
+      vatDefaultTaxMode: vatRegistered
+        ? args.vatDefaultTaxMode ?? organization.vatDefaultTaxMode ?? "vat_15"
+        : "no_vat",
+      vedEnabled: vatRegistered
+        ? args.vedEnabled ?? organization.vedEnabled ?? true
+        : false,
+      vedTransmissionMode:
+        args.vedTransmissionMode ?? organization.vedTransmissionMode ?? "manual_export",
+      itasRegistered: args.itasRegistered ?? organization.itasRegistered ?? false,
       defaultCurrency: cleanCurrency(args.defaultCurrency, organization.defaultCurrency),
       defaultTerms: clean(args.defaultTerms ?? "", organization.defaultTerms ?? defaultTerms),
       invoicePrefix: cleanPrefix(args.invoicePrefix ?? organization.invoicePrefix),
@@ -762,29 +839,48 @@ export const list = query({
       proofsByInvoice.set(proof.invoiceId, proofs);
     }
 
-    return await Promise.all(
-      invoices.map(async (invoice) => {
-        const events = await ctx.db
-          .query("invoiceEvents")
-          .withIndex("by_invoiceId", (q) => q.eq("invoiceId", invoice._id))
-          .order("desc")
-          .take(3);
+    const invoiceIds = new Set(invoices.map((invoice) => invoice._id));
+    const recentEvents =
+      invoices.length > 0
+        ? await ctx.db
+            .query("invoiceEvents")
+            .withIndex("by_organizationId_and_createdAt", (q) =>
+              q.eq("organizationId", organization._id),
+            )
+            .order("desc")
+            .take(240)
+        : [];
+    const eventsByInvoice = new Map<Id<"invoices">, Doc<"invoiceEvents">[]>();
 
-        return {
-          invoice,
-          client: null,
-          events,
-          lineItems: [],
-          paymentProofs: proofsByInvoice.get(invoice._id) ?? [],
-        };
-      }),
-    );
+    for (const event of recentEvents) {
+      if (!invoiceIds.has(event.invoiceId)) {
+        continue;
+      }
+
+      const events = eventsByInvoice.get(event.invoiceId) ?? [];
+
+      if (events.length < 3) {
+        events.push(event);
+        eventsByInvoice.set(event.invoiceId, events);
+      }
+    }
+
+    return invoices.map((invoice) => ({
+      invoice,
+      client: null,
+      events: eventsByInvoice.get(invoice._id) ?? [],
+      lineItems: [],
+      paymentProofs: proofsByInvoice.get(invoice._id) ?? [],
+    }));
   },
 });
 
 export const listRecords = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    from: v.optional(v.string()),
+    to: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
 
     if (userId === null) {
@@ -797,15 +893,27 @@ export const listRecords = query({
       return [];
     }
 
-    const invoices = await ctx.db
-      .query("invoices")
-      .withIndex("by_organizationId", (q) =>
-        q.eq("organizationId", organization._id),
-      )
-      .order("desc")
-      .take(300);
+    const rows =
+      args.from && args.to
+        ? await ctx.db
+            .query("invoices")
+            .withIndex("by_organizationId_and_issueDate", (q) =>
+              q
+                .eq("organizationId", organization._id)
+                .gte("issueDate", args.from as string)
+                .lte("issueDate", args.to as string),
+            )
+            .order("desc")
+            .take(300)
+        : await ctx.db
+            .query("invoices")
+            .withIndex("by_organizationId", (q) =>
+              q.eq("organizationId", organization._id),
+            )
+            .order("desc")
+            .take(300);
 
-    return invoices.map((invoice) => ({ invoice }));
+    return rows.map((invoice) => ({ invoice }));
   },
 });
 
@@ -858,19 +966,59 @@ export const listReminderQueue = query({
       .flat()
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
       .slice(0, 100);
-
-    return await Promise.all(
-      invoices.map(async (invoice) => {
-        const client = await invoiceClient(ctx, organization._id, invoice);
-        const reminders = await ctx.db
-          .query("reminders")
-          .withIndex("by_invoiceId", (q) => q.eq("invoiceId", invoice._id))
-          .order("desc")
-          .take(5);
-
-        return { invoice, client, reminders };
-      }),
+    const invoiceIds = new Set(invoices.map((invoice) => invoice._id));
+    const [clients, recentReminders] =
+      invoices.length > 0
+        ? await Promise.all([
+            ctx.db
+              .query("clients")
+              .withIndex("by_organizationId", (q) =>
+                q.eq("organizationId", organization._id),
+              )
+              .order("desc")
+              .take(250),
+            ctx.db
+              .query("reminders")
+              .withIndex("by_organizationId_and_scheduledFor", (q) =>
+                q.eq("organizationId", organization._id),
+              )
+              .order("desc")
+              .take(500),
+          ])
+        : [[], []];
+    const clientsById = new Map(clients.map((client) => [client._id, client]));
+    const clientsByEmail = new Map(
+      clients
+        .filter((client) => client.email.includes("@"))
+        .map((client) => [client.email.toLowerCase(), client]),
     );
+    const remindersByInvoice = new Map<Id<"invoices">, Doc<"reminders">[]>();
+
+    for (const reminder of recentReminders) {
+      if (!invoiceIds.has(reminder.invoiceId)) {
+        continue;
+      }
+
+      const reminders = remindersByInvoice.get(reminder.invoiceId) ?? [];
+
+      if (reminders.length < 5) {
+        reminders.push(reminder);
+        remindersByInvoice.set(reminder.invoiceId, reminders);
+      }
+    }
+
+    return invoices.map((invoice) => {
+      const client =
+        (invoice.clientId ? clientsById.get(invoice.clientId) : null) ??
+        clientsByEmail.get(clean(invoice.clientEmail).toLowerCase()) ??
+        null;
+
+      return {
+        invoice,
+        client,
+        reminders: remindersByInvoice.get(invoice._id) ?? [],
+      };
+    });
   },
 });
 
@@ -899,13 +1047,18 @@ export const stats = query({
       return empty;
     }
 
-    const invoices = await ctx.db
-      .query("invoices")
-      .withIndex("by_organizationId", (q) =>
-        q.eq("organizationId", organization._id),
-      )
-      .order("desc")
-      .take(500);
+    const invoiceGroups = await Promise.all(
+      statsInvoiceStatuses.map((status) =>
+        ctx.db
+          .query("invoices")
+          .withIndex("by_organizationId_and_status", (q) =>
+            q.eq("organizationId", organization._id).eq("status", status),
+          )
+          .order("desc")
+          .take(250),
+      ),
+    );
+    const invoices = invoiceGroups.flat();
 
     return invoices.reduce((totals, invoice) => {
       if (invoice.status === "void") {
@@ -981,12 +1134,7 @@ export const upsertClient = mutation({
     active: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    const organization = await getExistingOrganization(ctx, userId);
-
-    if (!organization) {
-      throw new Error("Organization setup required");
-    }
+    const { organization } = await requireOrganization(ctx, "manageClients");
 
     const now = Date.now();
     const email = clean(args.email).toLowerCase();
@@ -1052,15 +1200,11 @@ export const createDraft = mutation({
     paymentInstructions: v.optional(v.string()),
     paymentLink: v.optional(v.string()),
     paymentReference: v.optional(v.string()),
+    requiresApproval: v.optional(v.boolean()),
     lineItems: v.array(lineItemValidator),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    const organization = await getExistingOrganization(ctx, userId);
-
-    if (!organization) {
-      throw new Error("Organization setup required");
-    }
+    const { userId, organization } = await requireOrganization(ctx, "createInvoices");
 
     const client = await resolveInvoiceClient(ctx, organization._id, args);
     const now = Date.now();
@@ -1069,6 +1213,7 @@ export const createDraft = mutation({
       args.lineItems,
       args.taxMode,
       organization.vatRegistered,
+      organization.vatDefaultTaxMode,
     );
     const trimmedPaymentLink = clean(
       args.paymentLink,
@@ -1107,6 +1252,7 @@ export const createDraft = mutation({
         organization.paymentInstructions,
       ),
       paymentReference,
+      requiresApproval: args.requiresApproval ?? false,
       bankDetails: buildBankDetails(organization),
       supplierSnapshot: buildBusinessSnapshot(organization),
       clientSnapshot: buildClientSnapshot({
@@ -1159,12 +1305,14 @@ export const amend = mutation({
     paymentInstructions: v.optional(v.string()),
     paymentLink: v.optional(v.string()),
     paymentReference: v.optional(v.string()),
+    requiresApproval: v.optional(v.boolean()),
     lineItems: v.array(lineItemValidator),
   },
   handler: async (ctx, args) => {
     const { userId, organization, invoice } = await requireOwnedInvoice(
       ctx,
       args.id,
+      "createInvoices",
     );
 
     if (
@@ -1181,6 +1329,7 @@ export const amend = mutation({
       args.lineItems,
       args.taxMode,
       organization.vatRegistered,
+      organization.vatDefaultTaxMode,
     );
     const trimmedPaymentLink = clean(
       args.paymentLink,
@@ -1220,6 +1369,7 @@ export const amend = mutation({
       ),
       paymentLink: trimmedPaymentLink,
       paymentReference: clean(args.paymentReference, invoice.paymentReference ?? invoice.invoiceNumber),
+      requiresApproval: args.requiresApproval ?? false,
       bankDetails: buildBankDetails(organization),
       supplierSnapshot: buildBusinessSnapshot(organization),
       clientSnapshot: buildClientSnapshot({
@@ -1256,6 +1406,7 @@ export const send = mutation({
     const { userId, organization, invoice } = await requireOwnedInvoice(
       ctx,
       args.id,
+      "sendInvoices",
     );
 
     if (invoice.status === "void") {
@@ -1290,6 +1441,7 @@ export const send = mutation({
       paymentInstructions:
         invoice.paymentInstructions ?? organization.paymentInstructions,
       paymentReference: invoice.paymentReference ?? invoice.invoiceNumber,
+      requiresApproval: invoice.requiresApproval ?? false,
       bankDetails: invoice.bankDetails ?? buildBankDetails(organization),
       supplierSnapshot:
         invoice.supplierSnapshot ?? buildBusinessSnapshot(organization),
@@ -1352,6 +1504,7 @@ export const markSent = mutation({
     const { userId, organization, invoice } = await requireOwnedInvoice(
       ctx,
       args.id,
+      "sendInvoices",
     );
 
     if (!invoice.publicToken) {
@@ -1388,7 +1541,7 @@ export const markPaid = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
+    const { userId } = await requireOrganization(ctx, "recordPayments");
     await recordPayment(ctx, {
       invoiceId: args.id,
       amount: args.amount,
@@ -1410,6 +1563,7 @@ export const updateStatus = mutation({
     const { userId, organization, invoice } = await requireOwnedInvoice(
       ctx,
       args.id,
+      args.status === "void" ? "voidInvoices" : "sendInvoices",
     );
     const now = Date.now();
 
@@ -1436,6 +1590,7 @@ export const voidInvoice = mutation({
     const { userId, organization, invoice } = await requireOwnedInvoice(
       ctx,
       args.id,
+      "voidInvoices",
     );
 
     if (invoice.status === "paid") {
@@ -1471,6 +1626,7 @@ export const scheduleReminder = mutation({
     const { userId, organization, invoice } = await requireOwnedInvoice(
       ctx,
       args.id,
+      "sendInvoices",
     );
     const now = Date.now();
     const message = clean(
@@ -1533,7 +1689,11 @@ export const listPaymentProofs = query({
     return await Promise.all(
       proofs.map(async (proof) => {
         const invoice = await ctx.db.get(proof.invoiceId);
-        return { proof, invoice };
+        const proofFileUrl = proof.storageId
+          ? await ctx.storage.getUrl(proof.storageId)
+          : null;
+
+        return { proof, invoice, proofFileUrl };
       }),
     );
   },
@@ -1546,7 +1706,7 @@ export const reviewPaymentProof = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, organization } = await requireOrganization(ctx);
+    const { userId, organization } = await requireOrganization(ctx, "recordPayments");
     const proof = await ctx.db.get(args.proofId);
 
     if (!proof || proof.organizationId !== organization._id) {
@@ -1601,6 +1761,24 @@ export const generatePaymentProofUploadUrl = mutation({
 
     if (!invoice || !invoice.organizationId || invoice.status === "void") {
       throw new Error("Invoice not found");
+    }
+
+    if (invoice.status === "paid") {
+      throw new Error("This invoice is already marked paid");
+    }
+
+    if (
+      (invoice.requiresApproval ?? false) &&
+      invoice.status !== "approved" &&
+      invoice.status !== "awaiting_payment"
+    ) {
+      throw new Error("Approve this invoice before uploading payment proof");
+    }
+
+    const existingProof = await latestInvoiceProof(ctx, invoice._id);
+
+    if (existingProof) {
+      throw new Error("Payment details have already been submitted");
     }
 
     return await ctx.storage.generateUploadUrl();
@@ -1690,9 +1868,21 @@ export const approveByToken = mutation({
       throw new Error("Invoice not found");
     }
 
+    if (!(invoice.requiresApproval ?? false)) {
+      throw new Error("This invoice does not require client approval");
+    }
+
+    if (invoice.status === "rejected") {
+      throw new Error("Rejected invoices must be amended before approval");
+    }
+
+    if (invoice.status === "paid") {
+      throw new Error("Paid invoices do not need approval");
+    }
+
     const now = Date.now();
     await ctx.db.patch(invoice._id, {
-      status: invoice.status === "paid" ? "paid" : "approved",
+      status: "approved",
       approvedAt: now,
       updatedAt: now,
     });
@@ -1749,6 +1939,17 @@ export const rejectByToken = mutation({
       throw new Error("Paid invoices cannot be rejected");
     }
 
+    if (
+      invoice.status === "approved" ||
+      invoice.status === "awaiting_payment"
+    ) {
+      throw new Error("Approved invoices cannot be rejected");
+    }
+
+    if (!(invoice.requiresApproval ?? false)) {
+      throw new Error("This invoice does not require client approval");
+    }
+
     const now = Date.now();
     const reason = clean(
       args.reason,
@@ -1798,6 +1999,20 @@ export const submitPaymentProofByToken = mutation({
 
     if (invoice.status === "paid") {
       throw new Error("This invoice is already marked paid");
+    }
+
+    const existingProof = await latestInvoiceProof(ctx, invoice._id);
+
+    if (existingProof) {
+      throw new Error("Payment details have already been submitted");
+    }
+
+    if (
+      (invoice.requiresApproval ?? false) &&
+      invoice.status !== "approved" &&
+      invoice.status !== "awaiting_payment"
+    ) {
+      throw new Error("Approve this invoice before submitting payment proof");
     }
 
     const now = Date.now();

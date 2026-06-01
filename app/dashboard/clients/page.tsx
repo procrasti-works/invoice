@@ -5,12 +5,12 @@ import { useMutation, useQuery } from "convex/react";
 import {
   Building2,
   ChevronDown,
+  ContactRound,
   Loader2,
   Mail,
   Phone,
   Plus,
   Search,
-  UserRound,
   Users,
 } from "lucide-react";
 
@@ -51,9 +51,9 @@ const emptyForm: ClientForm = {
 };
 
 const fieldClass =
-  "h-10 rounded-md border border-[#e5e7eb] bg-white px-3 text-[13px] text-[#111827] outline-none transition focus:border-[#111827]";
+  "db-field-input";
 const textAreaClass =
-  "min-h-20 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] text-[#111827] outline-none transition focus:border-[#111827]";
+  "db-field-input db-field-textarea";
 
 function cleanBusinessName(client: Client) {
   const name = client.name.trim();
@@ -181,239 +181,241 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="db-page">
-      <div className="db-page-header">
-        <div>
-          <p className="db-page-eyebrow">Linked to {currentWorkspace}</p>
-          <h1 className="db-page-title">Clients</h1>
-        </div>
-        <button type="button" className="db-primary-btn" onClick={focusForm}>
-          <Plus className="size-4" /> Add client
-        </button>
-      </div>
-
-      {notice ? (
-        <div className="db-notice" style={{ marginBottom: "18px" }}>
-          {notice}
-        </div>
-      ) : null}
-
-      <div className="grid gap-5 xl:grid-cols-[minmax(320px,420px)_1fr]">
-        <form id="client-form" onSubmit={handleSubmit} className="db-card grid content-start gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="db-card-title">
-                <UserRound className="size-4" /> {editingId ? "Edit client" : "New client"}
-              </p>
-              <p className="mt-1 text-[13px] text-[#6b7280]">
-                {editingId ? "Update this workspace client." : "Add a person or organization."}
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-md border border-[#e5e7eb] px-2 py-1 text-[12px] font-medium text-[#6b7280]">
-              <Building2 className="size-3.5" /> Workspace
-            </span>
+    <div className="db-page db-dashboard-page db-clients-page">
+      <section className="db-workview">
+        <div className="db-workview-head">
+          <div>
+            <p className="db-breadcrumb">Payvio <span>/</span> Clients</p>
+            <h1 className="db-workview-title">Clients</h1>
           </div>
-
-          <div className="grid gap-3">
-            <ClientField label="Client name">
-              <input
-                id="client-name"
-                value={form.name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, name: event.target.value }))
-                }
-                className={fieldClass}
-                placeholder="Person, family, project, or business"
-                required
-              />
-            </ClientField>
-
-            <ClientField label="Email">
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, email: event.target.value }))
-                }
-                className={fieldClass}
-                placeholder="Optional"
-              />
-            </ClientField>
-
-            <ClientField label="Phone">
-              <input
-                value={form.phone}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, phone: event.target.value }))
-                }
-                className={fieldClass}
-                placeholder="Optional"
-              />
-            </ClientField>
-
-            <ClientField label="Business or group">
-              <input
-                value={form.businessName}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, businessName: event.target.value }))
-                }
-                className={fieldClass}
-                placeholder="Optional"
-              />
-            </ClientField>
-          </div>
-
-          <button
-            type="button"
-            className="db-outline-btn w-max"
-            onClick={() => setShowDetails((visible) => !visible)}
-          >
-            {showDetails ? "Hide details" : "More details"}
-            <ChevronDown className={`size-4 transition ${showDetails ? "rotate-180" : ""}`} />
+          <button type="button" className="db-primary-btn db-new-invoice-btn" onClick={focusForm}>
+            <Plus className="size-4" /> Add client
           </button>
+        </div>
 
-          {showDetails ? (
-            <div className="grid gap-3">
-              <ClientField label="Contact person">
+        <div className="db-metric-strip" aria-label="Client metrics">
+          <div className="db-metric-cell">
+            <span>Total clients</span>
+            <strong>{totalClients}</strong>
+            <small>{currentWorkspace}</small>
+          </div>
+          <div className="db-metric-cell">
+            <span>People</span>
+            <strong>{individualClients}</strong>
+            <small>Individual profiles</small>
+          </div>
+          <div className="db-metric-cell">
+            <span>Reachable</span>
+            <strong>{reachableClients}</strong>
+            <small>Email or phone saved</small>
+          </div>
+        </div>
+
+        {notice ? (
+          <div className="db-notice db-notice-clean">
+            <span>{notice}</span>
+          </div>
+        ) : null}
+
+        <div className="db-clients-layout">
+          <form id="client-form" onSubmit={handleSubmit} className="db-card db-clients-form-card">
+            <div className="db-panel-header">
+              <div>
+                <p className="db-panel-kicker">Client profile</p>
+                <h2>{editingId ? "Edit client" : "New client"}</h2>
+              </div>
+              <span className="db-panel-meta">
+                <Building2 className="size-3.5" /> Workspace
+              </span>
+            </div>
+
+            <div className="db-client-form-fields">
+              <ClientField label="Client name">
                 <input
-                  value={form.contactName}
+                  id="client-name"
+                  value={form.name}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, contactName: event.target.value }))
+                    setForm((current) => ({ ...current, name: event.target.value }))
+                  }
+                  className={fieldClass}
+                  placeholder="Person, project, or business"
+                  required
+                />
+              </ClientField>
+
+              <ClientField label="Email">
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, email: event.target.value }))
                   }
                   className={fieldClass}
                   placeholder="Optional"
                 />
               </ClientField>
 
-              <ClientField label="Address">
-                <textarea
-                  value={form.address}
+              <ClientField label="Phone">
+                <input
+                  value={form.phone}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, address: event.target.value }))
+                    setForm((current) => ({ ...current, phone: event.target.value }))
                   }
-                  className={textAreaClass}
+                  className={fieldClass}
                   placeholder="Optional"
                 />
               </ClientField>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ClientField label="VAT number">
+              <ClientField label="Business or group">
+                <input
+                  value={form.businessName}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, businessName: event.target.value }))
+                  }
+                  className={fieldClass}
+                  placeholder="Optional"
+                />
+              </ClientField>
+            </div>
+
+            <label className="db-client-active-toggle">
+              <input
+                type="checkbox"
+                checked={form.active}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, active: event.target.checked }))
+                }
+              />
+              <span>Active client</span>
+            </label>
+
+            <button
+              type="button"
+              className="db-outline-btn db-client-details-toggle"
+              onClick={() => setShowDetails((visible) => !visible)}
+            >
+              {showDetails ? "Hide details" : "More details"}
+              <ChevronDown className={`size-4 transition ${showDetails ? "rotate-180" : ""}`} />
+            </button>
+
+            {showDetails ? (
+              <div className="db-client-form-fields db-client-form-details">
+                <ClientField label="Contact person">
                   <input
-                    value={form.vatNumber}
+                    value={form.contactName}
                     onChange={(event) =>
-                      setForm((current) => ({ ...current, vatNumber: event.target.value }))
+                      setForm((current) => ({ ...current, contactName: event.target.value }))
                     }
                     className={fieldClass}
                     placeholder="Optional"
                   />
                 </ClientField>
-                <ClientField label="Tax ID">
-                  <input
-                    value={form.taxId}
+
+                <ClientField label="Address">
+                  <textarea
+                    value={form.address}
                     onChange={(event) =>
-                      setForm((current) => ({ ...current, taxId: event.target.value }))
+                      setForm((current) => ({ ...current, address: event.target.value }))
+                    }
+                    className={textAreaClass}
+                    placeholder="Optional"
+                  />
+                </ClientField>
+
+                <div className="db-two-field-grid">
+                  <ClientField label="VAT number">
+                    <input
+                      value={form.vatNumber}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, vatNumber: event.target.value }))
+                      }
+                      className={fieldClass}
+                      placeholder="Optional"
+                    />
+                  </ClientField>
+                  <ClientField label="Tax ID">
+                    <input
+                      value={form.taxId}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, taxId: event.target.value }))
+                      }
+                      className={fieldClass}
+                      placeholder="Optional"
+                    />
+                  </ClientField>
+                </div>
+
+                <ClientField label="Payment terms">
+                  <input
+                    value={form.paymentTerms}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, paymentTerms: event.target.value }))
                     }
                     className={fieldClass}
+                    placeholder="Optional"
+                  />
+                </ClientField>
+
+                <ClientField label="Notes">
+                  <textarea
+                    value={form.notes}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, notes: event.target.value }))
+                    }
+                    className={textAreaClass}
                     placeholder="Optional"
                   />
                 </ClientField>
               </div>
-
-              <ClientField label="Payment terms">
-                <input
-                  value={form.paymentTerms}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, paymentTerms: event.target.value }))
-                  }
-                  className={fieldClass}
-                  placeholder="Optional"
-                />
-              </ClientField>
-
-              <ClientField label="Notes">
-                <textarea
-                  value={form.notes}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, notes: event.target.value }))
-                  }
-                  className={textAreaClass}
-                  placeholder="Optional"
-                />
-              </ClientField>
-
-              <label className="flex items-center gap-2 text-[13px] font-medium text-[#374151]">
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, active: event.target.checked }))
-                  }
-                  className="size-4 rounded border-[#d1d5db]"
-                />
-                Active client
-              </label>
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={pending} className="db-primary-btn">
-              {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-              {editingId ? "Save client" : totalClients === 0 ? "Add first client" : "Add client"}
-            </button>
-            {editingId ? (
-              <button type="button" className="db-outline-btn" onClick={resetForm}>
-                Cancel
-              </button>
             ) : null}
-          </div>
-        </form>
 
-        <section className="grid content-start gap-4">
-          <div className="db-search-bar">
-            <Search className="size-4 text-[#9ca3af]" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search clients..."
-              className="db-search-bar-input"
-            />
-          </div>
+            <div className="db-client-form-actions">
+              <button type="submit" disabled={pending} className="db-primary-btn">
+                {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                {editingId ? "Save client" : totalClients === 0 ? "Add first client" : "Add client"}
+              </button>
+              {editingId ? (
+                <button type="button" className="db-outline-btn" onClick={resetForm}>
+                  Cancel
+                </button>
+              ) : null}
+            </div>
+          </form>
 
-          <div className="db-stat-row">
-            <div className="db-stat-card">
-              <p className="db-stat-label">Total clients</p>
-              <p className="db-stat-value">{totalClients}</p>
+          <section className="db-card db-clients-list-card">
+            <div className="db-panel-header db-clients-list-header">
+              <div>
+                <p className="db-panel-kicker">Directory</p>
+                <h2>Saved clients</h2>
+              </div>
+              <span className="db-panel-meta">{filteredClients.length} shown</span>
             </div>
-            <div className="db-stat-card">
-              <p className="db-stat-label">People</p>
-              <p className="db-stat-value">{individualClients}</p>
-            </div>
-            <div className="db-stat-card">
-              <p className="db-stat-label">Reachable</p>
-              <p className="db-stat-value">{reachableClients}</p>
-            </div>
-          </div>
 
-          {clients === undefined ? (
-            <div className="db-empty">
-              <Loader2 className="size-9 animate-spin text-[#d1d5db]" />
-              <h3>Loading clients</h3>
+            <div className="db-search-bar db-clients-search">
+              <Search className="size-4 text-[#9ca3af]" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search clients"
+                className="db-search-bar-input"
+              />
             </div>
-          ) : filteredClients.length === 0 ? (
+
+          {filteredClients.length === 0 ? (
             <div className="db-empty">
               <Users className="size-10 text-[#d1d5db]" />
               <h3>{search.trim() ? "No matching clients" : "No clients yet"}</h3>
               <p>{search.trim() ? "Clear the search or add a new client." : "Add the first client on the left."}</p>
             </div>
           ) : (
-            <div className="db-clients-grid">
+            <div className="db-clients-directory">
               {filteredClients.map((client) => {
                 const businessName = cleanBusinessName(client);
                 const phone = client.phone?.trim() ?? "";
 
                 return (
-                  <article key={client._id} className="db-client-card">
-                    <div className="db-client-avatar">
+                  <article key={client._id} className="db-client-card db-client-directory-card">
+                    <div className="db-client-avatar" aria-hidden="true">
                       {client.name.slice(0, 1).toUpperCase()}
                     </div>
                     <div className="db-client-info">
@@ -427,7 +429,7 @@ export default function ClientsPage() {
                       <p className="mt-1 text-[12px] text-[#6b7280]">
                         {businessName || "Person client"}
                       </p>
-                      <div className="mt-2 grid gap-1">
+                      <div className="db-client-contact-list">
                         {client.email ? (
                           <a className="db-client-email" href={`mailto:${client.email}`}>
                             <Mail className="size-3" /> {client.email}
@@ -438,10 +440,17 @@ export default function ClientsPage() {
                             <Phone className="size-3" /> {phone}
                           </a>
                         ) : null}
+                        {!client.email && !phone ? (
+                          <span className="db-client-email">
+                            <ContactRound className="size-3" /> No contact saved
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                     <div className="db-client-stats">
-                      <span>{client.active ?? true ? "Active" : "Inactive"}</span>
+                      <span className={client.active ?? true ? "db-status-dot-active" : "db-status-dot-muted"}>
+                        {client.active ?? true ? "Active" : "Inactive"}
+                      </span>
                       <button type="button" className="db-outline-btn" onClick={() => editClient(client)}>
                         Edit
                       </button>
@@ -451,8 +460,9 @@ export default function ClientsPage() {
               })}
             </div>
           )}
-        </section>
-      </div>
+          </section>
+        </div>
+      </section>
     </div>
   );
 }
@@ -465,7 +475,7 @@ function ClientField({
   children: ReactNode;
 }) {
   return (
-    <label className="grid gap-1.5 text-[13px] font-medium text-[#374151]">
+    <label className="db-field">
       {label}
       {children}
     </label>

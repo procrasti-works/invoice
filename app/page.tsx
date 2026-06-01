@@ -4,6 +4,7 @@ import {
   MarketingFooter,
   MarketingHeader,
 } from "@/app/_components/MarketingChrome";
+import dashboardMockup from "./_assets/payvio-dashboard-mockup.png";
 import {
   ArrowRight,
   BarChart3,
@@ -51,6 +52,23 @@ const platformFeatures: PlatformFeature[] = [
       fromName: "Payvio workspace",
       toToken: "Client",
       toName: "Secure approval link",
+    },
+  },
+  {
+    id: "scan",
+    kicker: "Scan",
+    title: "Scan supplier invoices into purchase records.",
+    body: "Upload a PDF or image, review the extracted fields, and save the supplier purchase with the original file attached.",
+    bullets: ["PDF and image uploads", "AI extraction", "Review before saving"],
+    visual: {
+      title: "Supplier scan",
+      body: "Captured fields stay editable before they enter the ledger.",
+      label: "Ready to review",
+      amount: "N$1,240.00",
+      fromToken: "Scan",
+      fromName: "Supplier invoice",
+      toToken: "Ledger",
+      toName: "Purchase record",
     },
   },
   {
@@ -164,49 +182,15 @@ function HeroLeadForm({ source }: { source: string }) {
 function HeroPreview() {
   return (
     <div className="il-preview" aria-label="Payvio invoice workspace preview">
-      <div className="il-preview-sidebar">
-        <strong>Payvio</strong>
-        <span className="is-active">Invoices</span>
-        <span>Clients</span>
-        <span>Ledger</span>
-        <span>Reports</span>
-      </div>
-      <div className="il-preview-main">
-        <div className="il-preview-topbar">
-          <span>Invoice pipeline</span>
-          <b>NAD</b>
-        </div>
-        <div className="il-preview-stats">
-          <span>
-            <small>Sent</small>
-            <strong>12</strong>
-          </span>
-          <span>
-            <small>Awaiting</small>
-            <strong>N$18k</strong>
-          </span>
-          <span>
-            <small>Paid</small>
-            <strong>8</strong>
-          </span>
-        </div>
-        <div className="il-preview-chart">
-          <i />
-        </div>
-        <div className="il-preview-table">
-          <span>INV-1024</span>
-          <b>Viewed</b>
-          <span>INV-1025</span>
-          <b>Paid</b>
-          <span>INV-1026</span>
-          <b>Draft</b>
-        </div>
-      </div>
-      <div className="il-preview-panel">
-        <small>Client link</small>
-        <strong>Ready to send</strong>
-        <p>Approval, payment proof, and status updates stay attached to the invoice.</p>
-      </div>
+      <Image
+        alt="Payvio invoice dashboard showing invoice metrics and a new invoice form"
+        className="il-preview-image"
+        placeholder="blur"
+        preload
+        quality={85}
+        sizes="(max-width: 760px) 94vw, (max-width: 1120px) 88vw, 1120px"
+        src={dashboardMockup}
+      />
     </div>
   );
 }
@@ -258,9 +242,9 @@ function OrbitScaleSection() {
         <div className="il-orbit-copy">
           <h2 id="orbit-scale-title">Easy to start, clear enough to scale.</h2>
           <p>
-            One Payvio workspace for invoices, clients, reminders, supplier records,
-            and VAT-ready reporting. Start simple and keep the record clean as
-            the business grows.
+            One Payvio workspace for invoices, clients, reminders, scanned
+            supplier records, and VAT-ready reporting. Start simple and keep the
+            record clean as the business grows.
           </p>
         </div>
       </div>
@@ -392,8 +376,8 @@ export default function Home() {
             The invoice platform Namibia can grow with.
           </h1>
           <p className="il-hero-copy mx-auto mt-7 max-w-3xl text-[#0d141c]">
-            Create invoices, send secure client links, track payments, and keep
-            VAT-ready records in one simple workspace.
+            Create invoices, send secure client links, scan supplier invoices,
+            track payments, and keep VAT-ready records in one simple workspace.
           </p>
           <div className="il-hero-form mx-auto mt-9">
             <HeroLeadForm source="Homepage hero" />
@@ -418,12 +402,12 @@ export default function Home() {
             <div>
               <SectionLabel>One workspace for invoice operations</SectionLabel>
               <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] text-[#0d141c] sm:text-7xl">
-                Invoices, clients, purchases, and VAT in one place.
+                Invoices, scans, clients, purchases, and VAT in one place.
               </h2>
             </div>
             <p className="max-w-xl text-lg leading-8 text-[#4e5961] lg:justify-self-end">
-              The structure is simple: create the invoice, send the link, follow
-              up, collect proof, and keep the ledger ready for reporting.
+              The structure is simple: create the invoice, send the link, scan
+              supplier files, collect proof, and keep the ledger ready for reporting.
             </p>
           </div>
 

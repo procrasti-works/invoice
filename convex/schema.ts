@@ -2,6 +2,11 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+import {
+  memberRoleValidator as memberRole,
+  organizationPermissionPolicyValidator,
+} from "./organizationPermissions";
+
 const invoiceStatus = v.union(
   v.literal("draft"),
   v.literal("ready"),
@@ -15,20 +20,14 @@ const invoiceStatus = v.union(
   v.literal("void"),
 );
 
-const memberRole = v.union(
-  v.literal("owner"),
-  v.literal("admin"),
-  v.literal("finance"),
-  v.literal("viewer"),
-  v.literal("member"),
-);
-
 const invitationStatus = v.union(
   v.literal("pending"),
   v.literal("accepted"),
   v.literal("revoked"),
   v.literal("expired"),
 );
+
+const platformRole = v.union(v.literal("user"), v.literal("admin"));
 
 const entityType = v.union(
   v.literal("sole_proprietor"),
@@ -44,6 +43,47 @@ const taxMode = v.union(
   v.literal("vat_15"),
   v.literal("zero_rated"),
   v.literal("exempt"),
+);
+
+const vatRegistrationType = v.union(
+  v.literal("not_registered"),
+  v.literal("voluntary"),
+  v.literal("mandatory"),
+);
+
+const vatFilingFrequency = v.union(
+  v.literal("monthly"),
+  v.literal("bi_monthly"),
+);
+
+const vedTransmissionMode = v.union(
+  v.literal("manual_export"),
+  v.literal("near_real_time"),
+  v.literal("real_time"),
+);
+
+const purchaseScanStatus = v.union(
+  v.literal("uploaded"),
+  v.literal("extracting"),
+  v.literal("needs_review"),
+  v.literal("ready"),
+  v.literal("saved"),
+  v.literal("failed"),
+);
+
+const purchaseScanEventType = v.union(
+  v.literal("uploaded"),
+  v.literal("extraction_started"),
+  v.literal("extraction_completed"),
+  v.literal("review_saved"),
+  v.literal("purchase_created"),
+  v.literal("failed"),
+);
+
+const extractionProvider = v.union(
+  v.literal("manual"),
+  v.literal("openai"),
+  v.literal("none"),
 );
 
 const businessSnapshot = v.object({
@@ -91,6 +131,19 @@ const eventType = v.union(
 
 export default defineSchema({
   ...authTables,
+  users: defineTable({
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+    role: v.optional(platformRole),
+  })
+    .index("email", ["email"])
+    .index("phone", ["phone"])
+    .index("by_role", ["role"]),
   organizations: defineTable({
     name: v.string(),
     legalName: v.optional(v.string()),
@@ -102,6 +155,14 @@ export default defineSchema({
     taxId: v.optional(v.string()),
     vatNumber: v.optional(v.string()),
     vatRegistered: v.optional(v.boolean()),
+    vatRegistrationType: v.optional(vatRegistrationType),
+    vatFilingFrequency: v.optional(vatFilingFrequency),
+    vatReturnDueDay: v.optional(v.number()),
+    vatRecordRetentionYears: v.optional(v.number()),
+    vatDefaultTaxMode: v.optional(taxMode),
+    vedEnabled: v.optional(v.boolean()),
+    vedTransmissionMode: v.optional(vedTransmissionMode),
+    itasRegistered: v.optional(v.boolean()),
     defaultTerms: v.optional(v.string()),
     invoicePrefix: v.optional(v.string()),
     nextInvoiceSequence: v.optional(v.number()),
@@ -115,6 +176,9 @@ export default defineSchema({
     paymentInstructions: v.string(),
     paymentLink: v.optional(v.string()),
     brandColor: v.string(),
+    permissionPolicy: v.optional(organizationPermissionPolicyValidator),
+    deletedAt: v.optional(v.number()),
+    deletedByUserId: v.optional(v.id("users")),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_ownerUserId", ["ownerUserId"]),
@@ -134,6 +198,14 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_activeOrganizationId", ["activeOrganizationId"]),
+  organizationNotificationViews: defineTable({
+    organizationId: v.id("organizations"),
+    userId: v.id("users"),
+    lastSeenAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_organizationId_and_userId", ["organizationId", "userId"]),
   organizationInvitations: defineTable({
     organizationId: v.id("organizations"),
     email: v.string(),
@@ -201,6 +273,7 @@ export default defineSchema({
     paymentInstructions: v.optional(v.string()),
     paymentLink: v.optional(v.string()),
     paymentReference: v.optional(v.string()),
+    requiresApproval: v.optional(v.boolean()),
     bankDetails: v.optional(bankDetails),
     supplierSnapshot: v.optional(businessSnapshot),
     clientSnapshot: v.optional(clientSnapshot),
@@ -220,6 +293,7 @@ export default defineSchema({
   })
     .index("by_organizationId", ["organizationId"])
     .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_organizationId_and_issueDate", ["organizationId", "issueDate"])
     .index("by_publicToken", ["publicToken"])
     .index("by_clientId", ["clientId"]),
   invoiceLineItems: defineTable({
@@ -259,6 +333,7 @@ export default defineSchema({
     paymentInstructions: v.string(),
     paymentLink: v.optional(v.string()),
     paymentReference: v.optional(v.string()),
+    requiresApproval: v.optional(v.boolean()),
     bankDetails: v.optional(bankDetails),
     supplierSnapshot: v.optional(businessSnapshot),
     clientSnapshot: v.optional(clientSnapshot),
@@ -291,7 +366,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_invoiceId", ["invoiceId"])
-    .index("by_organizationId", ["organizationId"]),
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_createdAt", ["organizationId", "createdAt"]),
   paymentRecords: defineTable({
     organizationId: v.id("organizations"),
     invoiceId: v.id("invoices"),
@@ -385,7 +461,12 @@ export default defineSchema({
     organizationId: v.id("organizations"),
     supplierId: v.optional(v.id("suppliers")),
     supplierName: v.string(),
+    supplierAddress: v.optional(v.string()),
+    supplierVatNumber: v.optional(v.string()),
+    recipientName: v.optional(v.string()),
+    recipientAddress: v.optional(v.string()),
     invoiceNumber: v.optional(v.string()),
+    purchaseOrderNumber: v.optional(v.string()),
     issueDate: v.string(),
     dueDate: v.optional(v.string()),
     currency: v.string(),
@@ -402,13 +483,98 @@ export default defineSchema({
     ),
     notes: v.optional(v.string()),
     proofStorageId: v.optional(v.id("_storage")),
+    sourceScanId: v.optional(v.id("purchaseScans")),
+    retainedUntil: v.optional(v.number()),
     createdByUserId: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
     .index("by_organizationId", ["organizationId"])
     .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_organizationId_and_issueDate", ["organizationId", "issueDate"])
+    .index("by_organizationId_and_invoiceNumber", ["organizationId", "invoiceNumber"])
     .index("by_supplierId", ["supplierId"]),
+  purchaseLineItems: defineTable({
+    organizationId: v.id("organizations"),
+    purchaseId: v.id("purchases"),
+    description: v.string(),
+    quantity: v.number(),
+    unitPrice: v.number(),
+    taxMode,
+    vatRate: v.optional(v.number()),
+    vatAmount: v.optional(v.number()),
+    lineSubtotal: v.optional(v.number()),
+    lineTotal: v.number(),
+    position: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_purchaseId", ["purchaseId"])
+    .index("by_organizationId", ["organizationId"]),
+  purchaseScans: defineTable({
+    organizationId: v.id("organizations"),
+    createdByUserId: v.id("users"),
+    storageId: v.id("_storage"),
+    fileName: v.optional(v.string()),
+    fileType: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+    status: purchaseScanStatus,
+    extractionProvider: extractionProvider,
+    extractedAt: v.optional(v.number()),
+    reviewedAt: v.optional(v.number()),
+    savedPurchaseId: v.optional(v.id("purchases")),
+    detectedTaxInvoice: v.optional(v.boolean()),
+    supplierName: v.optional(v.string()),
+    supplierAddress: v.optional(v.string()),
+    supplierVatNumber: v.optional(v.string()),
+    recipientName: v.optional(v.string()),
+    recipientAddress: v.optional(v.string()),
+    invoiceNumber: v.optional(v.string()),
+    purchaseOrderNumber: v.optional(v.string()),
+    issueDate: v.optional(v.string()),
+    dueDate: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    subtotal: v.optional(v.number()),
+    vatAmount: v.optional(v.number()),
+    total: v.optional(v.number()),
+    taxMode: v.optional(taxMode),
+    confidence: v.optional(v.number()),
+    rawTextPreview: v.optional(v.string()),
+    warnings: v.array(v.string()),
+    notes: v.optional(v.string()),
+    retainedUntil: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_storageId", ["storageId"])
+    .index("by_savedPurchaseId", ["savedPurchaseId"]),
+  purchaseScanLineItems: defineTable({
+    organizationId: v.id("organizations"),
+    scanId: v.id("purchaseScans"),
+    description: v.string(),
+    quantity: v.number(),
+    unitPrice: v.number(),
+    taxMode,
+    vatRate: v.optional(v.number()),
+    vatAmount: v.optional(v.number()),
+    lineSubtotal: v.optional(v.number()),
+    lineTotal: v.number(),
+    position: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_scanId", ["scanId"])
+    .index("by_organizationId", ["organizationId"]),
+  purchaseScanEvents: defineTable({
+    organizationId: v.id("organizations"),
+    scanId: v.id("purchaseScans"),
+    actorUserId: v.optional(v.id("users")),
+    type: purchaseScanEventType,
+    message: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_scanId", ["scanId"])
+    .index("by_organizationId", ["organizationId"]),
   subscriptions: defineTable({
     organizationId: v.id("organizations"),
     plan: v.union(

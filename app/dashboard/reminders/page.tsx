@@ -203,101 +203,113 @@ export default function RemindersPage() {
   }
 
   return (
-    <div className="db-page">
-      <div className="db-page-header">
-        <div>
-          <p className="db-page-eyebrow">Clients, invoices, follow-ups</p>
-          <h1 className="db-page-title">Reminders</h1>
+    <div className="db-page db-dashboard-page db-reminders-page">
+      <section className="db-workview">
+        <div className="db-workview-head">
+          <div>
+            <p className="db-breadcrumb">Payvio <span>/</span> Reminders</p>
+            <h1 className="db-workview-title">Reminders</h1>
+          </div>
         </div>
-      </div>
 
-      <div className="db-stat-row">
-        <div className="db-stat-card">
-          <p className="db-stat-label">Active invoices</p>
-          <p className="db-stat-value">{activeRows.length}</p>
+        <div className="db-metric-strip" aria-label="Reminder metrics">
+          <div className="db-metric-cell">
+            <span>Active invoices</span>
+            <strong>{activeRows.length}</strong>
+            <small>Ready to follow up</small>
+          </div>
+          <div className="db-metric-cell">
+            <span>Overdue</span>
+            <strong>{overdueRows.length}</strong>
+            <small>Needs attention</small>
+          </div>
+          <div className="db-metric-cell">
+            <span>Scheduled</span>
+            <strong>{scheduledCount}</strong>
+            <small>Prepared follow-ups</small>
+          </div>
+          <div className="db-metric-cell">
+            <span>Linked clients</span>
+            <strong>{linkedClientCount}</strong>
+            <small>Saved profiles</small>
+          </div>
         </div>
-        <div className="db-stat-card">
-          <p className="db-stat-label">Overdue</p>
-          <p className="db-stat-value" style={{ color: "#dc2626" }}>
-            {overdueRows.length}
-          </p>
-        </div>
-        <div className="db-stat-card">
-          <p className="db-stat-label">Scheduled</p>
-          <p className="db-stat-value">{scheduledCount}</p>
-        </div>
-        <div className="db-stat-card">
-          <p className="db-stat-label">Linked clients</p>
-          <p className="db-stat-value">{linkedClientCount}</p>
-        </div>
-      </div>
 
-      {notice ? (
-        <div className="db-notice">
-          <CheckCircle2 className="size-4" /> {notice}
-        </div>
-      ) : null}
+        {notice ? (
+          <div className="db-notice db-notice-clean">
+            <CheckCircle2 className="size-4" />
+            <span>{notice}</span>
+          </div>
+        ) : null}
 
-      {reminderRows === undefined ? (
-        <div className="db-empty">
-          <Clock className="size-10 text-[#d1d5db]" />
-          <h3>Loading reminder queue</h3>
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="db-empty">
-          <Bell className="size-10 text-[#d1d5db]" />
-          <h3>No invoices need reminders</h3>
-          <p>Sent, approved, awaiting payment, and overdue invoices will appear here.</p>
-        </div>
-      ) : (
-        <>
-          {overdueRows.length > 0 ? (
-            <section className="db-section">
-              <div className="db-section-header">
-                <AlertTriangle className="size-4 text-[#dc2626]" />
-                <h2>Overdue invoices</h2>
-              </div>
-              <div className="db-reminder-list">
-                {overdueRows.map((row) => (
-                  <ReminderCard
-                    key={row.invoice._id}
-                    row={row}
-                    kind="overdue"
-                    pending={pending}
-                    onSend={handleReminder}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <section className="db-section">
-            <div className="db-section-header">
-              <Clock className="size-4 text-[#1a6fc4]" />
-              <h2>Active invoices</h2>
+        {rows.length === 0 ? (
+          <div className="db-card db-reminders-card">
+            <div className="db-empty">
+              <Bell className="size-10 text-[#d1d5db]" />
+              <h3>No invoices need reminders</h3>
+              <p>Sent, approved, awaiting payment, and overdue invoices will appear here.</p>
             </div>
-            {activeRows.length === 0 ? (
-              <div className="db-empty">
-                <Bell className="size-10 text-[#d1d5db]" />
-                <h3>No active invoices</h3>
-                <p>Invoices sent to clients will appear here.</p>
+          </div>
+        ) : (
+          <div className="db-reminders-layout">
+            {overdueRows.length > 0 ? (
+              <section className="db-card db-reminders-card db-reminders-card-overdue">
+                <div className="db-panel-header">
+                  <div>
+                    <p className="db-panel-kicker">Past due</p>
+                    <h2>Overdue invoices</h2>
+                  </div>
+                  <span className="db-panel-meta">
+                    <AlertTriangle className="size-3.5" /> {overdueRows.length}
+                  </span>
+                </div>
+                <div className="db-reminder-list db-reminder-list-clean">
+                  {overdueRows.map((row) => (
+                    <ReminderCard
+                      key={row.invoice._id}
+                      row={row}
+                      kind="overdue"
+                      pending={pending}
+                      onSend={handleReminder}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="db-card db-reminders-card">
+              <div className="db-panel-header">
+                <div>
+                  <p className="db-panel-kicker">Follow up</p>
+                  <h2>Active invoices</h2>
+                </div>
+                <span className="db-panel-meta">
+                  <Clock className="size-3.5" /> {activeRows.length}
+                </span>
               </div>
-            ) : (
-              <div className="db-reminder-list">
-                {activeRows.map((row) => (
-                  <ReminderCard
-                    key={row.invoice._id}
-                    row={row}
-                    kind="reminder"
-                    pending={pending}
-                    onSend={handleReminder}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </>
-      )}
+              {activeRows.length === 0 ? (
+                <div className="db-empty">
+                  <Bell className="size-10 text-[#d1d5db]" />
+                  <h3>No active invoices</h3>
+                  <p>Invoices sent to clients will appear here.</p>
+                </div>
+              ) : (
+                <div className="db-reminder-list db-reminder-list-clean">
+                  {activeRows.map((row) => (
+                    <ReminderCard
+                      key={row.invoice._id}
+                      row={row}
+                      kind="reminder"
+                      pending={pending}
+                      onSend={handleReminder}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -321,8 +333,12 @@ function ReminderCard({
   const isPending = pending === `${kind}-${invoice._id}`;
 
   return (
-    <article className={`db-reminder-item${kind === "overdue" ? " db-reminder-overdue" : ""}`}>
-      <div className="grid gap-2">
+    <article className={`db-reminder-item db-reminder-row${kind === "overdue" ? " db-reminder-overdue" : ""}`}>
+      <span
+        className={`db-reminder-status-dot ${kind === "overdue" ? "db-status-danger" : "db-status-info"}`}
+        aria-hidden="true"
+      />
+      <div className="db-reminder-row-main">
         <div>
           <p className="db-reminder-inv">
             {invoice.invoiceNumber} - {rowClientName(row)}
@@ -331,17 +347,17 @@ function ReminderCard({
             Due {invoice.dueDate} - {statusLabels[invoice.status]} - {amount}
           </p>
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[#6b7280]">
-          <span className="inline-flex items-center gap-1">
+        <div className="db-reminder-contact-list">
+          <span>
             <UserRound className="size-3.5" /> {row.client ? "Onboarded client" : "Invoice client"}
           </span>
           {email ? (
-            <span className="inline-flex items-center gap-1">
+            <span>
               <Mail className="size-3.5" /> {email}
             </span>
           ) : null}
           {phone ? (
-            <span className="inline-flex items-center gap-1">
+            <span>
               <Phone className="size-3.5" /> {phone}
             </span>
           ) : null}
@@ -352,7 +368,7 @@ function ReminderCard({
             : "No reminders sent yet"}
         </p>
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="db-reminder-row-actions">
         {invoice.publicToken ? (
           <a
             className="db-reminder-btn"

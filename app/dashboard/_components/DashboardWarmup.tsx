@@ -44,6 +44,18 @@ function canWarmAggressively() {
   return !connection.saveData && connection.effectiveType !== "2g";
 }
 
+function monthStartIso(date = new Date()) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
+    .toISOString()
+    .slice(0, 10);
+}
+
+function monthEndIso(date = new Date()) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0))
+    .toISOString()
+    .slice(0, 10);
+}
+
 export function DashboardWarmup({ routes }: { routes: string[] }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -57,20 +69,48 @@ export function DashboardWarmup({ routes }: { routes: string[] }) {
     let cancelled = false;
     const routeSet = Array.from(new Set(routes)).filter((route) => route !== pathname);
     const extendSubscriptionFor = 90_000;
+    const currentMonth = {
+      from: monthStartIso(),
+      to: monthEndIso(),
+    };
 
-    const cancelRouteWarmup = scheduleIdle(() => {
-      if (cancelled) {
+    function isCancelled() {
+      return cancelled || document.visibilityState === "hidden";
+    }
+
+    function prefetchRoute(route: string) {
+      if (isCancelled()) {
         return;
       }
 
-      routeSet.forEach((route) => router.prefetch(route));
-    }, 250);
+      router.prefetch(route);
+    }
 
-    const cancelCoreQueryWarmup = scheduleIdle(() => {
-      if (cancelled) {
+    function prewarmCoreQueries() {
+      if (isCancelled()) {
         return;
       }
 
+      convex.prewarmQuery({
+        query: api.users.current,
+        args: {},
+        extendSubscriptionFor,
+      });
+      convex.prewarmQuery({
+        query: api.invoices.workspace,
+        args: {},
+        extendSubscriptionFor,
+      });
+      convex.prewarmQuery({
+        query: api.subscriptions.current,
+        args: {},
+        extendSubscriptionFor,
+      });
+      convex.prewarmQuery({
+        query: api.organizations.switcherState,
+        args: {},
+        extendSubscriptionFor,
+      });
       convex.prewarmQuery({
         query: api.invoices.list,
         args: {},
@@ -91,16 +131,16 @@ export function DashboardWarmup({ routes }: { routes: string[] }) {
         args: { status: "submitted" },
         extendSubscriptionFor,
       });
-    }, 700);
+    }
 
-    const cancelSecondaryQueryWarmup = scheduleIdle(() => {
-      if (cancelled) {
+    function prewarmAccountingQueries() {
+      if (isCancelled()) {
         return;
       }
 
       convex.prewarmQuery({
         query: api.invoices.listRecords,
-        args: {},
+        args: currentMonth,
         extendSubscriptionFor,
       });
       convex.prewarmQuery({
@@ -110,7 +150,17 @@ export function DashboardWarmup({ routes }: { routes: string[] }) {
       });
       convex.prewarmQuery({
         query: api.reports.summary,
-        args: {},
+        args: currentMonth,
+        extendSubscriptionFor,
+      });
+      convex.prewarmQuery({
+        query: api.reports.ledgerExport,
+        args: currentMonth,
+        extendSubscriptionFor,
+      });
+      convex.prewarmQuery({
+        query: api.vat.returnSummary,
+        args: currentMonth,
         extendSubscriptionFor,
       });
       convex.prewarmQuery({
@@ -119,22 +169,72 @@ export function DashboardWarmup({ routes }: { routes: string[] }) {
         extendSubscriptionFor,
       });
       convex.prewarmQuery({
-        query: api.organizations.switcherState,
-        args: {},
+        query: api.purchases.listPurchases,
+        args: currentMonth,
         extendSubscriptionFor,
       });
       convex.prewarmQuery({
-        query: api.subscriptions.current,
+        query: api.purchases.listPurchaseScans,
         args: {},
         extendSubscriptionFor,
       });
+    }
+
+    function prewarmSettingsQueries() {
+      if (isCancelled()) {
+        return;
+      }
+
+      convex.prewarmQuery({
+        query: api.organizations.settingsState,
+        args: {},
+        extendSubscriptionFor,
+      });
+    }
+
+    function warmEverything() {
+      routeSet.forEach(prefetchRoute);
+      prewarmCoreQueries();
+      prewarmAccountingQueries();
+      prewarmSettingsQueries();
+    }
+
+    const cancelRouteWarmup = scheduleIdle(() => {
+      if (isCancelled()) {
+        return;
+      }
+
+      routeSet.forEach(prefetchRoute);
+    }, 250);
+
+    const cancelCoreQueryWarmup = scheduleIdle(() => {
+      prewarmCoreQueries();
+    }, 700);
+
+    const cancelSecondaryQueryWarmup = scheduleIdle(() => {
+      prewarmAccountingQueries();
     }, 1400);
+    const cancelSettingsQueryWarmup = scheduleIdle(() => {
+      prewarmSettingsQueries();
+    }, 2200);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        warmEverything();
+      }
+    };
+
+    window.addEventListener("focus", warmEverything);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       cancelled = true;
       cancelRouteWarmup();
       cancelCoreQueryWarmup();
       cancelSecondaryQueryWarmup();
+      cancelSettingsQueryWarmup();
+      window.removeEventListener("focus", warmEverything);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [convex, pathname, router, routes]);
 

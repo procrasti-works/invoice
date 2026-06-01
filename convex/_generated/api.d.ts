@@ -8,15 +8,20 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as dashboard from "../dashboard.js";
 import type * as http from "../http.js";
 import type * as invoices from "../invoices.js";
 import type * as organizationContext from "../organizationContext.js";
+import type * as organizationPermissions from "../organizationPermissions.js";
 import type * as organizations from "../organizations.js";
+import type * as purchaseScanExtraction from "../purchaseScanExtraction.js";
 import type * as purchases from "../purchases.js";
 import type * as reports from "../reports.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
+import type * as vat from "../vat.js";
 
 import type {
   ApiFromModules,
@@ -25,15 +30,20 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   auth: typeof auth;
+  dashboard: typeof dashboard;
   http: typeof http;
   invoices: typeof invoices;
   organizationContext: typeof organizationContext;
+  organizationPermissions: typeof organizationPermissions;
   organizations: typeof organizations;
+  purchaseScanExtraction: typeof purchaseScanExtraction;
   purchases: typeof purchases;
   reports: typeof reports;
   subscriptions: typeof subscriptions;
   users: typeof users;
+  vat: typeof vat;
 }>;
 
 /**

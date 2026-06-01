@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
+  AlertTriangle,
+  Building2,
   CheckCircle2,
   Copy,
+  KeyRound,
   Loader2,
   MailPlus,
   Save,
+  ShieldCheck,
   Trash2,
+  UserCog,
+  UserMinus,
   Users,
 } from "lucide-react";
 
@@ -22,7 +29,44 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 type Workspace = Doc<"organizations">;
-type InviteRole = "admin" | "finance" | "viewer" | "member";
+type MemberRole = Doc<"memberships">["role"];
+type AssignableRole = Exclude<MemberRole, "owner">;
+type PermissionKey =
+  | "manageSettings"
+  | "manageMembers"
+  | "manageRoles"
+  | "createInvoices"
+  | "sendInvoices"
+  | "voidInvoices"
+  | "manageClients"
+  | "recordPayments"
+  | "managePurchases"
+  | "manageVat"
+  | "exportReports"
+  | "deleteOrganization";
+type PermissionPolicy = Omit<Record<PermissionKey, MemberRole>, "deleteOrganization"> & {
+  deleteOrganization: Extract<MemberRole, "owner" | "admin">;
+};
+type SettingsState = {
+  user: { name: string; email: string };
+  membership: Doc<"memberships">;
+  organization: Workspace;
+  permissionPolicy: PermissionPolicy;
+  permissions: {
+    canManageSettings: boolean;
+    canManageMembers: boolean;
+    canManageRoles: boolean;
+    canDeleteOrganization: boolean;
+  };
+  members: Array<{
+    membership: Doc<"memberships">;
+    current: boolean;
+    user: { name: string; email: string };
+  }>;
+  pendingInvitations: Array<
+    Doc<"organizationInvitations"> & { expired: boolean; token: string }
+  >;
+};
 type SettingsForm = {
   name: string;
   legalName: string;
@@ -34,6 +78,14 @@ type SettingsForm = {
   taxId: string;
   vatNumber: string;
   vatRegistered: boolean;
+  vatRegistrationType: "not_registered" | "voluntary" | "mandatory";
+  vatFilingFrequency: "monthly" | "bi_monthly";
+  vatReturnDueDay: string;
+  vatRecordRetentionYears: string;
+  vatDefaultTaxMode: "no_vat" | "vat_15" | "zero_rated" | "exempt";
+  vedEnabled: boolean;
+  vedTransmissionMode: "manual_export" | "near_real_time" | "real_time";
+  itasRegistered: boolean;
   defaultCurrency: string;
   defaultTerms: string;
   invoicePrefix: string;
@@ -46,6 +98,90 @@ type SettingsForm = {
   swiftCode: string;
 };
 
+const roleOptions: Array<{ value: MemberRole; label: string }> = [
+  { value: "owner", label: "Owner" },
+  { value: "admin", label: "Admin" },
+  { value: "finance", label: "Finance" },
+  { value: "member", label: "Member" },
+  { value: "viewer", label: "Viewer" },
+];
+
+const assignableRoleOptions: Array<{ value: AssignableRole; label: string }> = [
+  { value: "admin", label: "Admin" },
+  { value: "finance", label: "Finance" },
+  { value: "member", label: "Member" },
+  { value: "viewer", label: "Viewer" },
+];
+
+const permissionRows: Array<{
+  key: PermissionKey;
+  label: string;
+  description: string;
+  destructive?: boolean;
+}> = [
+  {
+    key: "manageSettings",
+    label: "Organization profile",
+    description: "Business details, VAT setup, bank details.",
+  },
+  {
+    key: "manageMembers",
+    label: "Team access",
+    description: "Invite people and remove members.",
+  },
+  {
+    key: "manageRoles",
+    label: "Roles and rules",
+    description: "Change member roles and permission levels.",
+  },
+  {
+    key: "createInvoices",
+    label: "Create invoices",
+    description: "Draft and edit client invoices.",
+  },
+  {
+    key: "sendInvoices",
+    label: "Issue invoices",
+    description: "Prepare links, mark sent, and schedule reminders.",
+  },
+  {
+    key: "voidInvoices",
+    label: "Void invoices",
+    description: "Close invoices without payment.",
+  },
+  {
+    key: "manageClients",
+    label: "Clients",
+    description: "Create and update client records.",
+  },
+  {
+    key: "recordPayments",
+    label: "Payments",
+    description: "Mark paid and review payment proof.",
+  },
+  {
+    key: "managePurchases",
+    label: "Purchases",
+    description: "Scan, review, and post supplier invoices.",
+  },
+  {
+    key: "manageVat",
+    label: "VAT settings",
+    description: "Change VAT filing and export setup.",
+  },
+  {
+    key: "exportReports",
+    label: "Report exports",
+    description: "Export ledger and accounting records.",
+  },
+  {
+    key: "deleteOrganization",
+    label: "Delete organization",
+    description: "Remove this workspace from active use.",
+    destructive: true,
+  },
+];
+
 const defaultSettings: SettingsForm = {
   name: "My company",
   legalName: "",
@@ -57,6 +193,14 @@ const defaultSettings: SettingsForm = {
   taxId: "",
   vatNumber: "",
   vatRegistered: false,
+  vatRegistrationType: "not_registered",
+  vatFilingFrequency: "monthly",
+  vatReturnDueDay: "25",
+  vatRecordRetentionYears: "5",
+  vatDefaultTaxMode: "no_vat",
+  vedEnabled: false,
+  vedTransmissionMode: "manual_export",
+  itasRegistered: false,
   defaultCurrency: "NAD",
   defaultTerms: "Payment due within 7 days unless otherwise agreed.",
   invoicePrefix: "INV",
@@ -86,6 +230,18 @@ function settingsFromWorkspace(workspace: Workspace | null): SettingsForm {
     taxId: workspace.taxId ?? "",
     vatNumber: workspace.vatNumber ?? "",
     vatRegistered: workspace.vatRegistered ?? false,
+    vatRegistrationType:
+      workspace.vatRegistrationType ??
+      (workspace.vatRegistered ? "mandatory" : "not_registered"),
+    vatFilingFrequency: workspace.vatFilingFrequency ?? "monthly",
+    vatReturnDueDay: String(workspace.vatReturnDueDay ?? 25),
+    vatRecordRetentionYears: String(workspace.vatRecordRetentionYears ?? 5),
+    vatDefaultTaxMode:
+      workspace.vatDefaultTaxMode ??
+      (workspace.vatRegistered ? "vat_15" : "no_vat"),
+    vedEnabled: workspace.vedEnabled ?? Boolean(workspace.vatRegistered),
+    vedTransmissionMode: workspace.vedTransmissionMode ?? "manual_export",
+    itasRegistered: workspace.itasRegistered ?? false,
     defaultCurrency: workspace.defaultCurrency,
     defaultTerms: workspace.defaultTerms ?? defaultSettings.defaultTerms,
     invoicePrefix: workspace.invoicePrefix ?? "INV",
@@ -100,71 +256,361 @@ function settingsFromWorkspace(workspace: Workspace | null): SettingsForm {
 }
 
 export function SettingsPage() {
-  const workspace = useQuery(api.invoices.workspace);
-  const loading = workspace === undefined;
+  const state = useQuery(api.organizations.settingsState);
+  const workspace = state?.organization ?? null;
 
   const workspaceVersion = workspace
-    ? `${workspace._id}:${workspace.updatedAt}`
+    ? `${workspace._id}:${workspace.updatedAt}:${state?.membership.role}`
     : "new";
 
   return (
-    <div className="db-page">
-      <div className="db-page-header">
-        <div>
-          <p className="db-page-eyebrow">Workspace settings</p>
-          <h1 className="db-page-title">Settings</h1>
+    <div className="db-page db-dashboard-page db-settings-page">
+      <section className="db-workview">
+        <div className="db-workview-head">
+          <div>
+            <p className="db-breadcrumb">
+              Payvio <span>/</span> Settings
+            </p>
+            <h1 className="db-workview-title">Settings</h1>
+          </div>
+          <Link href="/dashboard" className="db-outline-btn db-settings-back-link">
+            <ArrowLeft className="size-4" />
+            Dashboard
+          </Link>
         </div>
-        <Link href="/dashboard" className="db-outline-btn">
-          <ArrowLeft className="size-4" />
-          Dashboard
-        </Link>
-      </div>
 
-      {loading ? (
-        <section className="db-card grid max-w-3xl gap-3">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-12 rounded-lg bg-[#f1f1ee]" />
-          ))}
-        </section>
-      ) : workspace ? (
-        <div className="grid max-w-3xl gap-5">
-          <SettingsEditor
-            key={workspaceVersion}
-            workspace={workspace}
-            initialForm={settingsFromWorkspace(workspace)}
-          />
-          <TeamInvitationsPanel />
-        </div>
-      ) : (
-        <section className="db-card grid max-w-3xl gap-3">
-          <h2 className="text-lg font-semibold text-[#050505]">Workspace setup required</h2>
-          <p className="text-sm text-[#686b70]">
-            Create or join an organization before editing settings.
-          </p>
-          <Link href="/onboarding" className="db-primary-btn w-max">Open setup</Link>
-        </section>
-      )}
+        {state === undefined ? null : state && workspace ? (
+          <div className="db-settings-layout">
+            <OrganizationSummaryPanel state={state} />
+            <div className="db-settings-main">
+              <SettingsEditor
+                key={workspaceVersion}
+                workspace={workspace}
+                initialForm={settingsFromWorkspace(workspace)}
+                canManageSettings={state.permissions.canManageSettings}
+              />
+              <RoleRulesPanel key={`rules:${workspaceVersion}`} state={state} />
+              <MembersPanel key={`members:${workspaceVersion}`} state={state} />
+              <TeamInvitationsPanel key={`invites:${workspaceVersion}`} state={state} />
+              <DangerZonePanel key={`danger:${workspaceVersion}`} state={state} />
+            </div>
+          </div>
+        ) : (
+          <section className="db-card db-settings-empty">
+            <h2>Workspace setup required</h2>
+            <p>Create or join an organization before editing settings.</p>
+            <Link href="/onboarding" className="db-primary-btn">Open setup</Link>
+          </section>
+        )}
+      </section>
     </div>
   );
 }
 
-function TeamInvitationsPanel() {
-  const state = useQuery(api.organizations.onboardingState);
-  const invitations = useQuery(api.organizations.listInvitations, {
-    status: "pending",
-  });
+function OrganizationSummaryPanel({ state }: { state: SettingsState }) {
+  const policy = state.permissionPolicy;
+  const adminCount = state.members.filter(
+    (member) =>
+      member.membership.role === "owner" || member.membership.role === "admin",
+  ).length;
+
+  return (
+    <aside className="db-settings-sidebar">
+      <section className="db-settings-card db-settings-org-card">
+        <div className="db-settings-mark">
+          <Building2 className="size-5" />
+        </div>
+        <p className="db-settings-kicker">Active organization</p>
+        <h2>{state.organization.name}</h2>
+        <div className="db-settings-meta-list">
+          <span>{state.organization.defaultCurrency}</span>
+          <span>{roleLabel(state.membership.role)}</span>
+          <span>{state.members.length} members</span>
+        </div>
+      </section>
+
+      <section className="db-settings-card">
+        <div className="db-settings-card-head">
+          <div>
+            <p className="db-settings-kicker">Access</p>
+            <h2>Control scope</h2>
+          </div>
+          <ShieldCheck className="size-4" />
+        </div>
+        <div className="db-settings-scope-list">
+          <div>
+            <span>Admins</span>
+            <strong>{adminCount}</strong>
+          </div>
+          <div>
+            <span>Invoice create</span>
+            <strong>{roleLabel(policy.createInvoices)}+</strong>
+          </div>
+          <div>
+            <span>Delete org</span>
+            <strong>{policy.deleteOrganization === "admin" ? "Admins" : "Owner"}</strong>
+          </div>
+        </div>
+      </section>
+    </aside>
+  );
+}
+
+function RoleRulesPanel({ state }: { state: SettingsState }) {
+  const updatePermissionPolicy = useMutation(api.organizations.updatePermissionPolicy);
+  const [policy, setPolicy] = useState<PermissionPolicy>(state.permissionPolicy);
+  const [pending, setPending] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const canManageRules = state.permissions.canManageRoles;
+
+  async function handleSave() {
+    setNotice(null);
+    setError(null);
+    setPending(true);
+
+    try {
+      await updatePermissionPolicy({ permissionPolicy: policy });
+      setNotice("Role rules saved.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to save role rules.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="db-settings-card">
+      <div className="db-settings-card-head">
+        <div>
+          <p className="db-settings-kicker">Roles and rules</p>
+          <h2>Scoped organization access</h2>
+        </div>
+        <KeyRound className="size-4" />
+      </div>
+
+      {notice ? (
+        <p className="db-settings-success">
+          <CheckCircle2 className="size-4" />
+          {notice}
+        </p>
+      ) : null}
+
+      {error ? <p className="db-settings-error">{error}</p> : null}
+
+      {!canManageRules ? (
+        <p className="db-settings-warning">
+          <AlertTriangle className="size-4" />
+          Your role cannot change permission rules.
+        </p>
+      ) : null}
+
+      <div className="db-settings-role-grid">
+        {roleOptions.map((role) => (
+          <div key={role.value} className="db-settings-role-cell">
+            <strong>{role.label}</strong>
+            <span>{roleDescription(role.value)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="db-settings-rule-list">
+        {permissionRows.map((row) => {
+          const options =
+            row.key === "deleteOrganization"
+              ? roleOptions.filter(
+                  (role) => role.value === "owner" || role.value === "admin",
+                )
+              : roleOptions;
+
+          return (
+            <div key={row.key} className="db-settings-rule-row">
+              <div>
+                <span className={row.destructive ? "db-settings-danger-text" : ""}>
+                  {row.label}
+                </span>
+                <small>{row.description}</small>
+              </div>
+              <select
+                value={policy[row.key]}
+                onChange={(event) =>
+                  setPolicy((current) => ({
+                    ...current,
+                    [row.key]: event.target.value as PermissionPolicy[typeof row.key],
+                  }))
+                }
+                disabled={!canManageRules || pending}
+                className="db-settings-select"
+                aria-label={`${row.label} minimum role`}
+              >
+                {options.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.value === "owner" ? "Owner only" : `${role.label}+`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+
+      <Button
+        type="button"
+        disabled={!canManageRules || pending}
+        onClick={handleSave}
+        className="db-settings-action"
+      >
+        {pending ? <Loader2 className="animate-spin" /> : <Save />}
+        Save role rules
+      </Button>
+    </section>
+  );
+}
+
+function MembersPanel({ state }: { state: SettingsState }) {
+  const updateMemberRole = useMutation(api.organizations.updateMemberRole);
+  const removeMember = useMutation(api.organizations.removeMember);
+  const [changingId, setChangingId] = useState<Id<"memberships"> | null>(null);
+  const [removingId, setRemovingId] = useState<Id<"memberships"> | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleRoleChange(
+    membershipId: Id<"memberships">,
+    role: AssignableRole,
+  ) {
+    setNotice(null);
+    setError(null);
+    setChangingId(membershipId);
+
+    try {
+      await updateMemberRole({ membershipId, role });
+      setNotice("Member role updated.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to update role.");
+    } finally {
+      setChangingId(null);
+    }
+  }
+
+  async function handleRemove(membershipId: Id<"memberships">) {
+    setNotice(null);
+    setError(null);
+    setRemovingId(membershipId);
+
+    try {
+      await removeMember({ membershipId });
+      setNotice("Member removed.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to remove member.");
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  return (
+    <section className="db-settings-card">
+      <div className="db-settings-card-head">
+        <div>
+          <p className="db-settings-kicker">Members</p>
+          <h2>Organization roles</h2>
+        </div>
+        <UserCog className="size-4" />
+      </div>
+
+      {notice ? (
+        <p className="db-settings-success">
+          <CheckCircle2 className="size-4" />
+          {notice}
+        </p>
+      ) : null}
+
+      {error ? <p className="db-settings-error">{error}</p> : null}
+
+      <div className="db-settings-member-list">
+        {state.members.map((member) => {
+          const role = member.membership.role;
+          const canChangeRole =
+            state.permissions.canManageRoles && role !== "owner" && !member.current;
+          const canRemove =
+            state.permissions.canManageMembers && role !== "owner" && !member.current;
+
+          return (
+            <div key={member.membership._id} className="db-settings-member-row">
+              <div className="db-settings-member-main">
+                <span className="db-settings-avatar">
+                  {memberInitial(member.user.email || member.user.name)}
+                </span>
+                <div>
+                  <strong>{member.user.name || member.user.email || "Team member"}</strong>
+                  <small>
+                    {member.user.email || "No email"}{member.current ? " - you" : ""}
+                  </small>
+                </div>
+              </div>
+              <div className="db-settings-member-actions">
+                {canChangeRole ? (
+                  <select
+                    value={role}
+                    onChange={(event) =>
+                      handleRoleChange(
+                        member.membership._id,
+                        event.target.value as AssignableRole,
+                      )
+                    }
+                    disabled={changingId === member.membership._id}
+                    className="db-settings-select"
+                    aria-label="Member role"
+                  >
+                    {assignableRoleOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Badge variant="secondary">{roleLabel(role)}</Badge>
+                )}
+
+                {canRemove ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="db-settings-remove-btn"
+                    onClick={() => handleRemove(member.membership._id)}
+                    disabled={removingId === member.membership._id}
+                  >
+                    {removingId === member.membership._id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <UserMinus />
+                    )}
+                    Remove
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function TeamInvitationsPanel({ state }: { state: SettingsState }) {
+  const invitations = state.pendingInvitations;
   const createInvitation = useMutation(api.organizations.createInvitation);
   const revokeInvitation = useMutation(api.organizations.revokeInvitation);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<InviteRole>("finance");
+  const [role, setRole] = useState<AssignableRole>("finance");
   const [pending, setPending] = useState(false);
   const [revokingId, setRevokingId] =
     useState<Id<"organizationInvitations"> | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const canManageTeam =
-    state?.membership?.role === "owner" || state?.membership?.role === "admin";
+  const canManageTeam = state.permissions.canManageMembers;
 
   async function copyInviteUrl(token: string) {
     const url = inviteUrl(token);
@@ -210,47 +656,31 @@ function TeamInvitationsPanel() {
     }
   }
 
-  if (state === undefined || invitations === undefined) {
-    return (
-      <section className="db-card grid gap-3">
-        <div className="h-5 w-32 rounded bg-[#ecece8]" />
-        <div className="h-10 rounded bg-[#ecece8]" />
-      </section>
-    );
-  }
-
   return (
-    <section className="db-card grid gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className="db-settings-card db-settings-invitations-card">
+      <div className="db-settings-card-head">
         <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#505258]">
-            <Users className="size-4 text-[#009b68]" />
-            Team access
-          </div>
-          <p className="mt-1 text-sm text-[#686b70]">
-            Create invite links for this organization.
-          </p>
+          <p className="db-settings-kicker">Team access</p>
+          <h2>Invite links</h2>
+          <p className="db-settings-card-copy">Create invite links for this organization.</p>
         </div>
+        <Users className="size-4" />
         <Badge variant={canManageTeam ? "success" : "warning"}>
-          {canManageTeam ? "Owner/admin" : "Restricted"}
+          {canManageTeam ? "Can invite" : "Restricted"}
         </Badge>
       </div>
 
       {notice ? (
-        <p className="flex items-center gap-2 rounded-lg border border-[#bfe8d8] bg-[#ecf8f2] p-3 text-sm text-[#006545]">
+        <p className="db-settings-success">
           <CheckCircle2 className="size-4 shrink-0" />
           {notice}
         </p>
       ) : null}
 
-      {error ? (
-        <p className="rounded-lg border border-[#ffc7d1] bg-[#fff0f3] p-3 text-sm text-[#a51f43]">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className="db-settings-error">{error}</p> : null}
 
       {canManageTeam ? (
-        <form onSubmit={handleInvite} className="grid gap-3 rounded-lg border border-[#deded8] bg-[#f1f1ee] p-3">
+        <form onSubmit={handleInvite} className="db-settings-invite-form">
           <div className="grid gap-3 sm:grid-cols-[1fr_160px_auto]">
             <SettingsField label="Email" htmlFor="invite-email">
               <Input
@@ -266,7 +696,7 @@ function TeamInvitationsPanel() {
               <select
                 id="invite-role"
                 value={role}
-                onChange={(event) => setRole(event.target.value as InviteRole)}
+                onChange={(event) => setRole(event.target.value as AssignableRole)}
                 className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none"
               >
                 <option value="admin">Admin</option>
@@ -278,7 +708,7 @@ function TeamInvitationsPanel() {
             <Button
               type="submit"
               disabled={pending}
-              className="self-end bg-[#009b68] text-white hover:bg-[#00875b]"
+              className="db-primary-btn db-settings-invite-btn"
             >
               {pending ? <Loader2 className="animate-spin" /> : <MailPlus />}
               Create link
@@ -286,28 +716,26 @@ function TeamInvitationsPanel() {
           </div>
         </form>
       ) : (
-        <p className="rounded-lg border border-[#f7e09b] bg-[#fff9df] p-3 text-sm text-[#7d6000]">
-          Only owners and admins can invite teammates.
+        <p className="db-settings-warning">
+          Your current role cannot invite teammates.
         </p>
       )}
 
-      <div className="grid gap-2">
-        <p className="text-[13px] font-medium text-[#505258]">Pending invites</p>
+      <div className="db-settings-pending-list">
+        <p className="db-settings-section-title">Pending invites</p>
         {invitations.length === 0 ? (
-          <p className="rounded-lg border border-[#deded8] bg-[#f1f1ee] p-3 text-sm text-[#686b70]">
+          <p className="db-settings-empty-row">
             No pending invites.
           </p>
         ) : (
           invitations.map((invitation) => (
             <div
               key={invitation._id}
-              className="flex flex-col gap-3 rounded-lg border border-[#deded8] bg-[#f1f1ee] p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="db-settings-invite-row"
             >
               <div>
-                <p className="text-sm font-semibold text-[#050505]">
-                  {invitation.email}
-                </p>
-                <p className="text-xs text-[#686b70]">
+                <p className="db-settings-invite-email">{invitation.email}</p>
+                <p className="db-settings-invite-meta">
                   {roleLabel(invitation.role)} access
                   {invitation.expired ? " - expired" : ""}
                 </p>
@@ -318,7 +746,7 @@ function TeamInvitationsPanel() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="border-[#deded8] bg-[#f6f6f4]"
+                    className="db-settings-copy-btn"
                     onClick={() => copyInviteUrl(invitation.token)}
                     disabled={!invitation.token || invitation.expired}
                   >
@@ -329,7 +757,7 @@ function TeamInvitationsPanel() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="border-[#ffc7d1] bg-[#fff0f3] text-[#a51f43] hover:bg-[#ffe5eb]"
+                    className="db-settings-delete-btn"
                     onClick={() => handleRevoke(invitation._id)}
                     disabled={revokingId === invitation._id}
                   >
@@ -350,6 +778,73 @@ function TeamInvitationsPanel() {
   );
 }
 
+function DangerZonePanel({ state }: { state: SettingsState }) {
+  const router = useRouter();
+  const deleteOrganization = useMutation(api.organizations.deleteOrganization);
+  const [confirmationName, setConfirmationName] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canDelete = state.permissions.canDeleteOrganization;
+  const confirmed = confirmationName.trim() === state.organization.name;
+
+  async function handleDelete() {
+    setError(null);
+    setPending(true);
+
+    try {
+      await deleteOrganization({ confirmationName });
+      router.replace("/onboarding?mode=create");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to delete organization.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="db-settings-card db-settings-danger-zone">
+      <div className="db-settings-card-head">
+        <div>
+          <p className="db-settings-kicker">Danger zone</p>
+          <h2>Delete organization</h2>
+        </div>
+        <AlertTriangle className="size-4" />
+      </div>
+
+      {error ? <p className="db-settings-error">{error}</p> : null}
+
+      {!canDelete ? (
+        <p className="db-settings-warning">
+          <AlertTriangle className="size-4" />
+          Your role cannot delete this organization.
+        </p>
+      ) : null}
+
+      <div className="db-settings-delete-row">
+        <SettingsField label="Confirm organization name" htmlFor="delete-organization-name">
+          <Input
+            id="delete-organization-name"
+            value={confirmationName}
+            onChange={(event) => setConfirmationName(event.target.value)}
+            disabled={!canDelete || pending}
+            className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px]"
+          />
+        </SettingsField>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!canDelete || !confirmed || pending}
+          onClick={handleDelete}
+          className="db-settings-delete-btn"
+        >
+          {pending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+          Delete organization
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function inviteUrl(token: string) {
   if (typeof window === "undefined") {
     return `/join/${token}`;
@@ -359,6 +854,10 @@ function inviteUrl(token: string) {
 }
 
 function roleLabel(role: string) {
+  if (role === "owner") {
+    return "Owner";
+  }
+
   if (role === "admin") {
     return "Admin";
   }
@@ -374,12 +873,38 @@ function roleLabel(role: string) {
   return "Member";
 }
 
+function roleDescription(role: MemberRole) {
+  if (role === "owner") {
+    return "Full account ownership";
+  }
+
+  if (role === "admin") {
+    return "Operations and access control";
+  }
+
+  if (role === "finance") {
+    return "Invoices, payments, VAT";
+  }
+
+  if (role === "member") {
+    return "Day-to-day records";
+  }
+
+  return "Read-only workspace";
+}
+
+function memberInitial(value: string) {
+  return (value.trim().slice(0, 1) || "P").toUpperCase();
+}
+
 function SettingsEditor({
   workspace,
   initialForm,
+  canManageSettings,
 }: {
   workspace: Workspace | null;
   initialForm: SettingsForm;
+  canManageSettings: boolean;
 }) {
   const updateWorkspace = useMutation(api.invoices.updateWorkspace);
   const [form, setForm] = useState<SettingsForm>(initialForm);
@@ -392,10 +917,18 @@ function SettingsEditor({
     setNotice(null);
     setError(null);
 
+    if (!canManageSettings) {
+      setError("Your role cannot change organization profile settings.");
+      return;
+    }
+
     if (!/^[A-Z]{3}$/.test(form.defaultCurrency)) {
       setError("Currency must be a 3-letter code.");
       return;
     }
+
+    const vatReturnDueDay = Math.min(28, Math.max(1, Number(form.vatReturnDueDay) || 25));
+    const vatRecordRetentionYears = Math.max(5, Number(form.vatRecordRetentionYears) || 5);
 
     setPending(true);
 
@@ -411,6 +944,18 @@ function SettingsEditor({
         taxId: form.taxId,
         vatNumber: form.vatNumber,
         vatRegistered: form.vatRegistered,
+        vatRegistrationType: form.vatRegistered
+          ? form.vatRegistrationType === "not_registered"
+            ? "mandatory"
+            : form.vatRegistrationType
+          : "not_registered",
+        vatFilingFrequency: form.vatFilingFrequency,
+        vatReturnDueDay,
+        vatRecordRetentionYears,
+        vatDefaultTaxMode: form.vatRegistered ? form.vatDefaultTaxMode : "no_vat",
+        vedEnabled: form.vatRegistered && form.vedEnabled,
+        vedTransmissionMode: form.vedTransmissionMode,
+        itasRegistered: form.itasRegistered,
         defaultCurrency: form.defaultCurrency,
         defaultTerms: form.defaultTerms,
         invoicePrefix: form.invoicePrefix,
@@ -435,21 +980,25 @@ function SettingsEditor({
   return (
     <form
       onSubmit={handleSubmit}
-      className="db-card grid max-w-3xl gap-5"
+      className="db-settings-card db-settings-editor-card"
     >
       {notice ? (
-        <p className="flex items-center gap-2 rounded-lg border border-[#bfe8d8] bg-[#ecf8f2] p-3 text-sm text-[#006545]">
+        <p className="db-settings-success">
           <CheckCircle2 className="size-4 shrink-0" />
           {notice}
         </p>
       ) : null}
 
-      {error ? (
-        <p className="rounded-lg border border-[#ffc7d1] bg-[#fff0f3] p-3 text-sm text-[#a51f43]">
-          {error}
+      {error ? <p className="db-settings-error">{error}</p> : null}
+
+      {!canManageSettings ? (
+        <p className="db-settings-warning">
+          <AlertTriangle className="size-4" />
+          Your role cannot change organization profile settings.
         </p>
       ) : null}
 
+      <fieldset disabled={!canManageSettings || pending} className="db-settings-editor-fields">
       <SettingsField label="Workspace name" htmlFor="workspace-name">
         <Input
           id="workspace-name"
@@ -502,14 +1051,135 @@ function SettingsEditor({
         <textarea id="business-address" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} className="min-h-20 w-full resize-y rounded-lg border border-[#d7d7d1] bg-[#f1f1ee] px-3 py-2 text-[13px] font-normal outline-none transition-colors focus:border-[#009b68] focus:ring-2 focus:ring-[#009b68]/20" />
       </SettingsField>
 
-      <div className="grid gap-3 rounded-lg border border-[#deded8] bg-[#f1f1ee] p-3">
-        <label className="flex items-center gap-2 text-[13px] font-medium text-[#505258]">
-          <input type="checkbox" checked={form.vatRegistered} onChange={(event) => setForm((current) => ({ ...current, vatRegistered: event.target.checked }))} />
+      <div className="db-settings-form-section">
+        <label className="db-settings-toggle">
+          <input
+            type="checkbox"
+            checked={form.vatRegistered}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                vatRegistered: event.target.checked,
+                vatRegistrationType: event.target.checked ? "mandatory" : "not_registered",
+                vatDefaultTaxMode: event.target.checked ? "vat_15" : "no_vat",
+                vedEnabled: event.target.checked,
+              }))
+            }
+          />
           VAT registered
         </label>
-        <SettingsField label="VAT number" htmlFor="vat-number">
-          <Input id="vat-number" value={form.vatNumber} onChange={(event) => setForm((current) => ({ ...current, vatNumber: event.target.value }))} disabled={!form.vatRegistered} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal disabled:text-[#9ca3af]" />
-        </SettingsField>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SettingsField label="VAT number" htmlFor="vat-number">
+            <Input id="vat-number" value={form.vatNumber} onChange={(event) => setForm((current) => ({ ...current, vatNumber: event.target.value }))} disabled={!form.vatRegistered} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal disabled:text-[#9ca3af]" />
+          </SettingsField>
+          <SettingsField label="Registration type" htmlFor="vat-registration-type">
+            <select
+              id="vat-registration-type"
+              value={form.vatRegistrationType}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  vatRegistrationType: event.target.value as SettingsForm["vatRegistrationType"],
+                }))
+              }
+              disabled={!form.vatRegistered}
+              className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none disabled:text-[#9ca3af]"
+            >
+              <option value="not_registered">Not registered</option>
+              <option value="voluntary">Voluntary</option>
+              <option value="mandatory">Mandatory</option>
+            </select>
+          </SettingsField>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <SettingsField label="Default VAT mode" htmlFor="vat-default-tax-mode">
+            <select
+              id="vat-default-tax-mode"
+              value={form.vatRegistered ? form.vatDefaultTaxMode : "no_vat"}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  vatDefaultTaxMode: event.target.value as SettingsForm["vatDefaultTaxMode"],
+                }))
+              }
+              disabled={!form.vatRegistered}
+              className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none disabled:text-[#9ca3af]"
+            >
+              <option value="vat_15">VAT 15%</option>
+              <option value="zero_rated">Zero-rated</option>
+              <option value="exempt">Exempt</option>
+              <option value="no_vat">No VAT</option>
+            </select>
+          </SettingsField>
+          <SettingsField label="Filing frequency" htmlFor="vat-filing-frequency">
+            <select
+              id="vat-filing-frequency"
+              value={form.vatFilingFrequency}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  vatFilingFrequency: event.target.value as SettingsForm["vatFilingFrequency"],
+                }))
+              }
+              disabled={!form.vatRegistered}
+              className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none disabled:text-[#9ca3af]"
+            >
+              <option value="monthly">Monthly</option>
+              <option value="bi_monthly">Bi-monthly</option>
+            </select>
+          </SettingsField>
+          <SettingsField label="Return due day" htmlFor="vat-return-due-day">
+            <Input id="vat-return-due-day" inputMode="numeric" value={form.vatReturnDueDay} onChange={(event) => setForm((current) => ({ ...current, vatReturnDueDay: event.target.value }))} disabled={!form.vatRegistered} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal disabled:text-[#9ca3af]" />
+          </SettingsField>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <SettingsField label="Retention years" htmlFor="vat-retention-years">
+            <Input id="vat-retention-years" inputMode="numeric" value={form.vatRecordRetentionYears} onChange={(event) => setForm((current) => ({ ...current, vatRecordRetentionYears: event.target.value }))} disabled={!form.vatRegistered} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal disabled:text-[#9ca3af]" />
+          </SettingsField>
+          <SettingsField label="VAT transmission" htmlFor="ved-transmission-mode">
+            <select
+              id="ved-transmission-mode"
+              value={form.vedTransmissionMode}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  vedTransmissionMode: event.target.value as SettingsForm["vedTransmissionMode"],
+                }))
+              }
+              disabled={!form.vatRegistered}
+              className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none disabled:text-[#9ca3af]"
+            >
+              <option value="manual_export">Manual export</option>
+              <option value="near_real_time">Near real-time</option>
+              <option value="real_time">Real-time</option>
+            </select>
+          </SettingsField>
+          <SettingsField label="ITAS profile" htmlFor="itas-registered">
+            <label className="db-settings-checkbox-row">
+              <input
+                id="itas-registered"
+                type="checkbox"
+                checked={form.itasRegistered}
+                disabled={!form.vatRegistered}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, itasRegistered: event.target.checked }))
+                }
+              />
+              Saved
+            </label>
+          </SettingsField>
+        </div>
+        <label className="db-settings-toggle db-settings-toggle-compact">
+          <input
+            type="checkbox"
+            checked={form.vatRegistered && form.vedEnabled}
+            disabled={!form.vatRegistered}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, vedEnabled: event.target.checked }))
+            }
+          />
+          Enable VAT records and ITAS export preparation
+        </label>
       </div>
 
       <SettingsField label="Default currency" htmlFor="default-currency">
@@ -536,8 +1206,8 @@ function SettingsEditor({
         </SettingsField>
       </div>
 
-      <div className="grid gap-3 rounded-lg border border-[#deded8] bg-[#f1f1ee] p-3">
-        <p className="text-[13px] font-medium text-[#505258]">EFT bank details</p>
+      <div className="db-settings-form-section">
+        <p className="db-settings-section-title">EFT bank details</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <SettingsField label="Bank name" htmlFor="bank-name">
             <Input id="bank-name" value={form.bankName} onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal" />
@@ -589,12 +1259,13 @@ function SettingsEditor({
 
       <Button
         type="submit"
-        disabled={pending}
-        className="h-10 w-full bg-[#009b68] text-white hover:bg-[#00875b] hover:text-white sm:w-max"
+        disabled={pending || !canManageSettings}
+        className="db-primary-btn db-settings-save-btn"
       >
         {pending ? <Loader2 className="animate-spin" /> : <Save />}
         Save settings
       </Button>
+      </fieldset>
     </form>
   );
 }
@@ -609,8 +1280,8 @@ function SettingsField({
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-1.5">
-      <Label htmlFor={htmlFor} className="text-[13px] font-medium text-[#505258]">
+    <div className="db-settings-field">
+      <Label htmlFor={htmlFor} className="db-settings-field-label">
         {label}
       </Label>
       {children}

@@ -1,18 +1,22 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import {
+  AlertTriangle,
   BarChart3,
   Bell,
   BookOpen,
   Building2,
   ChevronDown,
   Check,
+  CheckCircle2,
   Circle,
+  Clock,
+  CreditCard,
+  FileSearch,
   FileText,
   HelpCircle,
   Inbox,
@@ -22,17 +26,20 @@ import {
   LogOut,
   MoreHorizontal,
   Plus,
+  ReceiptText,
   ScanLine,
   Search,
   Settings,
   Shield,
-  Star,
+  ShieldCheck,
   Users,
+  X,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { PayvioMark } from "@/app/_components/PayvioMark";
 import { cn } from "@/lib/utils";
 import { PlanProvider, usePlan, PLAN_LABELS, type Feature } from "@/lib/plan";
 import { DashboardWarmup } from "./DashboardWarmup";
@@ -108,7 +115,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         href: "/dashboard/vat",
         icon: Shield,
         feature: "vat",
-        description: "VAT-ready settings and records",
+        description: "VAT returns, settings, and ITAS exports",
         key: "PV-0204",
       },
     ],
@@ -124,10 +131,78 @@ const SETTINGS_ITEM: NavItem = {
   key: "PV-0301",
 };
 
-const ALL_NAV_ITEMS = [...NAV_GROUPS.flatMap((group) => group.items), SETTINGS_ITEM];
+const SUPPORT_ITEM: NavItem = {
+  label: "Support",
+  href: "/dashboard/support",
+  icon: HelpCircle,
+  feature: "settings",
+  description: "Help, contact details, and workspace administrators",
+  key: "PV-0401",
+};
 
-function PayvioGlyph() {
-  return <Image src="/payvio-logo.svg" alt="Payvio" width={100} height={40} style={{ objectFit: "contain", marginLeft: "-14px" }} />;
+const ALL_NAV_ITEMS = [
+  ...NAV_GROUPS.flatMap((group) => group.items),
+  SETTINGS_ITEM,
+  SUPPORT_ITEM,
+];
+const MOBILE_NAV_ITEMS = ALL_NAV_ITEMS.filter((item) =>
+  ["Invoices", "Reports", "Ledger", "Scan", "Settings"].includes(item.label),
+);
+
+const SEARCH_TYPE_LABELS: Record<string, string> = {
+  invoice: "Invoice",
+  client: "Client",
+  purchase: "Purchase",
+  supplier: "Supplier",
+  scan: "Scan",
+};
+
+function searchIconFor(type: string): typeof FileText {
+  switch (type) {
+    case "client":
+      return Users;
+    case "purchase":
+      return ReceiptText;
+    case "supplier":
+      return Building2;
+    case "scan":
+      return ScanLine;
+    case "invoice":
+      return FileText;
+    default:
+      return FileSearch;
+  }
+}
+
+function notificationIconFor(type: string, tone: string): typeof Bell {
+  if (type === "payment") {
+    return CreditCard;
+  }
+
+  if (type === "overdue" || tone === "danger") {
+    return AlertTriangle;
+  }
+
+  if (type === "reminder") {
+    return Clock;
+  }
+
+  if (type === "scan") {
+    return ScanLine;
+  }
+
+  if (tone === "success") {
+    return CheckCircle2;
+  }
+
+  return Bell;
+}
+
+function formatNotificationTime(value: number) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(value);
 }
 
 function ShellInner({ children }: { children: ReactNode }) {
@@ -137,15 +212,27 @@ function ShellInner({ children }: { children: ReactNode }) {
   const user = useQuery(api.users.current);
   const workspace = useQuery(api.invoices.workspace);
   const switcherState = useQuery(api.organizations.switcherState);
+  const notificationState = useQuery(api.dashboard.notifications);
   const switchOrganization = useMutation(api.organizations.switchOrganization);
   const acceptInvitation = useMutation(api.organizations.acceptInvitationById);
+  const markNotificationsSeen = useMutation(api.dashboard.markNotificationsSeen);
   const { plan, daysLeftInTrial, canAccess } = usePlan();
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [workspaceMenuError, setWorkspaceMenuError] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [switchingOrganizationId, setSwitchingOrganizationId] =
     useState<Id<"organizations"> | null>(null);
   const [joiningInvitationId, setJoiningInvitationId] =
     useState<Id<"organizationInvitations"> | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const searchQuery = searchTerm.trim();
+  const searchState = useQuery(
+    api.dashboard.globalSearch,
+    searchOpen && searchQuery.length >= 2 ? { query: searchQuery } : "skip",
+  );
   const warmupRoutes = useMemo(
     () => ALL_NAV_ITEMS.filter((item) => canAccess(item.feature)).map((item) => item.href),
     [canAccess],
@@ -158,11 +245,58 @@ function ShellInner({ children }: { children: ReactNode }) {
     }
   }, [pathname, router, workspace]);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setNotificationsOpen(false);
+        setSearchOpen(true);
+      }
+
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+        setNotificationsOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!searchOpen) {
+      return;
+    }
+
+    window.setTimeout(() => searchInputRef.current?.focus(), 0);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (
+        target instanceof Node &&
+        notificationsRef.current &&
+        !notificationsRef.current.contains(target)
+      ) {
+        setNotificationsOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [notificationsOpen]);
+
   if (workspace === undefined || user === undefined || workspace === null) {
     return (
       <main className="db-root db-root-loading">
         <div className="db-loading-card">
-          <PayvioGlyph />
+          <PayvioMark className="db-payvio-loading-mark" />
           <p>Loading Payvio workspace...</p>
         </div>
       </main>
@@ -210,9 +344,32 @@ function ShellInner({ children }: { children: ReactNode }) {
     }
   }
 
+  function openSearch() {
+    setNotificationsOpen(false);
+    setSearchOpen(true);
+  }
+
+  function handleNotificationsToggle() {
+    setNotificationsOpen((open) => {
+      const nextOpen = !open;
+
+      if (nextOpen) {
+        setSearchOpen(false);
+        void markNotificationsSeen({}).catch(() => undefined);
+      }
+
+      return nextOpen;
+    });
+  }
+
   const planLabel = PLAN_LABELS[plan];
   const organizationOptions = switcherState?.organizations ?? [];
   const pendingInvitations = switcherState?.pendingInvitations ?? [];
+  const searchResults = searchState?.results ?? [];
+  const searchLoading = searchOpen && searchQuery.length >= 2 && searchState === undefined;
+  const notificationItems = notificationState?.items ?? [];
+  const unreadCount = notificationState?.unreadCount ?? 0;
+  const visibleUnreadCount = unreadCount > 9 ? "9+" : String(unreadCount);
   const createOrganizationHref = `/onboarding?mode=create&next=${encodeURIComponent(
     pathname && pathname.startsWith("/dashboard") ? pathname : "/dashboard",
   )}`;
@@ -246,12 +403,10 @@ function ShellInner({ children }: { children: ReactNode }) {
             onFocus={() => prefetchRoute("/dashboard")}
             onPointerEnter={() => prefetchRoute("/dashboard")}
           >
-            <PayvioGlyph />
+            <PayvioMark className="db-payvio-sidebar-mark" />
+            <span className="db-brand-wordmark">Payvio</span>
           </Link>
           <div className="db-sidebar-actions">
-            <button type="button" aria-label="Search">
-              <Search className="size-4" />
-            </button>
             <Link
               href="/dashboard#new-invoice"
               aria-label="New invoice"
@@ -433,32 +588,205 @@ function ShellInner({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="db-sidebar-footer">
-          <a href="#" className="db-help-link">
+          {user?.role === "admin" ? (
+            <Link
+              href="/admin"
+              className="db-help-link"
+              onFocus={() => prefetchRoute("/admin")}
+              onPointerEnter={() => prefetchRoute("/admin")}
+            >
+              <ShieldCheck className="size-3.5" />
+              Admin
+            </Link>
+          ) : null}
+          <Link
+            href="/dashboard/support"
+            className={cn(
+              "db-help-link",
+              pathname?.startsWith("/dashboard/support") && "db-help-link-active",
+            )}
+            onFocus={() => prefetchRoute("/dashboard/support")}
+            onPointerEnter={() => prefetchRoute("/dashboard/support")}
+          >
             <HelpCircle className="size-3.5" />
             Support
-          </a>
+          </Link>
         </div>
       </aside>
 
       <div className="db-main">
         <header className="db-topbar">
           <div className="db-topbar-left">
+            <span className="db-mobile-topbar-avatar" aria-hidden="true">
+              {workspaceInitial}
+            </span>
             <span className="db-topbar-title">{activeItem.label}</span>
-            <Star className="db-star" />
-            <MoreHorizontal className="size-4" />
+          </div>
+          <div className="db-topbar-center">
+            <button type="button" className="db-global-search-trigger" onClick={openSearch}>
+              <Search className="size-4" />
+              <span>Search {workspace.name}</span>
+            </button>
           </div>
           <div className="db-topbar-right">
-            <button className="db-topbar-btn" title="Copy page link">
-              <Link2 className="size-4" />
-            </button>
-            <button className="db-topbar-btn" title="Notifications">
-              <Bell className="size-4" />
-            </button>
+            <div className="db-topbar-action-wrap" ref={notificationsRef}>
+              <button
+                type="button"
+                className={cn("db-topbar-btn", notificationsOpen && "db-topbar-btn-active")}
+                title="Notifications"
+                aria-expanded={notificationsOpen}
+                aria-haspopup="dialog"
+                onClick={handleNotificationsToggle}
+              >
+                <Bell className="size-4" />
+                {unreadCount > 0 ? (
+                  <span className="db-notification-badge">{visibleUnreadCount}</span>
+                ) : null}
+              </button>
+
+              {notificationsOpen ? (
+                <div className="db-notification-panel" role="dialog" aria-label="Notifications">
+                  <div className="db-notification-header">
+                    <span>{notificationState?.organizationName ?? workspace.name}</span>
+                    <strong>{notificationItems.length}</strong>
+                  </div>
+
+                  <div className="db-notification-list">
+                    {notificationState === undefined ? (
+                      <div className="db-notification-empty">
+                        <Loader2 className="size-4 animate-spin" />
+                        Loading notifications
+                      </div>
+                    ) : notificationItems.length > 0 ? (
+                      notificationItems.map((item) => {
+                        const Icon = notificationIconFor(item.type, item.tone);
+
+                        return (
+                          <Link
+                            key={item.id}
+                            href={item.href}
+                            className={cn(
+                              "db-notification-item",
+                              !item.read && "db-notification-item-unread",
+                              `db-notification-item-${item.tone}`,
+                            )}
+                            onClick={() => setNotificationsOpen(false)}
+                          >
+                            <span className="db-notification-icon">
+                              <Icon className="size-4" />
+                            </span>
+                            <span className="db-notification-main">
+                              <span className="db-notification-title">{item.title}</span>
+                              <span className="db-notification-body">{item.body}</span>
+                              <span className="db-notification-meta">
+                                {item.cta} - {formatNotificationTime(item.createdAt)}
+                              </span>
+                            </span>
+                          </Link>
+                        );
+                      })
+                    ) : (
+                      <div className="db-notification-empty">No notifications</div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
 
         <div className="db-content">{children}</div>
       </div>
+
+      {searchOpen ? (
+        <div className="db-search-overlay" role="dialog" aria-modal="true" aria-label="Search">
+          <button
+            type="button"
+            className="db-search-backdrop"
+            aria-label="Close search"
+            onClick={() => setSearchOpen(false)}
+          />
+          <section className="db-search-panel">
+            <div className="db-search-panel-field">
+              <Search className="db-search-panel-icon" />
+              <input
+                ref={searchInputRef}
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder={`Search ${workspace.name}`}
+                className="db-search-panel-input"
+              />
+              <button type="button" className="db-search-panel-close" onClick={() => setSearchOpen(false)}>
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="db-search-panel-meta">
+              <span>{workspace.name}</span>
+              {searchQuery.length >= 2 ? <strong>{searchResults.length}</strong> : null}
+            </div>
+
+            <div className="db-search-results">
+              {searchQuery.length < 2 ? (
+                <div className="db-search-quick-list">
+                  {ALL_NAV_ITEMS.filter((item) => canAccess(item.feature)).map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="db-search-quick-item"
+                        onClick={() => setSearchOpen(false)}
+                        onFocus={() => prefetchRoute(item.href)}
+                        onPointerEnter={() => prefetchRoute(item.href)}
+                      >
+                        <Icon className="size-4" />
+                        <span>
+                          <strong>{item.label}</strong>
+                          <small>{item.description}</small>
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : searchLoading ? (
+                <div className="db-search-empty">
+                  <Loader2 className="size-4 animate-spin" />
+                  Searching {workspace.name}
+                </div>
+              ) : searchResults.length > 0 ? (
+                searchResults.map((item) => {
+                  const Icon = searchIconFor(item.type);
+
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className="db-search-result"
+                      onClick={() => setSearchOpen(false)}
+                    >
+                      <span className="db-search-result-icon">
+                        <Icon className="size-4" />
+                      </span>
+                      <span className="db-search-result-main">
+                        <span className="db-search-result-title">{item.title}</span>
+                        <span className="db-search-result-subtitle">{item.subtitle}</span>
+                      </span>
+                      <span className="db-search-result-meta">
+                        <strong>{SEARCH_TYPE_LABELS[item.type] ?? item.type}</strong>
+                        <small>{item.meta}</small>
+                      </span>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="db-search-empty">No matches in {workspace.name}</div>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       <aside className="db-inspector">
         <div className="db-inspector-toolbar">
@@ -516,6 +844,42 @@ function ShellInner({ children }: { children: ReactNode }) {
           </div>
         </div>
       </aside>
+
+      <nav className="db-mobile-tabbar" aria-label="Dashboard">
+        {MOBILE_NAV_ITEMS.map((item) => {
+          const locked = !canAccess(item.feature);
+          const active =
+            item.href === "/dashboard"
+              ? pathname === item.href
+              : pathname?.startsWith(item.href);
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.label}
+              href={locked ? "#" : item.href}
+              aria-current={active ? "page" : undefined}
+              onClick={locked ? (event) => event.preventDefault() : undefined}
+              onFocus={() => {
+                if (!locked) {
+                  prefetchRoute(item.href);
+                }
+              }}
+              className={cn(
+                "db-mobile-tab-item",
+                active && "db-mobile-tab-item-active",
+                locked && "db-mobile-tab-item-locked",
+              )}
+            >
+              <span className="db-mobile-tab-icon">
+                <Icon className="size-5" />
+                {locked ? <Lock className="db-mobile-tab-lock" /> : null}
+              </span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </main>
   );
 }

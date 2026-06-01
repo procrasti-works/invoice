@@ -1,5 +1,10 @@
-const CACHE_NAME = "payvio-static-v1";
-const PUBLIC_ASSETS = ["/payvio-logo.svg", "/payvio-logo.png"];
+const CACHE_NAME = "payvio-static-v3";
+const PUBLIC_ASSETS = [
+  "/payvio-logo.svg",
+  "/payvio-logo.png",
+  "/payvio-app-icon-192.png",
+  "/payvio-app-icon-512.png",
+];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -40,20 +45,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const cacheable =
-    url.pathname.startsWith("/_next/static/") || PUBLIC_ASSETS.includes(url.pathname);
-
-  if (!cacheable) {
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(cacheFirst(request));
     return;
   }
 
-  event.respondWith(staleWhileRevalidate(request));
+  if (PUBLIC_ASSETS.includes(url.pathname)) {
+    event.respondWith(cacheFirst(request));
+  }
 });
 
-async function staleWhileRevalidate(request) {
+async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request);
-  const fresh = fetch(request)
+
+  if (cached) {
+    return cached;
+  }
+
+  return fetch(request)
     .then((response) => {
       if (response.ok) {
         cache.put(request, response.clone());
@@ -62,6 +72,4 @@ async function staleWhileRevalidate(request) {
       return response;
     })
     .catch(() => cached);
-
-  return cached || fresh;
 }

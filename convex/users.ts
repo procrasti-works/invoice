@@ -11,6 +11,15 @@ export const current = query({
       return null;
     }
 
-    return await ctx.db.get(userId);
+    const user = await ctx.db.get(userId);
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      ...user,
+      role: user.role ?? "user",
+    };
   },
 });

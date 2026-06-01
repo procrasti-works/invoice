@@ -28,11 +28,20 @@ export function PerformanceBoot() {
       return;
     }
 
+    const isSecureOrigin =
+      window.location.protocol === "https:" ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+
+    if (!isSecureOrigin) {
+      return;
+    }
+
     const timeout = window.setTimeout(() => {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/", updateViaCache: "none" })
         .catch(() => undefined);
-    }, 1800);
+    }, 800);
 
     return () => window.clearTimeout(timeout);
   }, []);
