@@ -7416,8 +7416,7 @@ main {
 }
 
 @media (max-width: 1120px) {
-  .db-root:has(.db-dashboard-page) .db-compose-grid,
-  .db-root:has(.db-dashboard-page) .db-line-item-row {
+  .db-root:has(.db-dashboard-page) .db-compose-grid {
     grid-template-columns: 1fr;
   }
 }
