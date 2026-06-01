@@ -6332,7 +6332,7 @@ main {
   height: 6.25rem;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 0 1.25rem;
+  padding: 0 1.25rem 0 0.25rem;
 }
 
 .il-header-logo {
