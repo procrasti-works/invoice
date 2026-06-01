@@ -26,6 +26,7 @@ import {
   LogOut,
   MoreHorizontal,
   Plus,
+  Receipt,
   ReceiptText,
   ScanLine,
   Search,
@@ -109,6 +110,14 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         feature: "scan",
         description: "Capture supplier invoices and purchase records",
         key: "PV-0203",
+      },
+      {
+        label: "Receipt Tracker",
+        href: "/dashboard/scan#receipt-tracker",
+        icon: Receipt,
+        feature: "scan",
+        description: "Capture expense receipts and track VAT input automatically",
+        key: "PV-0205",
       },
       {
         label: "VAT",
