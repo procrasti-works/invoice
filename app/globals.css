@@ -5946,7 +5946,7 @@ main {
 }
 
 .db-form-grid-3 {
-  grid-template-columns: minmax(130px, 0.7fr) minmax(110px, 0.55fr) minmax(0, 1fr);
+  grid-template-columns: minmax(140px, 0.7fr) minmax(130px, 0.55fr) minmax(160px, 1fr);
 }
 
 .db-field {
@@ -5998,8 +5998,8 @@ main {
 
 .db-line-item-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 76px 124px auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 90px 140px auto;
+  gap: 12px;
   align-items: end;
 }
 
@@ -6476,7 +6476,6 @@ main {
 
   .db-metric-strip,
   .db-form-grid-2,
-  .db-line-item-row,
   .db-dashboard-lower,
   .db-mini-grid {
     grid-template-columns: 1fr;
@@ -7416,8 +7415,7 @@ main {
 }
 
 @media (max-width: 1120px) {
-  .db-root:has(.db-dashboard-page) .db-compose-grid,
-  .db-root:has(.db-dashboard-page) .db-line-item-row {
+  .db-root:has(.db-dashboard-page) .db-compose-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -12063,7 +12061,6 @@ main {
   .db-root:has(.db-dashboard-page) .db-compose-grid,
   .db-root:has(.db-dashboard-page) .db-form-grid-2,
   .db-root:has(.db-dashboard-page) .db-form-grid-3,
-  .db-root:has(.db-dashboard-page) .db-line-item-row,
   .db-root:has(.db-dashboard-page) .db-dashboard-lower,
   .db-root:has(.db-dashboard-page) .db-split-grid,
   .db-root:has(.db-reports-page) .db-report-grid,
