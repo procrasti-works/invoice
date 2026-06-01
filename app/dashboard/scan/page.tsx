@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   Trash2,
   UploadCloud,
-  Wand2,
 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
@@ -77,12 +76,25 @@ const textareaClass =
 
 const statusTone: Record<string, { color: string; label: string }> = {
   uploaded: { color: "#6b7280", label: "Uploaded" },
-  extracting: { color: "#7d6000", label: "Extracting" },
+  extracting: { color: "#7d6000", label: "Sending" },
   needs_review: { color: "#a51f43", label: "Needs review" },
   ready: { color: "#006545", label: "Ready" },
   saved: { color: "#3042a6", label: "Saved" },
   failed: { color: "#a51f43", label: "Failed" },
 };
+
+const providerLabels: Record<string, { label: string; detail: string }> = {
+  manual: { label: "Manual review", detail: "In Payvio" },
+  desert: { label: "Desert", detail: "Integration handoff" },
+  none: { label: "Not sent", detail: "Waiting" },
+};
+
+function providerDisplay(provider: string | undefined) {
+  return providerLabels[provider ?? "none"] ?? {
+    label: provider ?? "Not sent",
+    detail: "Review",
+  };
+}
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -245,6 +257,7 @@ export default function ScanPage() {
   const savedScanCount = scanRows.filter((scan) => scan.status === "saved").length;
   const purchaseCount = purchases?.length ?? 0;
   const selectedScan = scanDetails?.scan ?? null;
+  const selectedProvider = providerDisplay(selectedScan?.extractionProvider);
   const formBase = useMemo(() => {
     if (scanDetails) {
       return scanToForm(scanDetails, currency);
@@ -444,9 +457,9 @@ export default function ScanPage() {
         delete next[selectedScanId];
         return next;
       });
-      setNotice("Extraction refreshed.");
+      setNotice("Review handoff refreshed.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to extract this scan.");
+      setError(caught instanceof Error ? caught.message : "Unable to send this scan for review.");
     } finally {
       setPendingUpload(false);
     }
@@ -538,8 +551,8 @@ export default function ScanPage() {
                 className="db-primary-btn"
                 onClick={handleUploadAndExtract}
               >
-                {pendingUpload ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-                Upload and extract
+                {pendingUpload ? <Loader2 className="size-4 animate-spin" /> : <UploadCloud className="size-4" />}
+                Upload for review
               </button>
               {selectedScan ? (
                 <button
@@ -549,7 +562,7 @@ export default function ScanPage() {
                   onClick={rerunExtraction}
                 >
                   {pendingUpload ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-                  Extract again
+                  Send again
                 </button>
               ) : null}
             </div>
@@ -962,17 +975,15 @@ export default function ScanPage() {
                 </strong>
               </div>
               <div className="flex justify-between gap-3">
-                <span>Provider</span>
+                <span>Review path</span>
                 <strong className="text-[#111827]">
-                  {selectedScan?.extractionProvider ?? "-"}
+                  {selectedProvider.label}
                 </strong>
               </div>
               <div className="flex justify-between gap-3">
-                <span>Confidence</span>
+                <span>Handoff</span>
                 <strong className="text-[#111827]">
-                  {selectedScan?.confidence === undefined
-                    ? "-"
-                    : `${Math.round(selectedScan.confidence * 100)}%`}
+                  {selectedScan ? selectedProvider.detail : "-"}
                 </strong>
               </div>
             </div>

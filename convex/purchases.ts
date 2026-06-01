@@ -42,7 +42,7 @@ const purchaseScanStatusValidator = v.union(
 
 const extractionProviderValidator = v.union(
   v.literal("manual"),
-  v.literal("openai"),
+  v.literal("desert"),
   v.literal("none"),
 );
 

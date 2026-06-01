@@ -617,13 +617,18 @@ function ShellInner({ children }: { children: ReactNode }) {
       <div className="db-main">
         <header className="db-topbar">
           <div className="db-topbar-left">
-            <span className="db-mobile-topbar-avatar" aria-hidden="true">
-              {workspaceInitial}
-            </span>
+            <PayvioMark className="db-mobile-topbar-mark" aria-hidden="true" />
             <span className="db-topbar-title">{activeItem.label}</span>
           </div>
           <div className="db-topbar-center">
-            <button type="button" className="db-global-search-trigger" onClick={openSearch}>
+            <button
+              type="button"
+              className="db-global-search-trigger"
+              aria-label={`Search ${workspace.name}`}
+              aria-expanded={searchOpen}
+              aria-haspopup="dialog"
+              onClick={openSearch}
+            >
               <Search className="size-4" />
               <span>Search {workspace.name}</span>
             </button>
@@ -634,6 +639,7 @@ function ShellInner({ children }: { children: ReactNode }) {
                 type="button"
                 className={cn("db-topbar-btn", notificationsOpen && "db-topbar-btn-active")}
                 title="Notifications"
+                aria-label={unreadCount > 0 ? `${visibleUnreadCount} unread notifications` : "Notifications"}
                 aria-expanded={notificationsOpen}
                 aria-haspopup="dialog"
                 onClick={handleNotificationsToggle}

@@ -87,13 +87,11 @@ lib/
 
 ## Scan Paper Invoice Feature
 - Frontend: `app/dashboard/scan/page.tsx`
-- **Backend needed**: `app/api/scan-invoice/route.ts` (not yet created — Andreas builds this)
-- Uses **Tesseract.js** (free, open source OCR)
-- Website: https://tesseract-ocr.github.io/
-- npm: `npm install tesseract.js`
-- Images processed in memory only, **never stored** — deleted immediately after extraction
-- Returns: clientName, invoiceNumber, dates, lineItems, subtotal, VAT, total, currency
-- See full instructions in comments at top of `app/dashboard/scan/page.tsx`
+- Backend: `convex/purchaseScanExtraction.ts`
+- Uses in-app manual review by default.
+- Optional Desert handoff: set `PAYVIO_SCAN_DESERT_WEBHOOK_URL` or `DESERT_SCAN_WEBHOOK_URL`.
+- Uploaded originals stay in Convex storage for the purchase record.
+- Review fields: supplier, invoice number, dates, line items, subtotal, VAT, total, currency.
 
 ---
 
@@ -136,7 +134,7 @@ lib/
 ---
 
 ## What Andreas Still Needs to Build
-1. `app/api/scan-invoice/route.ts` — Tesseract OCR endpoint
+1. Optional OCR/parser layer for scan review automation
 2. NamRA ITAS direct API integration (VAT & NamRA page export button)
 3. Local bank integrations — FNB, Bank Windhoek, Standard Bank (Enterprise feature)
 4. Payment processing backend (Stripe/Polar already in schema)

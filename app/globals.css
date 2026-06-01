@@ -11864,7 +11864,7 @@ main {
   padding: 0;
 }
 
-.db-mobile-topbar-avatar,
+.db-mobile-topbar-mark,
 .db-mobile-tabbar {
   display: none;
 }
@@ -11905,8 +11905,8 @@ main {
     position: sticky;
     top: 0;
     z-index: 45;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) 38px 38px;
+    gap: 8px;
     min-height: 58px;
     padding: calc(8px + env(safe-area-inset-top)) 14px 8px;
     border: 0;
@@ -11926,18 +11926,14 @@ main {
     gap: 9px;
   }
 
-  .db-mobile-topbar-avatar {
-    display: inline-flex;
+  .db-mobile-topbar-mark {
+    display: block;
     width: 34px;
     height: 34px;
     flex: 0 0 34px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background: #17181c;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 750;
+    color: #070708;
+    overflow: visible;
+    shape-rendering: geometricPrecision;
   }
 
   .db-root:has(.db-dashboard-page) .db-topbar-title {
@@ -11957,15 +11953,22 @@ main {
   }
 
   .db-root:has(.db-dashboard-page) .db-topbar-center {
-    grid-column: 1 / -1;
+    grid-column: auto;
+    justify-content: flex-end;
   }
 
   .db-root:has(.db-dashboard-page) .db-global-search-trigger {
-    width: 100%;
-    min-height: 42px;
-    justify-content: flex-start;
+    width: 38px;
+    height: 38px;
+    min-height: 38px;
+    justify-content: center;
+    padding: 0;
     border-radius: 8px;
     background: #f3f4f6;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-global-search-trigger span {
+    display: none;
   }
 
   .db-root:has(.db-dashboard-page) .db-workview {
@@ -12655,5 +12658,526 @@ main {
   .public-invoice-page button {
     min-height: 46px;
     font-size: 16px;
+  }
+}
+
+/* Mobile PWA fit fixes */
+@media (max-width: 760px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  .db-root:has(.db-dashboard-page),
+  .db-root:has(.db-dashboard-page) .db-main,
+  .db-root:has(.db-dashboard-page) .db-content,
+  .db-root:has(.db-dashboard-page) .db-page,
+  .db-root:has(.db-dashboard-page) .db-workview,
+  .db-root:has(.db-dashboard-page) .db-card,
+  .db-root:has(.db-dashboard-page) .db-compose-card,
+  .db-root:has(.db-dashboard-page) .db-list-card,
+  .db-root:has(.db-dashboard-page) .db-table-wrap,
+  .il-page,
+  .public-invoice-page {
+    max-width: 100vw;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  .db-root:has(.db-dashboard-page) :where(
+    main,
+    section,
+    article,
+    aside,
+    header,
+    form,
+    fieldset,
+    div
+  ),
+  .il-page :where(main, section, article, aside, header, footer, nav, form, fieldset, div),
+  .public-invoice-page :where(main, section, article, aside, header, footer, form, div) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-topbar {
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-topbar-left {
+    overflow: hidden;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-topbar-center,
+  .db-root:has(.db-dashboard-page) .db-topbar-right,
+  .db-root:has(.db-dashboard-page) .db-topbar-action-wrap {
+    width: 38px;
+    max-width: 38px;
+    flex: 0 0 38px;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-topbar-btn,
+  .db-root:has(.db-dashboard-page) .db-global-search-trigger {
+    flex: 0 0 38px;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-notification-panel {
+    position: fixed;
+    top: calc(58px + env(safe-area-inset-top));
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: calc(100dvh - 132px - env(safe-area-inset-bottom));
+    border-radius: 8px;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-notification-list {
+    max-height: calc(100dvh - 210px - env(safe-area-inset-bottom));
+  }
+
+  .db-root:has(.db-dashboard-page) :where(
+    .db-notification-title,
+    .db-notification-body,
+    .db-notification-meta,
+    .db-row-primary,
+    .db-row-meta,
+    .db-row-warning,
+    .db-inv-num,
+    .db-panel-meta,
+    .db-status-pill,
+    .db-compliance-badge,
+    .db-compliance-tag
+  ) {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-search-overlay {
+    z-index: 85;
+    place-items: start stretch;
+    padding: calc(10px + env(safe-area-inset-top)) 10px calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .db-root:has(.db-dashboard-page) .db-search-panel {
+    width: 100%;
+    max-height: calc(100dvh - 108px - env(safe-area-inset-bottom));
+    border-radius: 8px;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-search-results {
+    max-height: calc(100dvh - 210px - env(safe-area-inset-bottom));
+  }
+
+  .db-root:has(.db-dashboard-page) .db-search-quick-list {
+    grid-template-columns: 1fr;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-search-result {
+    align-items: flex-start;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-search-result-main,
+  .db-root:has(.db-dashboard-page) .db-search-result-meta,
+  .db-root:has(.db-dashboard-page) .db-table td > *,
+  .db-root:has(.db-dashboard-page) .db-table td {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .db-root:has(.db-dashboard-page) :where(
+    .db-search-result-title,
+    .db-search-result-subtitle,
+    .db-search-result-meta small,
+    .db-search-quick-item strong,
+    .db-search-quick-item small
+  ) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-table td {
+    align-items: flex-start;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-table td > :last-child {
+    overflow-wrap: anywhere;
+  }
+
+  .il-page :where(img, picture, video, canvas),
+  .public-invoice-page :where(img, picture, video, canvas) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .il-page table td,
+  .public-invoice-line-row span {
+    min-width: 0;
+    align-items: flex-start;
+    overflow-wrap: anywhere;
+  }
+
+  .pwa-install-card {
+    max-width: calc(100vw - 20px);
+  }
+
+  .pwa-install-copy strong,
+  .pwa-install-copy span {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 390px) {
+  .db-root:has(.db-dashboard-page) .db-search-result-meta {
+    display: none;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-topbar {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+}
+
+/* Responsive viewport fit pass */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
+body {
+  min-width: 0;
+}
+
+.il-page,
+.db-root,
+.public-invoice-page,
+.payvio-auth-screen {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.il-page :where(main, section, article, aside, header, footer, nav, form, fieldset, div),
+.db-root :where(main, section, article, aside, header, footer, nav, form, fieldset, div),
+.public-invoice-page :where(main, section, article, aside, header, footer, nav, form, fieldset, div),
+.payvio-auth-screen :where(main, section, article, aside, header, footer, nav, form, fieldset, div) {
+  min-width: 0;
+}
+
+.il-page :where(img, picture, video, canvas),
+.public-invoice-page :where(img, picture, video, canvas),
+.db-root :where(img, picture, video, canvas) {
+  max-width: 100%;
+}
+
+.il-page :where(input, select, textarea, button, a),
+.db-root :where(input, select, textarea, button, a),
+.public-invoice-page :where(input, select, textarea, button, a),
+.payvio-auth-screen :where(input, select, textarea, button, a) {
+  max-width: 100%;
+}
+
+.db-root .db-main,
+.db-root .db-content,
+.db-root .db-page,
+.db-root .db-workview,
+.db-root .db-card,
+.db-root .db-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.db-root .db-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.db-root :where(.db-search-panel, .db-notification-panel, .db-workspace-menu) {
+  max-width: calc(100vw - 24px);
+}
+
+.payvio-auth-screen {
+  overflow-y: auto;
+}
+
+@media (max-height: 680px) {
+  .payvio-auth-screen {
+    place-items: start center;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .payvio-auth-logo {
+    margin-bottom: 18px;
+  }
+
+  .payvio-auth-heading {
+    margin-bottom: 18px;
+  }
+
+  .payvio-auth-note {
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 1280px) and (min-width: 1121px) {
+  .il-header-shell {
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+
+  .il-header-nav {
+    gap: 1.35rem;
+  }
+
+  .il-header-actions {
+    gap: 0.85rem;
+  }
+
+  .il-header-cta {
+    padding-right: 1.15rem;
+    padding-left: 1.15rem;
+  }
+}
+
+@media (max-width: 980px) and (min-width: 761px) {
+  .il-hero {
+    min-height: auto;
+  }
+
+  .il-hero-shell {
+    min-height: auto;
+    padding-top: 4.25rem;
+    padding-bottom: 5rem;
+  }
+
+  .il-hero-title {
+    font-size: 3.75rem;
+  }
+
+  .il-orbit-stage {
+    width: min(40rem, calc(100vw - 3rem));
+  }
+
+  .il-orbit-copy h2 {
+    font-size: 3.35rem;
+  }
+
+  .il-platform-panel {
+    min-height: auto;
+    padding: 2rem;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 761px) {
+  .il-hero {
+    min-height: auto;
+  }
+
+  .il-hero-shell {
+    min-height: auto;
+    padding-top: 3.5rem;
+    padding-bottom: 4rem;
+  }
+
+  .il-hero-title {
+    font-size: 4rem;
+  }
+
+  .il-preview {
+    width: min(100%, 58rem);
+  }
+}
+
+@media (max-width: 940px) and (min-width: 761px) {
+  .db-root:has(.db-dashboard-page) {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    gap: 8px;
+    overflow: visible;
+    padding: 8px;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-sidebar,
+  .db-root:has(.db-dashboard-page) .db-main {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-sidebar {
+    position: sticky;
+    top: 8px;
+    z-index: 40;
+    overflow: visible;
+    border-right: 0;
+    border-radius: 14px;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-workspace,
+  .db-root:has(.db-dashboard-page) .db-sidebar-footer {
+    display: none;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-nav {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0 12px 12px;
+    scrollbar-width: none;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-nav-group {
+    display: contents;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-nav-group-label,
+  .db-root:has(.db-dashboard-page) .db-nav-key {
+    display: none;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-nav-item {
+    flex: 0 0 auto;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-main {
+    overflow: visible;
+    border-radius: 16px;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-content {
+    overflow: visible;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 320px) auto;
+  }
+
+  .db-root:has(.db-dashboard-page) .db-workview {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .il-page table {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .il-page table,
+  .il-page table thead,
+  .il-page table tbody,
+  .il-page table tr,
+  .il-page table td {
+    display: block;
+  }
+
+  .il-page table thead {
+    display: none;
+  }
+
+  .il-page table tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  .il-page table tr {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #e4e8e0;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  .il-page table td {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 0 !important;
+    border: 0 !important;
+    color: #4e5961;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+
+  .il-page table td::before {
+    flex: 0 0 104px;
+    color: #687076;
+    content: "Feature";
+    font-size: 11px;
+    font-weight: 900;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .il-page table td:nth-child(2)::before { content: "Starter"; }
+  .il-page table td:nth-child(3)::before { content: "Business"; }
+  .il-page table td:nth-child(4)::before { content: "Professional"; }
+  .il-page table td:nth-child(5)::before { content: "Enterprise"; }
+}
+
+@media (max-width: 860px) {
+  .public-invoice-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .public-invoice-actions {
+    position: static !important;
+  }
+
+  .public-invoice-lines {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 520px) {
+  .payvio-auth-toast {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .payvio-auth-toast a {
+    grid-column: 2 / -1;
+  }
+
+  .pwa-install-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .pwa-install-actions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .pwa-install-btn {
+    flex: 1;
   }
 }

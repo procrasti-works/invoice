@@ -82,7 +82,7 @@ const purchaseScanEventType = v.union(
 
 const extractionProvider = v.union(
   v.literal("manual"),
-  v.literal("openai"),
+  v.literal("desert"),
   v.literal("none"),
 );
 
