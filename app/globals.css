@@ -6330,9 +6330,9 @@ main {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   height: 6.25rem;
-  max-width: 1650px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 0 4rem;
+  padding: 0 1.25rem;
 }
 
 .il-header-logo {
