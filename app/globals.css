@@ -7086,6 +7086,20 @@ main {
   background: #eef3f0;
 }
 
+.il-platform-feature-img {
+  width: 100%;
+  border-radius: 0.45rem;
+  overflow: hidden;
+  aspect-ratio: 16 / 7;
+}
+
+.il-platform-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .il-platform-showcase-copy {
   max-width: 31rem;
 }
