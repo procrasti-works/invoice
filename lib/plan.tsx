@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 
 export type PlanLevel = "trial" | "starter" | "business" | "professional" | "enterprise" | "admin";
 
-export type Feature = "invoices" | "clients" | "reminders" | "reports" | "ledger" | "vat" | "settings" | "scan";
+export type Feature = "invoices" | "clients" | "reminders" | "reports" | "ledger" | "vat" | "settings" | "scan" | "receipts";
 
 const TRIAL_DAYS = 14;
 export const TRIAL_SCAN_LIMIT = 0;
@@ -21,6 +21,7 @@ const FEATURE_REQUIREMENTS: Record<Feature, PlanLevel[]> = {
   ledger: ["trial", "starter", "business", "professional", "enterprise", "admin"],
   vat: ["trial", "starter", "business", "professional", "enterprise", "admin"],
   scan: ["trial", "starter", "business", "professional", "enterprise", "admin"],
+  receipts: ["business", "professional", "enterprise", "admin"],
 };
 
 export const PLAN_LABELS: Record<PlanLevel, string> = {

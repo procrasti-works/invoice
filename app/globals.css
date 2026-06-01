@@ -13254,13 +13254,17 @@ body {
 }
 
 .db-receipt-cat-pill {
-  padding: 5px 14px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 6px 16px;
   border-radius: 999px;
   background: #eff6ff;
   color: #0978e1;
   font-size: 0.8rem;
   font-weight: 600;
   border: 1px solid #bfdbfe;
+  line-height: 1;
 }
 
 .db-receipt-coming-soon {
@@ -13329,5 +13333,167 @@ body {
 @media (max-width: 560px) {
   .db-receipt-how-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── Receipt Tracker UI ── */
+.db-receipts-intro {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #4e5961;
+  max-width: 56rem;
+}
+
+.db-receipt-upload-card,
+.db-receipt-review-card {
+  display: grid;
+  gap: 18px;
+}
+
+.db-receipt-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  border: 2px dashed #d1d5db;
+  border-radius: 10px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: border-color 140ms, background 140ms;
+  padding: 24px;
+}
+
+.db-receipt-dropzone:hover,
+.db-receipt-dropzone-active {
+  border-color: #0978e1;
+  background: #eff6ff;
+}
+
+.db-receipt-dropzone-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.db-receipt-dropzone-copy strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0d141c;
+}
+
+.db-receipt-dropzone-copy span {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.db-receipt-file-ready {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.db-receipt-cat-row {
+  display: grid;
+  gap: 10px;
+}
+
+.db-receipt-cat-pill-active {
+  background: #0978e1 !important;
+  color: #fff !important;
+  border-color: #0978e1 !important;
+}
+
+.db-receipt-upload-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.db-receipt-review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.db-receipt-review-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f5f7f2;
+}
+
+.db-receipt-review-row strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0d141c;
+}
+
+.db-receipt-extracting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #0978e1;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.db-receipt-review-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.db-receipt-vat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid #e4e4df;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.db-receipt-vat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  border-right: 1px solid #e4e4df;
+}
+
+.db-receipt-vat-cell:last-child {
+  border-right: none;
+}
+
+.db-receipt-vat-cell span {
+  font-size: 0.78rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.db-receipt-vat-cell strong {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0d141c;
+}
+
+@media (max-width: 720px) {
+  .db-receipt-review-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .db-receipt-vat-strip {
+    grid-template-columns: 1fr;
+  }
+  .db-receipt-vat-cell {
+    border-right: none;
+    border-bottom: 1px solid #e4e4df;
+  }
+  .db-receipt-vat-cell:last-child {
+    border-bottom: none;
   }
 }

@@ -115,7 +115,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         label: "Receipts",
         href: "/dashboard/receipts",
         icon: Receipt,
-        feature: "scan",
+        feature: "receipts",
         description: "Capture expense receipts and track VAT input automatically",
         key: "PV-0205",
       },
