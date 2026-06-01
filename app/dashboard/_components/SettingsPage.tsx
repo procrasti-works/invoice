@@ -7,9 +7,11 @@ import { useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
   AlertTriangle,
+  BadgeCheck,
   Building2,
   CheckCircle2,
   Copy,
+  CreditCard,
   KeyRound,
   Loader2,
   MailPlus,
@@ -27,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { PLAN_LABELS, PLAN_COLORS, type PlanLevel } from "@/lib/plan";
 
 type Workspace = Doc<"organizations">;
 type MemberRole = Doc<"memberships">["role"];
@@ -292,6 +295,7 @@ export function SettingsPage() {
               <RoleRulesPanel key={`rules:${workspaceVersion}`} state={state} />
               <MembersPanel key={`members:${workspaceVersion}`} state={state} />
               <TeamInvitationsPanel key={`invites:${workspaceVersion}`} state={state} />
+              <BillingPanel key={`billing:${workspaceVersion}`} state={state} />
               <DangerZonePanel key={`danger:${workspaceVersion}`} state={state} />
             </div>
           </div>
@@ -774,6 +778,110 @@ function TeamInvitationsPanel({ state }: { state: SettingsState }) {
           ))
         )}
       </div>
+    </section>
+  );
+}
+
+type BillingPlan = "trial" | "starter" | "business" | "professional" | "enterprise";
+
+const ACCESS_CODES: Record<string, BillingPlan> = {
+  "PAYVIO-ADMIN-2026": "enterprise",
+  "ENT-2026": "enterprise",
+  "PRO-2026": "professional",
+  "BIZ-2026": "business",
+  "START-2026": "starter",
+};
+
+function BillingPanel({ state }: { state: SettingsState }) {
+  const subscription = useQuery(api.subscriptions.current);
+  const upsertSubscription = useMutation(api.subscriptions.upsertForOrganization);
+  const isOwner = state.membership.role === "owner" || state.membership.role === "admin";
+
+  const [code, setCode] = useState("");
+  const [pending, setPending] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentPlan = (subscription?.plan ?? "trial") as PlanLevel;
+  const planColor = PLAN_COLORS[currentPlan] ?? "#6b7280";
+  const planLabel = PLAN_LABELS[currentPlan] ?? "Trial";
+
+  async function handleApplyCode(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setNotice(null);
+    setError(null);
+    const trimmed = code.trim().toUpperCase();
+    const plan: BillingPlan | undefined = ACCESS_CODES[trimmed];
+    if (!plan) {
+      setError("Invalid access code. Please check and try again.");
+      return;
+    }
+    setPending(true);
+    try {
+      await upsertSubscription({ plan, status: "active" });
+      setNotice(`Plan upgraded to ${PLAN_LABELS[plan]}. Refresh to see all features.`);
+      setCode("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not apply code.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="db-settings-card">
+      <div className="db-settings-card-head">
+        <div>
+          <p className="db-settings-kicker">Billing</p>
+          <h2>Plan &amp; access</h2>
+          <p className="db-settings-card-copy">Your current workspace plan and access level.</p>
+        </div>
+        <CreditCard className="size-4" />
+      </div>
+
+      {notice && (
+        <p className="db-settings-success">
+          <CheckCircle2 className="size-4 shrink-0" />
+          {notice}
+        </p>
+      )}
+      {error && <p className="db-settings-error">{error}</p>}
+
+      <div className="db-billing-current">
+        <span className="db-billing-plan-badge" style={{ background: planColor + "18", color: planColor, borderColor: planColor + "40" }}>
+          <BadgeCheck className="size-4" />
+          {planLabel}
+        </span>
+        <p className="db-billing-plan-note">
+          {currentPlan === "trial"
+            ? "You are on the free trial. Apply an access code to unlock paid features."
+            : "Your plan is active. Contact the team to change your subscription."}
+        </p>
+      </div>
+
+      {isOwner && (
+        <form onSubmit={handleApplyCode} className="db-billing-code-form">
+          <p className="db-settings-field-label">Apply access code</p>
+          <div className="db-billing-code-row">
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="e.g. ENT-2026"
+              className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-mono"
+              disabled={pending}
+            />
+            <Button type="submit" disabled={!code.trim() || pending} className="db-primary-btn h-10 shrink-0">
+              {pending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
+              Apply
+            </Button>
+          </div>
+          <p className="db-billing-code-hint">
+            Access codes are provided by the Payvio team. Contact{" "}
+            <a href="mailto:info.procrasti@gmail.com" className="underline">info.procrasti@gmail.com</a>{" "}
+            to get one.
+          </p>
+        </form>
+      )}
     </section>
   );
 }

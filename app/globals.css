@@ -13497,3 +13497,49 @@ body {
     border-bottom: none;
   }
 }
+
+/* ── Billing Panel ── */
+.db-billing-current {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f5f7f2;
+  border: 1px solid #e4e4df;
+}
+
+.db-billing-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.db-billing-plan-note {
+  font-size: 0.82rem;
+  color: #4e5961;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.db-billing-code-form {
+  display: grid;
+  gap: 8px;
+}
+
+.db-billing-code-row {
+  display: flex;
+  gap: 10px;
+}
+
+.db-billing-code-hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin: 0;
+}
