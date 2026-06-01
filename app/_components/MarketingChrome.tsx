@@ -6,6 +6,7 @@ import {
   Building2,
   FileText,
   Landmark,
+  Receipt,
   ReceiptText,
   ScanLine,
   Send,
@@ -31,10 +32,16 @@ const productNavItems: NavItem[] = [
     icon: FileText,
   },
   {
-    label: "Scan",
+    label: "Scan Paper Invoices",
     href: "/#scan",
     body: "Extract supplier invoices into purchase records.",
     icon: ScanLine,
+  },
+  {
+    label: "Receipt Tracker",
+    href: "/#receipts",
+    body: "Capture expense receipts and track VAT input automatically.",
+    icon: Receipt,
   },
   {
     label: "Client approvals",
@@ -233,7 +240,8 @@ export function MarketingFooter() {
           <h3 className="font-black">Product</h3>
           <div className="mt-4 grid gap-2 text-sm text-white/65">
             <FooterLink href="/#invoices">Invoices</FooterLink>
-            <FooterLink href="/#scan">Scan</FooterLink>
+            <FooterLink href="/#scan">Scan invoices</FooterLink>
+            <FooterLink href="/#receipts">Receipt Tracker</FooterLink>
             <FooterLink href="/#clients">Clients</FooterLink>
             <FooterLink href="/#ledger">Ledger</FooterLink>
             <FooterLink href="/#vat">VAT records</FooterLink>
