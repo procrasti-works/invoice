@@ -5925,7 +5925,7 @@ main {
 
 .db-compose-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.62fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.62fr);
   gap: 18px;
   padding-top: 18px;
 }
@@ -7043,7 +7043,7 @@ main {
 }
 
 .db-root:has(.db-dashboard-page) .db-compose-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(380px, 0.58fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.58fr);
   gap: 22px;
 }
 
