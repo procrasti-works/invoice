@@ -17,7 +17,6 @@ type PlatformFeature = {
   body: string;
   bullets: string[];
   id: string;
-  image: { src: string; alt: string };
   kicker: string;
   title: string;
   visual: {
@@ -39,10 +38,6 @@ const platformFeatures: PlatformFeature[] = [
     title: "Create, send, and close invoices from one workspace.",
     body: "Payvio keeps the invoice flow direct: draft the invoice, send the client link, track the status, and mark payment when it lands.",
     bullets: ["Line items", "Client link", "Payment status"],
-    image: {
-      src: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=80",
-      alt: "Business professional reviewing invoices on a laptop",
-    },
     visual: {
       title: "Invoice sent",
       body: "Every invoice has a simple path from draft to paid.",
@@ -77,10 +72,6 @@ const platformFeatures: PlatformFeature[] = [
     title: "Keep approvals and follow-up easy to manage.",
     body: "Save client details once, reuse them on every invoice, and keep reminders connected to the same record.",
     bullets: ["Client records", "Approval status", "Reminder drafts"],
-    image: {
-      src: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=900&q=80",
-      alt: "Business team in a client meeting",
-    },
     visual: {
       title: "Client review",
       body: "The client sees the invoice without needing an account.",
@@ -98,10 +89,6 @@ const platformFeatures: PlatformFeature[] = [
     title: "See sales, supplier purchases, and VAT-ready totals clearly.",
     body: "Payvio keeps the operational record tidy so reporting does not become a month-end rebuild.",
     bullets: ["Issued invoices", "Supplier records", "VAT summary"],
-    image: {
-      src: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80",
-      alt: "Financial analytics dashboard on a screen",
-    },
     visual: {
       title: "Ledger view",
       body: "Sales and purchases stay side by side.",
@@ -111,27 +98,6 @@ const platformFeatures: PlatformFeature[] = [
       fromName: "Issued invoices",
       toToken: "VAT",
       toName: "VAT-ready records",
-    },
-  },
-  {
-    id: "scan",
-    kicker: "Scan Paper Invoices",
-    title: "Turn paper invoices into digital records instantly.",
-    body: "Point your camera at any paper invoice and Payvio extracts the details — client, amounts, line items, and VAT — straight into your workspace.",
-    bullets: ["OCR extraction", "Auto line items", "VAT detection"],
-    image: {
-      src: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=900&q=80",
-      alt: "Scanning a paper document with a phone camera",
-    },
-    visual: {
-      title: "Scan complete",
-      body: "Paper details land directly into a draft invoice.",
-      label: "Extracted total",
-      amount: "N$2,300.00",
-      fromToken: "Paper",
-      fromName: "Physical invoice",
-      toToken: "Draft",
-      toName: "Ready to review",
     },
   },
 ];
@@ -270,15 +236,6 @@ function PlatformFeature({ feature }: { feature: PlatformFeature }) {
         </p>
       </div>
       <div className="il-platform-panel">
-        <div className="il-platform-feature-img">
-          <Image
-            src={feature.image.src}
-            alt={feature.image.alt}
-            width={900}
-            height={500}
-            className="il-platform-img"
-          />
-        </div>
         <div className="il-platform-showcase-copy">
           <h4>{feature.visual.title}</h4>
           <p>{feature.visual.body}</p>
