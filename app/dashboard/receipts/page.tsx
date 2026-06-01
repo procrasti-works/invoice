@@ -15,7 +15,7 @@ export default function ReceiptsPage() {
   const { canAccess } = usePlan();
 
   if (!canAccess("scan")) {
-    return <LockedPage feature="scan" />;
+    return <LockedPage feature="scan" requiredPlan="Business" />;
   }
 
   return (
