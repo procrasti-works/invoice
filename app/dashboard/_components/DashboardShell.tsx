@@ -247,7 +247,6 @@ function ShellInner({ children }: { children: ReactNode }) {
             onPointerEnter={() => prefetchRoute("/dashboard")}
           >
             <PayvioGlyph />
-            <span>Payvio</span>
           </Link>
           <div className="db-sidebar-actions">
             <button type="button" aria-label="Search">
