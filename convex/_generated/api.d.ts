@@ -11,6 +11,11 @@
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as invoices from "../invoices.js";
+import type * as organizationContext from "../organizationContext.js";
+import type * as organizations from "../organizations.js";
+import type * as purchases from "../purchases.js";
+import type * as reports from "../reports.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -23,6 +28,11 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
   invoices: typeof invoices;
+  organizationContext: typeof organizationContext;
+  organizations: typeof organizations;
+  purchases: typeof purchases;
+  reports: typeof reports;
+  subscriptions: typeof subscriptions;
   users: typeof users;
 }>;
 

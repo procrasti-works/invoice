@@ -12,9 +12,69 @@ const invoiceStatus = v.union(
   v.literal("rejected"),
   v.literal("paid"),
   v.literal("overdue"),
+  v.literal("void"),
 );
 
-const memberRole = v.union(v.literal("owner"), v.literal("member"));
+const memberRole = v.union(
+  v.literal("owner"),
+  v.literal("admin"),
+  v.literal("finance"),
+  v.literal("viewer"),
+  v.literal("member"),
+);
+
+const invitationStatus = v.union(
+  v.literal("pending"),
+  v.literal("accepted"),
+  v.literal("revoked"),
+  v.literal("expired"),
+);
+
+const entityType = v.union(
+  v.literal("sole_proprietor"),
+  v.literal("close_corporation"),
+  v.literal("private_company"),
+  v.literal("partnership"),
+  v.literal("ngo"),
+  v.literal("other"),
+);
+
+const taxMode = v.union(
+  v.literal("no_vat"),
+  v.literal("vat_15"),
+  v.literal("zero_rated"),
+  v.literal("exempt"),
+);
+
+const businessSnapshot = v.object({
+  name: v.string(),
+  legalName: v.optional(v.string()),
+  tradingName: v.optional(v.string()),
+  phone: v.optional(v.string()),
+  address: v.optional(v.string()),
+  taxId: v.optional(v.string()),
+  vatNumber: v.optional(v.string()),
+  vatRegistered: v.optional(v.boolean()),
+});
+
+const clientSnapshot = v.object({
+  name: v.string(),
+  businessName: v.optional(v.string()),
+  contactName: v.optional(v.string()),
+  email: v.optional(v.string()),
+  phone: v.optional(v.string()),
+  address: v.optional(v.string()),
+  taxId: v.optional(v.string()),
+  vatNumber: v.optional(v.string()),
+});
+
+const bankDetails = v.object({
+  bankName: v.optional(v.string()),
+  accountName: v.optional(v.string()),
+  accountNumber: v.optional(v.string()),
+  branchCode: v.optional(v.string()),
+  swiftCode: v.optional(v.string()),
+});
 
 const eventType = v.union(
   v.literal("created"),
@@ -33,6 +93,23 @@ export default defineSchema({
   ...authTables,
   organizations: defineTable({
     name: v.string(),
+    legalName: v.optional(v.string()),
+    tradingName: v.optional(v.string()),
+    entityType: v.optional(entityType),
+    region: v.optional(v.string()),
+    address: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    taxId: v.optional(v.string()),
+    vatNumber: v.optional(v.string()),
+    vatRegistered: v.optional(v.boolean()),
+    defaultTerms: v.optional(v.string()),
+    invoicePrefix: v.optional(v.string()),
+    nextInvoiceSequence: v.optional(v.number()),
+    bankName: v.optional(v.string()),
+    bankAccountName: v.optional(v.string()),
+    bankAccountNumber: v.optional(v.string()),
+    branchCode: v.optional(v.string()),
+    swiftCode: v.optional(v.string()),
     ownerUserId: v.id("users"),
     defaultCurrency: v.string(),
     paymentInstructions: v.string(),
@@ -50,12 +127,50 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_organizationId", ["organizationId"])
     .index("by_organizationId_and_userId", ["organizationId", "userId"]),
+  userOrganizationPreferences: defineTable({
+    userId: v.id("users"),
+    activeOrganizationId: v.optional(v.id("organizations")),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_activeOrganizationId", ["activeOrganizationId"]),
+  organizationInvitations: defineTable({
+    organizationId: v.id("organizations"),
+    email: v.string(),
+    role: memberRole,
+    token: v.string(),
+    status: invitationStatus,
+    invitedByUserId: v.id("users"),
+    acceptedByUserId: v.optional(v.id("users")),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+    acceptedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_token", ["token"])
+    .index("by_email_and_status", ["email", "status"])
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_organizationId_and_email_and_status", [
+      "organizationId",
+      "email",
+      "status",
+    ]),
   clients: defineTable({
     organizationId: v.id("organizations"),
     name: v.string(),
+    businessName: v.optional(v.string()),
     contactName: v.optional(v.string()),
     email: v.string(),
     company: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
+    vatNumber: v.optional(v.string()),
+    taxId: v.optional(v.string()),
+    paymentTerms: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    active: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -72,13 +187,24 @@ export default defineSchema({
     status: invoiceStatus,
     amount: v.optional(v.number()),
     amountTotal: v.optional(v.number()),
+    subtotal: v.optional(v.number()),
+    vatAmount: v.optional(v.number()),
+    total: v.optional(v.number()),
+    taxMode: v.optional(taxMode),
     currency: v.optional(v.string()),
+    exchangeRateSnapshot: v.optional(v.number()),
+    balanceDue: v.optional(v.number()),
     issueDate: v.optional(v.string()),
     dueDate: v.string(),
     terms: v.optional(v.string()),
     notes: v.optional(v.string()),
     paymentInstructions: v.optional(v.string()),
     paymentLink: v.optional(v.string()),
+    paymentReference: v.optional(v.string()),
+    bankDetails: v.optional(bankDetails),
+    supplierSnapshot: v.optional(businessSnapshot),
+    clientSnapshot: v.optional(clientSnapshot),
+    legacy: v.optional(v.boolean()),
     publicToken: v.optional(v.string()),
     snapshotId: v.optional(v.id("invoiceSnapshots")),
     sentAt: v.optional(v.number()),
@@ -87,6 +213,7 @@ export default defineSchema({
     rejectedAt: v.optional(v.number()),
     rejectionReason: v.optional(v.string()),
     paidAt: v.optional(v.number()),
+    voidedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
     userId: v.optional(v.id("users")),
@@ -101,6 +228,10 @@ export default defineSchema({
     description: v.string(),
     quantity: v.number(),
     unitPrice: v.number(),
+    taxMode: v.optional(taxMode),
+    vatRate: v.optional(v.number()),
+    vatAmount: v.optional(v.number()),
+    lineSubtotal: v.optional(v.number()),
     lineTotal: v.number(),
     position: v.number(),
     createdAt: v.number(),
@@ -114,13 +245,23 @@ export default defineSchema({
     clientName: v.string(),
     clientEmail: v.string(),
     amountTotal: v.number(),
+    subtotal: v.optional(v.number()),
+    vatAmount: v.optional(v.number()),
+    total: v.optional(v.number()),
+    taxMode: v.optional(taxMode),
+    balanceDue: v.optional(v.number()),
     currency: v.string(),
+    exchangeRateSnapshot: v.optional(v.number()),
     issueDate: v.string(),
     dueDate: v.string(),
     terms: v.string(),
     notes: v.string(),
     paymentInstructions: v.string(),
     paymentLink: v.optional(v.string()),
+    paymentReference: v.optional(v.string()),
+    bankDetails: v.optional(bankDetails),
+    supplierSnapshot: v.optional(businessSnapshot),
+    clientSnapshot: v.optional(clientSnapshot),
     createdAt: v.number(),
   })
     .index("by_invoiceId", ["invoiceId"])
@@ -132,6 +273,10 @@ export default defineSchema({
     description: v.string(),
     quantity: v.number(),
     unitPrice: v.number(),
+    taxMode: v.optional(taxMode),
+    vatRate: v.optional(v.number()),
+    vatAmount: v.optional(v.number()),
+    lineSubtotal: v.optional(v.number()),
     lineTotal: v.number(),
     position: v.number(),
   }).index("by_snapshotId", ["snapshotId"]),
@@ -166,13 +311,42 @@ export default defineSchema({
     currency: v.string(),
     providerReference: v.optional(v.string()),
     paymentLink: v.optional(v.string()),
+    proofId: v.optional(v.id("paymentProofs")),
+    reviewedByUserId: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    notes: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_invoiceId", ["invoiceId"])
     .index("by_organizationId", ["organizationId"]),
+  paymentProofs: defineTable({
+    organizationId: v.id("organizations"),
+    invoiceId: v.id("invoices"),
+    publicToken: v.optional(v.string()),
+    payerName: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    paymentDate: v.string(),
+    bankReference: v.optional(v.string()),
+    storageId: v.optional(v.id("_storage")),
+    fileName: v.optional(v.string()),
+    status: v.union(
+      v.literal("submitted"),
+      v.literal("accepted"),
+      v.literal("rejected"),
+    ),
+    reviewerUserId: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_invoiceId", ["invoiceId"])
+    .index("by_organizationId_and_status", ["organizationId", "status"]),
   reminders: defineTable({
     organizationId: v.id("organizations"),
     invoiceId: v.id("invoices"),
+    clientId: v.optional(v.id("clients")),
     status: v.union(
       v.literal("scheduled"),
       v.literal("sent"),
@@ -184,9 +358,74 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_invoiceId", ["invoiceId"])
+    .index("by_clientId", ["clientId"])
     .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_organizationId_and_clientId", ["organizationId", "clientId"])
     .index("by_organizationId_and_scheduledFor", [
       "organizationId",
       "scheduledFor",
     ]),
+  suppliers: defineTable({
+    organizationId: v.id("organizations"),
+    name: v.string(),
+    contactName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
+    vatNumber: v.optional(v.string()),
+    taxId: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_name", ["organizationId", "name"]),
+  purchases: defineTable({
+    organizationId: v.id("organizations"),
+    supplierId: v.optional(v.id("suppliers")),
+    supplierName: v.string(),
+    invoiceNumber: v.optional(v.string()),
+    issueDate: v.string(),
+    dueDate: v.optional(v.string()),
+    currency: v.string(),
+    subtotal: v.number(),
+    vatAmount: v.number(),
+    total: v.number(),
+    balanceDue: v.number(),
+    taxMode,
+    status: v.union(
+      v.literal("draft"),
+      v.literal("recorded"),
+      v.literal("paid"),
+      v.literal("void"),
+    ),
+    notes: v.optional(v.string()),
+    proofStorageId: v.optional(v.id("_storage")),
+    createdByUserId: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_supplierId", ["supplierId"]),
+  subscriptions: defineTable({
+    organizationId: v.id("organizations"),
+    plan: v.union(
+      v.literal("trial"),
+      v.literal("starter"),
+      v.literal("business"),
+      v.literal("professional"),
+      v.literal("enterprise"),
+    ),
+    status: v.union(
+      v.literal("trialing"),
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("canceled"),
+    ),
+    currentPeriodEnd: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  }).index("by_organizationId", ["organizationId"]),
 });

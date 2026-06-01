@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
 import {
   CheckCircle2,
@@ -9,16 +9,18 @@ import {
   Loader2,
   Mail,
   ReceiptText,
+  Upload,
   XCircle,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
-function formatMoney(amount: number, currency = "USD") {
+function formatMoney(amount: number, currency = "NAD") {
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-NA", {
       style: "currency",
       currency,
       maximumFractionDigits: 2,
@@ -41,10 +43,18 @@ export function ClientInvoicePage({ token }: { token: string }) {
   const markViewed = useMutation(api.invoices.markViewedByToken);
   const approve = useMutation(api.invoices.approveByToken);
   const reject = useMutation(api.invoices.rejectByToken);
+  const generateUploadUrl = useMutation(api.invoices.generatePaymentProofUploadUrl);
+  const submitPaymentProof = useMutation(api.invoices.submitPaymentProofByToken);
   const viewedRef = useRef(false);
   const [pending, setPending] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [submittingProof, setSubmittingProof] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [payerName, setPayerName] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [bankReference, setBankReference] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,8 +74,13 @@ export function ClientInvoicePage({ token }: { token: string }) {
   const clientName =
     snapshot?.clientName ?? invoice?.clientName ?? invoice?.client ?? "Client";
   const clientEmail = snapshot?.clientEmail ?? invoice?.clientEmail ?? "";
-  const currency = snapshot?.currency ?? invoice?.currency ?? "USD";
-  const total = snapshot?.amountTotal ?? invoice?.amountTotal ?? invoice?.amount ?? 0;
+  const currency = snapshot?.currency ?? invoice?.currency ?? "NAD";
+  const subtotal = snapshot?.subtotal ?? invoice?.subtotal ?? snapshot?.amountTotal ?? invoice?.amountTotal ?? invoice?.amount ?? 0;
+  const vatAmount = snapshot?.vatAmount ?? invoice?.vatAmount ?? 0;
+  const total = snapshot?.total ?? snapshot?.amountTotal ?? invoice?.total ?? invoice?.amountTotal ?? invoice?.amount ?? 0;
+  const balanceDue = snapshot?.balanceDue ?? invoice?.balanceDue ?? (invoice?.status === "paid" ? 0 : total);
+  const bankDetails = snapshot?.bankDetails ?? invoice?.bankDetails ?? null;
+  const submittedProofs = data?.paymentProofs?.filter((proof) => proof.status === "submitted") ?? [];
 
   async function handleApprove() {
     setPending(true);
@@ -76,12 +91,55 @@ export function ClientInvoicePage({ token }: { token: string }) {
       setNotice(
         paymentLink
           ? "Approved. Payment is separate, use the payment link when you are ready to pay."
-          : "Approved. Payment is separate and remains due by the agreed date.",
+          : "Approved. Payment is separate. Use the EFT details below when you are ready to pay.",
       );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to approve invoice.");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleSubmitProof(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmittingProof(true);
+    setNotice(null);
+
+    try {
+      let storageId: Id<"_storage"> | undefined;
+
+      if (proofFile) {
+        const uploadUrl = await generateUploadUrl({ token });
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": proofFile.type || "application/octet-stream" },
+          body: proofFile,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Proof upload failed");
+        }
+
+        const uploadJson = (await uploadResponse.json()) as { storageId: string };
+        storageId = uploadJson.storageId as Id<"_storage">;
+      }
+
+      await submitPaymentProof({
+        token,
+        payerName: payerName || clientName,
+        amount: Number(paymentAmount) || balanceDue || total,
+        paymentDate,
+        bankReference,
+        storageId,
+        fileName: proofFile?.name,
+      });
+      setProofFile(null);
+      setBankReference("");
+      setNotice("Proof submitted. The sender will review it and confirm payment.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to submit payment proof.");
+    } finally {
+      setSubmittingProof(false);
     }
   }
 
@@ -180,12 +238,20 @@ export function ClientInvoicePage({ token }: { token: string }) {
             <div className="mt-5 flex justify-end">
               <div className="w-full max-w-[260px]">
                 <div className="flex justify-between text-sm text-[#6e6e73]">
-                  <span>Subtotal</span>
-                  <span>{formatMoney(total, currency)}</span>
+                <span>Subtotal</span>
+                  <span>{formatMoney(subtotal, currency)}</span>
+                </div>
+                <div className="mt-2 flex justify-between text-sm text-[#6e6e73]">
+                  <span>VAT</span>
+                  <span>{formatMoney(vatAmount, currency)}</span>
                 </div>
                 <div className="mt-2 flex justify-between border-t border-[#e5e5ea] pt-3 text-xl font-medium text-[#1d1d1f]">
                   <span>Total</span>
                   <span>{formatMoney(total, currency)}</span>
+                </div>
+                <div className="mt-2 flex justify-between text-sm font-medium text-[#006545]">
+                  <span>Balance due</span>
+                  <span>{formatMoney(balanceDue, currency)}</span>
                 </div>
               </div>
             </div>
@@ -199,8 +265,19 @@ export function ClientInvoicePage({ token }: { token: string }) {
                 <span className="font-medium text-[#1d1d1f]">Payment:</span>{" "}
                 {snapshot?.paymentInstructions ??
                   invoice.paymentInstructions ??
-                  "Use the payment method agreed with the sender."}
+                  "Pay by EFT or bank transfer using the invoice number as reference."}
               </p>
+              {bankDetails ? (
+                <div className="grid gap-1 rounded-md border border-[#e5e5ea] bg-white p-3">
+                  <p className="font-medium text-[#1d1d1f]">EFT details</p>
+                  {bankDetails.bankName ? <p>Bank: {bankDetails.bankName}</p> : null}
+                  {bankDetails.accountName ? <p>Account name: {bankDetails.accountName}</p> : null}
+                  {bankDetails.accountNumber ? <p>Account number: {bankDetails.accountNumber}</p> : null}
+                  {bankDetails.branchCode ? <p>Branch code: {bankDetails.branchCode}</p> : null}
+                  {bankDetails.swiftCode ? <p>SWIFT: {bankDetails.swiftCode}</p> : null}
+                  <p>Reference: {snapshot?.paymentReference ?? invoice.paymentReference ?? invoiceNumber}</p>
+                </div>
+              ) : null}
               {(snapshot?.notes ?? invoice.notes) ? (
                 <p>{snapshot?.notes ?? invoice.notes}</p>
               ) : null}
@@ -300,6 +377,46 @@ export function ClientInvoicePage({ token }: { token: string }) {
               </a>
             </Button>
           ) : null}
+
+          <form onSubmit={handleSubmitProof} className="grid gap-3 rounded-md border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+            <div>
+              <p className="text-sm font-medium text-[#1d1d1f]">Submit proof of payment</p>
+              <p className="mt-1 text-xs text-[#6e6e73]">
+                Uploading proof does not mark this invoice paid. The sender confirms it after checking their bank account.
+              </p>
+            </div>
+            {submittedProofs.length ? (
+              <p className="rounded-md border border-[#f7e09b] bg-[#fff9df] p-2 text-xs text-[#7d6000]">
+                Proof already submitted and waiting for sender review.
+              </p>
+            ) : null}
+            <label className="grid gap-1 text-xs font-medium text-[#424245]">
+              Payer name
+              <input value={payerName} onChange={(event) => setPayerName(event.target.value)} placeholder={clientName} className="h-9 rounded-md border border-[#e5e5ea] bg-white px-3 text-sm outline-none" />
+            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="grid gap-1 text-xs font-medium text-[#424245]">
+                Amount
+                <input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder={String(balanceDue || total)} className="h-9 rounded-md border border-[#e5e5ea] bg-white px-3 text-sm outline-none" />
+              </label>
+              <label className="grid gap-1 text-xs font-medium text-[#424245]">
+                Payment date
+                <input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} className="h-9 rounded-md border border-[#e5e5ea] bg-white px-3 text-sm outline-none" />
+              </label>
+            </div>
+            <label className="grid gap-1 text-xs font-medium text-[#424245]">
+              Bank reference
+              <input value={bankReference} onChange={(event) => setBankReference(event.target.value)} className="h-9 rounded-md border border-[#e5e5ea] bg-white px-3 text-sm outline-none" />
+            </label>
+            <label className="grid gap-1 text-xs font-medium text-[#424245]">
+              Proof file
+              <input type="file" accept="image/*,.pdf" onChange={(event) => setProofFile(event.target.files?.[0] ?? null)} className="rounded-md border border-[#e5e5ea] bg-white px-3 py-2 text-sm" />
+            </label>
+            <Button type="submit" disabled={submittingProof || invoice.status === "paid"} className="h-10 bg-[#009b68] text-white hover:bg-[#00875b] hover:text-white">
+              {submittingProof ? <Loader2 className="animate-spin" /> : <Upload />}
+              Submit proof
+            </Button>
+          </form>
 
           <Button
             type="button"

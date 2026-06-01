@@ -11,13 +11,11 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <AuthShell
-      eyebrow="Login"
-      title="Welcome back."
-      description="Access your invoice operations workspace."
+      title="Log in to Payvio"
       footer={
         <>
           New to Payvio?{" "}
-          <Link href="/signup">Open a ledger</Link>
+          <Link href="/signup">Create workspace</Link>
         </>
       }
     >

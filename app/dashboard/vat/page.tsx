@@ -1,194 +1,154 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { Download, Calculator, FileCheck, Globe, AlertCircle } from "lucide-react";
+import { Calculator, CheckCircle2, FileText, Shield } from "lucide-react";
+
 import { api } from "@/convex/_generated/api";
-import type { Doc } from "@/convex/_generated/dataModel";
 import { usePlan } from "@/lib/plan";
 import { LockedPage } from "../_components/DashboardShell";
 
-type InvoiceRow = {
-  invoice: Doc<"invoices">;
-};
-
 function formatMoney(amount: number, currency = "NAD") {
-  try { return new Intl.NumberFormat("en-NA", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount); }
-  catch { return `${currency} ${amount.toFixed(2)}`; }
+  try {
+    return new Intl.NumberFormat("en-NA", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
 }
-
-const TABS = ["VAT Calculator", "NamRA Export", "Currency Settings", "Compliance Status"] as const;
-type Tab = typeof TABS[number];
 
 export default function VatPage() {
   const { canAccess } = usePlan();
-  const [activeTab, setActiveTab] = useState<Tab>("VAT Calculator");
-  const [calcAmount, setCalcAmount] = useState("");
-  const [calcMode, setCalcMode] = useState<"excl" | "incl">("excl");
-  const invoiceRows = useQuery(api.invoices.list) as InvoiceRow[] | undefined;
   const workspace = useQuery(api.invoices.workspace);
-  const currency = workspace?.defaultCurrency ?? "NAD";
+  const summary = useQuery(api.reports.summary, {});
+  const [amount, setAmount] = useState("1000");
+  const [mode, setMode] = useState<"exclusive" | "inclusive">("exclusive");
 
-  if (!canAccess("vat")) return <LockedPage feature="VAT & NamRA Compliance" requiredPlan="Professional" />;
+  if (!canAccess("vat")) {
+    return <LockedPage feature="VAT" requiredPlan="Starter" />;
+  }
 
-  const rows = invoiceRows ?? [];
-  const paid = rows.filter(({ invoice }) => invoice.status === "paid");
-  const totalRevenue = paid.reduce((s, { invoice }) => s + (invoice.amountTotal ?? invoice.amount ?? 0), 0);
-  const vatAmount = totalRevenue * 0.15;
-  const exclVat = totalRevenue / 1.15;
-
-  const calcNum = parseFloat(calcAmount) || 0;
-  const calcVat = calcMode === "excl" ? calcNum * 0.15 : calcNum - (calcNum / 1.15);
-  const calcTotal = calcMode === "excl" ? calcNum * 1.15 : calcNum;
-  const calcExcl = calcMode === "excl" ? calcNum : calcNum / 1.15;
+  const currency = summary?.currency ?? workspace?.defaultCurrency ?? "NAD";
+  const value = Math.max(0, Number(amount) || 0);
+  const subtotal = mode === "exclusive" ? value : value / 1.15;
+  const vat = mode === "exclusive" ? value * 0.15 : value - subtotal;
+  const total = subtotal + vat;
+  const vatPosition = (summary?.vatCollected ?? 0) - (summary?.vatInput ?? 0);
+  const checklist: { label: string; done: boolean }[] = [
+    { label: "Business VAT setting saved", done: Boolean(workspace?.vatRegistered) },
+    { label: "VAT number stored when registered", done: Boolean(workspace?.vatNumber) },
+    { label: "Issued invoices include VAT totals", done: true },
+    { label: "Purchase records include VAT input", done: true },
+    { label: "Direct NamRA/ITAS submission", done: false },
+  ];
 
   return (
     <div className="db-page">
       <div className="db-page-header">
         <div>
-          <p className="db-page-eyebrow">Tax & e-invoicing compliance</p>
-          <h1 className="db-page-title">VAT & NamRA</h1>
+          <p className="db-page-eyebrow">VAT-ready records</p>
+          <h1 className="db-page-title">VAT</h1>
         </div>
-        <button className="db-primary-btn"><Download className="size-4" /> Export ITAS Report</button>
+        <Link href="/dashboard/settings" className="db-outline-btn">
+          <Shield className="size-4" />
+          Business settings
+        </Link>
       </div>
 
-      {/* NamRA compliance banner */}
       <div className="db-compliance-banner">
-        <FileCheck className="size-5 text-[#16a34a]" />
-        <div>
-          <p className="db-compliance-title">NamRA ITAS Ready</p>
-          <p className="db-compliance-sub">Your invoices are formatted for NamRA&apos;s Integrated Tax Administration System. Phased e-invoicing mandate: 2026–2029.</p>
+        <div className="db-stat-icon" style={{ marginBottom: 0 }}>
+          <Shield className="size-4" />
         </div>
-        <span className="db-compliance-badge">Compliant</span>
+        <div>
+          <p className="db-compliance-title">
+            {workspace?.vatRegistered ? "VAT is enabled for issued invoices" : "VAT is off for this workspace"}
+          </p>
+          <p className="db-compliance-sub">
+            Payvio keeps invoice totals, input VAT, and supplier records ready for internal review.
+          </p>
+        </div>
+        <span className="db-compliance-badge">{workspace?.vatRegistered ? "Enabled" : "Not registered"}</span>
       </div>
 
-      {/* VAT summary */}
       <div className="db-stat-row db-stat-row-4">
         <div className="db-stat-card">
-          <p className="db-stat-label">Revenue (excl. VAT)</p>
-          <p className="db-stat-value">{formatMoney(exclVat, currency)}</p>
+          <p className="db-stat-label">VAT collected</p>
+          <p className="db-stat-value">{formatMoney(summary?.vatCollected ?? 0, currency)}</p>
+          <p className="db-stat-sub">From issued invoices</p>
         </div>
         <div className="db-stat-card">
-          <p className="db-stat-label">VAT Collected (15%)</p>
-          <p className="db-stat-value">{formatMoney(vatAmount, currency)}</p>
+          <p className="db-stat-label">VAT input</p>
+          <p className="db-stat-value">{formatMoney(summary?.vatInput ?? 0, currency)}</p>
+          <p className="db-stat-sub">From purchase records</p>
         </div>
         <div className="db-stat-card">
-          <p className="db-stat-label">Total (incl. VAT)</p>
-          <p className="db-stat-value">{formatMoney(totalRevenue, currency)}</p>
+          <p className="db-stat-label">VAT position</p>
+          <p className="db-stat-value">{formatMoney(vatPosition, currency)}</p>
+          <p className="db-stat-sub">Collected minus input</p>
         </div>
         <div className="db-stat-card">
-          <p className="db-stat-label">VAT Return Due</p>
-          <p className="db-stat-value" style={{ fontSize: "1rem" }}>25th of month</p>
+          <p className="db-stat-label">Currency</p>
+          <p className="db-stat-value">{currency}</p>
+          <p className="db-stat-sub">Workspace default</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="db-tabs">
-        {TABS.map((tab) => (
-          <button key={tab} className={`db-tab${activeTab === tab ? " db-tab-active" : ""}`} onClick={() => setActiveTab(tab)}>
-            {tab}
-          </button>
-        ))}
-      </div>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,0.75fr)_minmax(320px,0.55fr)]">
+        <section className="db-card">
+          <p className="db-card-title">
+            <FileText className="size-4" />
+            VAT record checklist
+          </p>
+          <div className="db-compliance-list">
+            {checklist.map(({ label, done }) => (
+              <div key={label} className="db-compliance-row">
+                <span className={done ? "db-compliance-check db-compliance-check-done" : "db-compliance-check db-compliance-check-pending"}>
+                  {done ? "Y" : "-"}
+                </span>
+                <span>{label}</span>
+                <span className="db-compliance-tag">{done ? "Ready" : "Manual"}</span>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      {activeTab === "VAT Calculator" && (
-        <div className="db-card">
-          <h3 className="db-card-title"><Calculator className="size-4" /> VAT Calculator (15%)</h3>
+        <section className="db-card">
+          <p className="db-card-title">
+            <Calculator className="size-4" />
+            VAT calculator
+          </p>
           <div className="db-calc-wrap">
             <div className="db-calc-toggle">
-              <button className={calcMode === "excl" ? "db-calc-toggle-active" : ""} onClick={() => setCalcMode("excl")}>Amount excl. VAT</button>
-              <button className={calcMode === "incl" ? "db-calc-toggle-active" : ""} onClick={() => setCalcMode("incl")}>Amount incl. VAT</button>
+              <button type="button" className={mode === "exclusive" ? "db-calc-toggle-active" : ""} onClick={() => setMode("exclusive")}>
+                Add VAT
+              </button>
+              <button type="button" className={mode === "inclusive" ? "db-calc-toggle-active" : ""} onClick={() => setMode("inclusive")}>
+                Extract VAT
+              </button>
             </div>
             <input
-              type="number"
-              className="db-calc-input"
-              placeholder={`Enter amount (${currency})`}
-              value={calcAmount}
-              onChange={(e) => setCalcAmount(e.target.value)}
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              className="db-calc-input h-11 rounded-md border border-[#e5e7eb] px-3 text-sm"
             />
-            {calcNum > 0 && (
-              <div className="db-calc-result">
-                <div className="db-info-row"><span>Amount excl. VAT</span><strong>{formatMoney(calcExcl, currency)}</strong></div>
-                <div className="db-info-row"><span>VAT (15%)</span><strong>{formatMoney(calcVat, currency)}</strong></div>
-                <div className="db-info-row db-info-row-total"><span>Total incl. VAT</span><strong>{formatMoney(calcTotal, currency)}</strong></div>
-              </div>
-            )}
+            <div className="db-calc-result">
+              <div className="db-info-row"><span>Subtotal</span><strong>{formatMoney(subtotal, currency)}</strong></div>
+              <div className="db-info-row"><span>VAT 15%</span><strong>{formatMoney(vat, currency)}</strong></div>
+              <div className="db-info-row db-info-row-total"><span>Total</span><strong>{formatMoney(total, currency)}</strong></div>
+            </div>
           </div>
-        </div>
-      )}
+        </section>
+      </div>
 
-      {activeTab === "NamRA Export" && (
-        <div className="db-card">
-          <h3 className="db-card-title">NamRA ITAS Export</h3>
-          <p style={{ fontSize: "0.9rem", color: "#4b5563", marginBottom: "20px" }}>
-            Export your invoice data in a format compatible with NamRA&apos;s Integrated Tax Administration System for VAT return filing.
-          </p>
-          <div className="db-info-grid">
-            <div className="db-info-row"><span>Export Format</span><strong>ITAS-Compatible CSV/XML</strong></div>
-            <div className="db-info-row"><span>VAT Period</span><strong>Monthly</strong></div>
-            <div className="db-info-row"><span>Filing Deadline</span><strong>25th of following month</strong></div>
-          </div>
-          <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
-            <button className="db-primary-btn"><Download className="size-4" /> Export VAT Return</button>
-            <button className="db-outline-btn"><Download className="size-4" /> Export All Invoices</button>
-          </div>
-          <div className="db-notice" style={{ marginTop: "16px", background: "#fef9c3", borderColor: "#fde68a", color: "#92400e" }}>
-            <AlertCircle className="size-4" /> Backend integration for direct ITAS submission coming soon. Your partner should wire this up.
-          </div>
-        </div>
-      )}
-
-      {activeTab === "Currency Settings" && (
-        <div className="db-card">
-          <h3 className="db-card-title"><Globe className="size-4" /> Multi-Currency Support</h3>
-          <p style={{ fontSize: "0.9rem", color: "#4b5563", marginBottom: "20px" }}>
-            Payvio supports NAD, USD, and ZAR for cross-border invoicing.
-          </p>
-          <div className="db-currency-grid">
-            {[
-              { code: "NAD", name: "Namibian Dollar", flag: "🇳🇦", active: true },
-              { code: "USD", name: "US Dollar", flag: "🇺🇸", active: true },
-              { code: "ZAR", name: "South African Rand", flag: "🇿🇦", active: true },
-            ].map((c) => (
-              <div key={c.code} className="db-currency-item">
-                <span className="db-currency-flag">{c.flag}</span>
-                <div>
-                  <p className="db-currency-code">{c.code}</p>
-                  <p className="db-currency-name">{c.name}</p>
-                </div>
-                <span className="db-currency-status">{c.active ? "Active" : "Inactive"}</span>
-              </div>
-            ))}
-          </div>
-          <p style={{ fontSize: "0.82rem", color: "#9ca3af", marginTop: "12px" }}>Default currency is set in Settings. Change it per invoice at creation time.</p>
-        </div>
-      )}
-
-      {activeTab === "Compliance Status" && (
-        <div className="db-card">
-          <h3 className="db-card-title">Compliance Checklist</h3>
-          <div className="db-compliance-list">
-            {[
-              { item: "Tax Invoice label on all invoices", done: true },
-              { item: "Supplier VAT registration number included", done: true },
-              { item: "Sequential invoice numbering", done: true },
-              { item: "VAT amount shown separately (15%)", done: true },
-              { item: "5-year invoice retention", done: true },
-              { item: "NamRA ITAS export format", done: true },
-              { item: "Direct ITAS system integration", done: false },
-              { item: "Real-time invoice transmission to NamRA", done: false },
-            ].map((row) => (
-              <div key={row.item} className="db-compliance-row">
-                <span className={`db-compliance-check ${row.done ? "db-compliance-check-done" : "db-compliance-check-pending"}`}>
-                  {row.done ? "✓" : "○"}
-                </span>
-                <span style={{ color: row.done ? "#111827" : "#9ca3af" }}>{row.item}</span>
-                <span className="db-compliance-tag">{row.done ? "Complete" : "Coming soon"}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="db-notice mt-5">
+        <CheckCircle2 className="size-4" />
+        Direct filing is not submitted from Payvio yet. The working records on this page are usable for review and export preparation.
+      </div>
     </div>
   );
 }

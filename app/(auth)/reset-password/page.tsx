@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { AuthShell } from "../_components/AuthShell";
 
 export const metadata: Metadata = {
@@ -11,21 +10,23 @@ export const metadata: Metadata = {
 export default function ResetPasswordPage() {
   return (
     <AuthShell
-      eyebrow="New password"
       title="Set a new password"
-      description="Password reset needs an email provider before it can verify codes."
+      description="Password reset codes are not connected yet."
       footer={
         <>
           Back to{" "}
-          <Link className="underline underline-offset-4" href="/login">
-            login
+          <Link href="/login">
+            log in
           </Link>
         </>
       }
     >
-      <Button asChild className="w-full">
-        <Link href="/login">Back to login</Link>
-      </Button>
+      <div className="payvio-auth-empty">
+        <p>Use the log in page while reset links are being configured.</p>
+        <Link className="payvio-auth-submit" href="/login">
+          Back to log in
+        </Link>
+      </div>
     </AuthShell>
   );
 }

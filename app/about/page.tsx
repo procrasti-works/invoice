@@ -1,132 +1,197 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  MarketingFooter,
+  MarketingHeader,
+} from "@/app/_components/MarketingChrome";
+import {
+  ArrowRight,
+  Building2,
+  FileText,
+  Landmark,
+  ReceiptText,
+  ShieldCheck,
+} from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "About | Payvio",
+  description:
+    "Payvio is a Namibia-built invoice and ledger workspace for local SMEs.",
+};
+
+const stats = [
+  ["40,000+", "Active SMEs in Namibia"],
+  ["90%", "SME failure risk tied to weak financial management"],
+  ["15%", "VAT-ready records for registered businesses"],
+  ["NAD", "Local currency from day one"],
+];
+
+const values = [
+  {
+    icon: Landmark,
+    title: "Local first",
+    body: "Built around Namibian business realities, local currency, and SME workflows.",
+  },
+  {
+    icon: ReceiptText,
+    title: "VAT-ready",
+    body: "Invoices can separate VAT clearly when your business is VAT registered.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Private by design",
+    body: "Financial records should stay controlled, organized, and easy to review.",
+  },
+  {
+    icon: FileText,
+    title: "Simple by choice",
+    body: "Powerful enough for growth, simple enough for first-time business owners.",
+  },
+];
+
+const founders = [
+  {
+    initials: "NH",
+    name: "Nazeem Harris",
+    role: "Co-Founder and CTO",
+    body: "Leads product, frontend direction, and the Payvio experience for Namibian SMEs.",
+  },
+  {
+    initials: "AM",
+    name: "Andreas Mukombabi",
+    role: "Co-Founder and CTO",
+    body: "Leads backend architecture, product infrastructure, and the technical foundation.",
+  },
+];
 
 export default function AboutPage() {
   return (
-    <main className="info-page">
-      {/* Header */}
-      <nav className="info-nav">
-        <Link href="/" className="info-nav-logo">
-          <img src="/payvio-logo.svg" alt="Payvio" style={{ height: "40px" }} />
-        </Link>
-        <div className="info-nav-links">
-          <Link href="/">Home</Link>
-          <Link href="/about" className="active">About</Link>
-          <Link href="/blog">Blog</Link>
-          <Link href="/contact">Contact</Link>
-        </div>
-        <Link href="/login" className="info-nav-cta">Login</Link>
-      </nav>
-
-      {/* Hero */}
-      <section className="info-hero">
-        <div className="lp-section-label">Our Story</div>
-        <h1 className="info-hero-title">Built in Namibia.<br />Built for Namibia.</h1>
-        <p className="info-hero-sub">
-          Payvio was born from a simple observation — Namibia has over 40,000 active SMEs, a growing digital economy, and a government-mandated e-invoicing deadline. Yet not a single locally-built, NamRA-compliant invoicing platform existed. We decided to build it.
-        </p>
-      </section>
-
-      {/* Mission */}
-      <section className="info-section info-section-alt">
-        <div className="info-section-inner">
-          <div className="lp-section-label">Mission</div>
-          <h2 className="info-section-title">Why Payvio exists</h2>
-          <div className="info-mission-grid">
-            <div className="info-mission-card">
-              <div className="info-mission-num">90%</div>
-              <p>of Namibian SMEs fail within their first five years. The primary cause: poor financial management — no proper invoicing, no cash flow visibility, no digital records.</p>
-            </div>
-            <div className="info-mission-card">
-              <div className="info-mission-num">40K+</div>
-              <p>active businesses in Namibia are still managing invoices on paper, WhatsApp, or Excel — not NamRA compliant, not scalable, not sustainable.</p>
-            </div>
-            <div className="info-mission-card">
-              <div className="info-mission-num">2026</div>
-              <p>NamRA&apos;s mandatory e-invoicing rollout begins. Every business will need a compliant digital invoicing system. We&apos;re building it before anyone else does.</p>
-            </div>
-          </div>
-          <p className="info-mission-body">
-            Payvio is the answer to all three. A professional, affordable, NamRA-compliant invoice management platform built specifically for Namibian businesses — in Namibian dollars, with local support, and designed for the realities of doing business in Namibia.
+    <div className="il-page min-h-screen bg-white text-[#0d141c]">
+      <MarketingHeader />
+      <main>
+        <section className="bg-white px-5 py-20 text-center sm:px-8 sm:py-28">
+          <p className="mx-auto inline-flex rounded-full bg-[#c9ecff] px-5 py-2 text-sm font-black text-[#04120f]">
+            Built in Namibia
           </p>
-        </div>
-      </section>
+          <h1 className="mx-auto mt-8 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl">
+            Invoice software built for local businesses.
+          </h1>
+          <p className="mx-auto mt-7 max-w-3xl text-xl font-medium leading-8 text-[#4e5961]">
+            Payvio exists because too many businesses still manage invoices through
+            paper, spreadsheets, and message threads. We are building a cleaner way
+            to send invoices, track clients, and keep records ready.
+          </p>
+        </section>
 
-      {/* Founders */}
-      <section className="info-section">
-        <div className="info-section-inner">
-          <div className="lp-section-label">The Team</div>
-          <h2 className="info-section-title">The people behind Payvio</h2>
-          <div className="info-founders-grid">
-
-            <div className="info-founder-card">
-              <div className="info-founder-avatar" style={{ background: "#1a6fc4" }}>NH</div>
-              <div className="info-founder-info">
-                <h3>Nazeem Harris</h3>
-                <p className="info-founder-role">Co-Founder & CTO</p>
-                <p className="info-founder-bio">
-                  Nazeem is a builder at heart. With a deep understanding of the Namibian SME landscape and the technical gaps that hold local businesses back, he co-founded Payvio to create the invoicing infrastructure that Namibia&apos;s economy has been missing. He leads product development, frontend architecture, and the overall vision of the platform — building every feature with the real-world challenges of Namibian business owners in mind.
-                </p>
-                <div className="info-founder-links">
-                  <a href="https://www.instagram.com/nazeem_harris/" target="_blank" rel="noreferrer" className="info-social-link">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                    Instagram
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="info-founder-card">
-              <div className="info-founder-avatar" style={{ background: "#009b68" }}>AM</div>
-              <div className="info-founder-info">
-                <h3>Andreas Mukombabi</h3>
-                <p className="info-founder-role">Co-Founder & CTO</p>
-                <p className="info-founder-bio">
-                  Andreas brings the backend muscle to Payvio. Passionate about building technology that solves real problems for African businesses, he co-founded Payvio to tackle the compliance and financial digitisation challenges facing Namibian SMEs head-on. He leads backend architecture, API integrations, and the technical infrastructure that powers Payvio&apos;s real-time invoice operations — including the upcoming NamRA ITAS integration that will keep every Payvio user ahead of the e-invoicing mandate.
-                </p>
-                <div className="info-founder-links">
-                  <a href="https://www.instagram.com/dot.a9/" target="_blank" rel="noreferrer" className="info-social-link">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                    Instagram
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Values */}
-      <section className="info-section info-section-alt">
-        <div className="info-section-inner">
-          <div className="lp-section-label">Our Values</div>
-          <h2 className="info-section-title">What we stand for</h2>
-          <div className="info-values-grid">
-            {[
-              { icon: "🇳🇦", title: "Local first", body: "Built by Namibians, for Namibians. Every feature is designed around the realities of running a business in Namibia." },
-              { icon: "⚖️", title: "Compliance built in", body: "NamRA compliance isn&apos;t an afterthought — it&apos;s in the foundation. Every invoice Payvio generates is tax-ready." },
-              { icon: "🔒", title: "Privacy by design", body: "Your financial data is yours. We never sell it, share it, or hold onto anything we don&apos;t need." },
-              { icon: "💡", title: "Simple by choice", body: "Powerful enough for a growing business, simple enough for a first-time business owner. No training required." },
-            ].map((v) => (
-              <div key={v.title} className="info-value-card">
-                <span className="info-value-icon">{v.icon}</span>
-                <h3>{v.title}</h3>
-                <p>{v.body}</p>
+        <section className="border-y border-[#e4e8e0] bg-[#f8fbfa] px-5 py-10 sm:px-8">
+          <div className="mx-auto grid max-w-[1180px] gap-4 md:grid-cols-4">
+            {stats.map(([value, label]) => (
+              <div className="rounded-[8px] border border-[#e4e8e0] bg-white p-5 text-center" key={label}>
+                <strong className="block text-3xl font-black text-[#0d141c]">{value}</strong>
+                <span className="mt-2 block text-sm font-bold text-[#687076]">{label}</span>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA */}
-      <section className="info-cta">
-        <h2>Ready to take your invoicing digital?</h2>
-        <p>Join Namibia&apos;s growing community of businesses that invoice smarter.</p>
-        <Link href="/signup" className="lp-primary-btn">Get Started Free</Link>
-      </section>
+        <section className="bg-white px-5 py-20 sm:px-8 sm:py-28">
+          <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase text-[#0978e1]">Mission</p>
+              <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+                Make invoice operations simple enough for every SME.
+              </h2>
+            </div>
+            <div className="rounded-[8px] bg-[#f5f7f2] p-8 sm:p-10">
+              <Building2 aria-hidden="true" className="size-7 text-[#0978e1]" />
+              <p className="mt-6 text-lg font-medium leading-8 text-[#4e5961]">
+                Payvio gives local businesses a focused workspace for invoices,
+                clients, reminders, purchase records, reports, and VAT-ready totals.
+                The goal is not more software complexity. The goal is better records
+                and faster follow-up.
+              </p>
+            </div>
+          </div>
+        </section>
 
-      <footer className="info-footer">
-        <p>© 2026 Payvio · <Link href="/contact">Contact us</Link></p>
-      </footer>
-    </main>
+        <section className="bg-[#f5f7f2] px-5 py-20 sm:px-8 sm:py-28">
+          <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-start">
+            <div>
+              <p className="text-xs font-black uppercase text-[#0978e1]">Values</p>
+              <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+                The product should feel practical, local, and clear.
+              </h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {values.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <article className="rounded-[8px] border border-[#e4e8e0] bg-white p-5" key={item.title}>
+                    <Icon aria-hidden="true" className="size-6 text-[#0978e1]" strokeWidth={1.8} />
+                    <h3 className="mt-4 text-xl font-black">{item.title}</h3>
+                    <p className="mt-3 text-sm leading-6 text-[#4e5961]">{item.body}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white px-5 py-20 sm:px-8 sm:py-28">
+          <div className="mx-auto max-w-[1180px]">
+            <div className="grid gap-7 lg:grid-cols-[0.78fr_1fr] lg:items-end">
+              <div>
+                <p className="text-xs font-black uppercase text-[#0978e1]">Team</p>
+                <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+                  The people building Payvio.
+                </h2>
+              </div>
+              <p className="max-w-xl text-lg leading-8 text-[#4e5961] lg:justify-self-end">
+                A small product team focused on making invoice work easier for
+                Namibian business owners.
+              </p>
+            </div>
+            <div className="mt-10 grid gap-4 md:grid-cols-2">
+              {founders.map((founder) => (
+                <article className="rounded-[8px] border border-[#e4e8e0] bg-white p-6" key={founder.name}>
+                  <div className="flex items-start gap-4">
+                    <span className="grid size-14 shrink-0 place-items-center rounded-[8px] bg-[#0978e1] text-lg font-black text-white">
+                      {founder.initials}
+                    </span>
+                    <div>
+                      <h3 className="text-2xl font-black">{founder.name}</h3>
+                      <p className="mt-1 text-sm font-black text-[#0978e1]">{founder.role}</p>
+                      <p className="mt-4 text-sm leading-6 text-[#4e5961]">{founder.body}</p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#0978e1] px-5 py-20 text-white sm:px-8 sm:py-28">
+          <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[1fr_0.65fr] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase text-white/80">Next step</p>
+              <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] sm:text-7xl">
+                Start with one clean invoice.
+              </h2>
+            </div>
+            <div className="grid gap-3 rounded-[8px] bg-white p-5">
+              <Link className="il-dark-button" href="/signup">
+                Open workspace
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+              <Link className="il-light-button" href="/pricing">
+                View pricing
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <MarketingFooter />
+      </main>
+    </div>
   );
 }

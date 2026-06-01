@@ -1,38 +1,38 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
-import { useMutation, useQuery } from "convex/react";
-import {
-  Bell,
-  CheckCircle2,
-  Clock3,
-  Copy,
-  ExternalLink,
-  FileText,
-  Loader2,
-  Mail,
-  PencilLine,
-  ReceiptText,
-  Send,
-  Users,
-  WalletCards,
-} from "lucide-react";
+import { useConvex, useMutation, useQuery } from "convex/react";
+import { Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { cn } from "@/lib/utils";
 
 type Invoice = Doc<"invoices">;
+type Client = Doc<"clients">;
 type InvoiceLineItem = Doc<"invoiceLineItems">;
 type InvoiceEvent = Doc<"invoiceEvents">;
+type PaymentProof = Doc<"paymentProofs">;
 type InvoiceStatus = Invoice["status"];
 type InvoiceRow = {
   invoice: Invoice;
+  client: Client | null;
   events: InvoiceEvent[];
   lineItems: InvoiceLineItem[];
+  paymentProofs?: PaymentProof[];
+};
+type PaymentProofRow = {
+  proof: PaymentProof;
+  invoice: Invoice | null;
+};
+type DraftLineItem = {
+  id: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
 };
 type ViewFilter =
   | "all"
@@ -49,6 +49,7 @@ type EmailDraft = {
   body: string;
   gmailHref: string;
   mailtoHref: string;
+  whatsappHref: string;
 };
 
 const statusLabels: Record<InvoiceStatus, string> = {
@@ -61,23 +62,25 @@ const statusLabels: Record<InvoiceStatus, string> = {
   rejected: "Rejected",
   paid: "Paid",
   overdue: "Overdue",
+  void: "Void",
 };
 
-const statusClasses: Record<InvoiceStatus, string> = {
-  draft: "border-[#e5e7eb] bg-white text-[#4b5563]",
-  ready: "border-[#b9e7fb] bg-[#eef9fd] text-[#0874a8]",
-  sent: "border-[#a8b4ff] bg-[#f1f3ff] text-[#3042a6]",
-  viewed: "border-[#d9c7ff] bg-[#f7f1ff] text-[#6833b0]",
-  approved: "border-[#bfe8d8] bg-[#ecf8f2] text-[#006545]",
-  awaiting_payment: "border-[#f7e09b] bg-[#fff9df] text-[#7d6000]",
-  rejected: "border-[#ffc7d1] bg-[#fff0f3] text-[#a51f43]",
-  paid: "border-[#bfe8d8] bg-[#ecf8f2] text-[#006545]",
-  overdue: "border-[#ffc7d1] bg-[#fff0f3] text-[#a51f43]",
+const statusToneClasses: Record<InvoiceStatus, string> = {
+  draft: "db-status-neutral",
+  ready: "db-status-info",
+  sent: "db-status-info",
+  viewed: "db-status-info",
+  approved: "db-status-success",
+  awaiting_payment: "db-status-warning",
+  rejected: "db-status-danger",
+  paid: "db-status-success",
+  overdue: "db-status-danger",
+  void: "db-status-neutral",
 };
 
-function formatMoney(amount: number, currency = "USD") {
+function formatMoney(amount: number, currency = "NAD") {
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-NA", {
       style: "currency",
       currency,
       maximumFractionDigits: 2,
@@ -119,6 +122,23 @@ function gmailHref(to: string, subject: string, body: string) {
   return `https://mail.google.com/mail/?${params.toString()}`;
 }
 
+function whatsappHref(subject: string, body: string) {
+  return `https://wa.me/?text=${encodeURIComponent(`${subject}\n\n${body}`)}`;
+}
+
+function invoiceDisplayTotal(invoice: Invoice) {
+  return invoice.total ?? invoice.amountTotal ?? invoice.amount ?? 0;
+}
+
+function newLineItem(): DraftLineItem {
+  return {
+    id: crypto.randomUUID(),
+    description: "",
+    quantity: "1",
+    unitPrice: "0",
+  };
+}
+
 function buildEmailDraft(invoice: Invoice, invoiceUrl: string, senderName: string) {
   const clientName = invoice.clientName ?? invoice.client ?? "there";
   const subject = `${invoice.invoiceNumber} from ${senderName}`;
@@ -140,6 +160,7 @@ function buildEmailDraft(invoice: Invoice, invoiceUrl: string, senderName: strin
     body,
     gmailHref: gmailHref(invoice.clientEmail ?? "", subject, body),
     mailtoHref: emailHref(invoice.clientEmail ?? "", subject, body),
+    whatsappHref: whatsappHref(subject, body),
   };
 }
 
@@ -151,8 +172,8 @@ function buildFollowUpDraft(
 ) {
   const clientName = invoice.clientName ?? invoice.client ?? "there";
   const invoiceTotal = formatMoney(
-    invoice.amountTotal ?? invoice.amount ?? 0,
-    invoice.currency ?? "USD",
+    invoiceDisplayTotal(invoice),
+    invoice.currency ?? "NAD",
   );
   const subject =
     kind === "overdue"
@@ -189,13 +210,16 @@ function buildFollowUpDraft(
     body,
     gmailHref: gmailHref(invoice.clientEmail ?? "", subject, body),
     mailtoHref: emailHref(invoice.clientEmail ?? "", subject, body),
+    whatsappHref: whatsappHref(subject, body),
   };
 }
 
 export function DashboardPage() {
+  const convex = useConvex();
   const invoiceRows = useQuery(api.invoices.list);
   const stats = useQuery(api.invoices.stats);
   const workspace = useQuery(api.invoices.workspace);
+  const clientRows = useQuery(api.invoices.listClients) as Client[] | undefined;
   const createDraft = useMutation(api.invoices.createDraft);
   const amendInvoice = useMutation(api.invoices.amend);
   const sendInvoice = useMutation(api.invoices.send);
@@ -203,13 +227,24 @@ export function DashboardPage() {
   const markPaid = useMutation(api.invoices.markPaid);
   const scheduleReminder = useMutation(api.invoices.scheduleReminder);
   const updateStatus = useMutation(api.invoices.updateStatus);
+  const proofRows = useQuery(api.invoices.listPaymentProofs, { status: "submitted" });
+  const reviewPaymentProof = useMutation(api.invoices.reviewPaymentProof);
 
   const [activeView, setActiveView] = useState<ViewFilter>("all");
-  const [clientName, setClientName] = useState("Acme Operations");
-  const [clientEmail, setClientEmail] = useState("billing@acme.test");
-  const [description, setDescription] = useState("Monthly service invoice");
-  const [quantity, setQuantity] = useState("1");
-  const [unitPrice, setUnitPrice] = useState("1250");
+  const [selectedClientId, setSelectedClientId] = useState<Id<"clients"> | null>(null);
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+  const [draftLineItems, setDraftLineItems] = useState<DraftLineItem[]>([
+    {
+      id: crypto.randomUUID(),
+      description: "Monthly service invoice",
+      quantity: "1",
+      unitPrice: "1250",
+    },
+  ]);
+  const [taxMode, setTaxMode] = useState<"no_vat" | "vat_15">("no_vat");
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [paymentLink, setPaymentLink] = useState("");
   const [paymentInstructions, setPaymentInstructions] = useState("");
@@ -222,7 +257,21 @@ export function DashboardPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const rows = useMemo(() => (invoiceRows ?? []) as InvoiceRow[], [invoiceRows]);
+  const activeClients = useMemo(
+    () => (clientRows ?? []).filter((client) => client.active ?? true),
+    [clientRows],
+  );
+  const selectedClient = useMemo(
+    () => activeClients.find((client) => client._id === selectedClientId) ?? null,
+    [activeClients, selectedClientId],
+  );
+  const pendingProofRows = useMemo(
+    () => (proofRows ?? []) as PaymentProofRow[],
+    [proofRows],
+  );
   const isLoading = invoiceRows === undefined || stats === undefined;
+  const vatRegistered = workspace?.vatRegistered ?? false;
+  const effectiveTaxMode = vatRegistered ? taxMode : "no_vat";
 
   const filteredRows = useMemo(() => {
     if (activeView === "drafts") {
@@ -292,27 +341,34 @@ export function DashboardPage() {
     { id: "paid", label: "Paid", count: stats?.paidCount ?? 0 },
   ];
 
-  const clients = useMemo(() => {
-    const byEmail = new Map<
-      string,
-      { name: string; email: string; value: number; invoices: number }
-    >();
+  const clientSummaries = useMemo(() => {
+    const statsByClient = new Map<string, { value: number; invoices: number }>();
 
     rows.forEach(({ invoice }) => {
-      const email = invoice.clientEmail ?? "no-email";
-      const current = byEmail.get(email) ?? {
-        name: invoice.clientName ?? invoice.client ?? "Client",
-        email,
-        value: 0,
-        invoices: 0,
-      };
-      current.value += invoice.amountTotal ?? invoice.amount ?? 0;
-      current.invoices += 1;
-      byEmail.set(email, current);
+      const keys = [
+        invoice.clientId,
+        invoice.clientEmail?.toLowerCase(),
+        invoice.clientName?.toLowerCase(),
+      ].filter(Boolean) as string[];
+
+      keys.forEach((key) => {
+        const current = statsByClient.get(key) ?? { value: 0, invoices: 0 };
+        current.value += invoiceDisplayTotal(invoice);
+        current.invoices += 1;
+        statsByClient.set(key, current);
+      });
     });
 
-    return Array.from(byEmail.values()).slice(0, 6);
-  }, [rows]);
+    return activeClients.slice(0, 6).map((client) => {
+      const stats =
+        statsByClient.get(client._id) ??
+        statsByClient.get(client.email.toLowerCase()) ??
+        statsByClient.get(client.name.toLowerCase()) ??
+        { value: 0, invoices: 0 };
+
+      return { client, ...stats };
+    });
+  }, [activeClients, rows]);
 
   async function copyText(value: string) {
     try {
@@ -320,6 +376,59 @@ export function DashboardPage() {
       setNotice("Client link copied.");
     } catch {
       setNotice(value);
+    }
+  }
+
+  function updateDraftLineItem(id: string, patch: Partial<DraftLineItem>) {
+    setDraftLineItems((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+  }
+
+  function addDraftLineItem() {
+    setDraftLineItems((current) => [...current, newLineItem()]);
+  }
+
+  function removeDraftLineItem(id: string) {
+    setDraftLineItems((current) =>
+      current.length === 1 ? current : current.filter((item) => item.id !== id),
+    );
+  }
+
+  function applySelectedClient(clientId: string) {
+    if (!clientId) {
+      setSelectedClientId(null);
+      return;
+    }
+
+    const client = activeClients.find((item) => item._id === clientId);
+
+    if (!client) {
+      return;
+    }
+
+    setSelectedClientId(client._id);
+    setClientName(client.name);
+    setClientEmail(client.email);
+    setClientPhone(client.phone ?? "");
+    setClientAddress(client.address ?? "");
+
+    if (client.paymentTerms) {
+      setTerms(client.paymentTerms);
+    }
+  }
+
+  async function handleReviewProof(proofId: Id<"paymentProofs">, status: "accepted" | "rejected") {
+    setPendingAction(`proof-${proofId}-${status}`);
+    setNotice(null);
+
+    try {
+      await reviewPaymentProof({ proofId, status });
+      setNotice(status === "accepted" ? "Payment proof accepted." : "Payment proof rejected.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to review proof.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -331,21 +440,25 @@ export function DashboardPage() {
     setEmailDraft(null);
 
     const payload = {
+      clientId: selectedClientId ?? undefined,
       clientName,
       clientEmail,
+      clientPhone,
+      clientAddress,
+      clientVatNumber: selectedClient?.vatNumber ?? undefined,
+      clientTaxId: selectedClient?.taxId ?? undefined,
       dueDate,
-      currency: workspace?.defaultCurrency ?? "USD",
+      currency: workspace?.defaultCurrency ?? "NAD",
+      taxMode: effectiveTaxMode,
       paymentInstructions,
       paymentLink: paymentLink || workspace?.paymentLink || "",
       terms,
       notes,
-      lineItems: [
-        {
-          description,
-          quantity: Number(quantity) || 1,
-          unitPrice: Number(unitPrice) || 0,
-        },
-      ],
+      lineItems: draftLineItems.map((item) => ({
+        description: item.description,
+        quantity: Number(item.quantity) || 1,
+        unitPrice: Number(item.unitPrice) || 0,
+      })),
     };
 
     try {
@@ -364,25 +477,54 @@ export function DashboardPage() {
     }
   }
 
-  function handleAmend(row: InvoiceRow) {
-    const { invoice, lineItems } = row;
-    const firstLineItem = lineItems[0];
+  async function handleAmend(row: InvoiceRow) {
+    setPendingAction(`amend-${row.invoice._id}`);
+    setNotice(null);
 
-    setEditingInvoiceId(invoice._id);
-    setClientName(invoice.clientName ?? invoice.client ?? "Client");
-    setClientEmail(invoice.clientEmail ?? "");
-    setDescription(firstLineItem?.description ?? "Revised invoice item");
-    setQuantity(String(firstLineItem?.quantity ?? 1));
-    setUnitPrice(String(firstLineItem?.unitPrice ?? invoice.amountTotal ?? invoice.amount ?? 0));
-    setDueDate(invoice.dueDate || defaultDueDate());
-    setPaymentLink(invoice.paymentLink ?? "");
-    setPaymentInstructions(invoice.paymentInstructions ?? "");
-    setTerms(invoice.terms ?? "Due on receipt unless otherwise agreed.");
-    setNotes(invoice.notes ?? "Updated after client feedback.");
-    setNotice(`Amending ${invoice.invoiceNumber}. Save the amendment, then send it again.`);
-    setClientLink(null);
-    setEmailDraft(null);
-    document.getElementById("new-invoice")?.scrollIntoView({ behavior: "smooth" });
+    try {
+      const details = row.lineItems.length
+        ? row
+        : await convex.query(api.invoices.getEditDetails, { id: row.invoice._id });
+      const { invoice, lineItems, client } = details;
+
+      setEditingInvoiceId(invoice._id);
+      setSelectedClientId(invoice.clientId ?? client?._id ?? null);
+      setClientName(invoice.clientName ?? invoice.client ?? "Client");
+      setClientEmail(invoice.clientEmail ?? "");
+      setClientPhone(invoice.clientSnapshot?.phone ?? "");
+      setClientAddress(invoice.clientSnapshot?.address ?? "");
+      setDraftLineItems(
+        lineItems.length
+          ? lineItems.map((item) => ({
+              id: item._id,
+              description: item.description,
+              quantity: String(item.quantity ?? 1),
+              unitPrice: String(item.unitPrice ?? 0),
+            }))
+          : [
+              {
+                id: crypto.randomUUID(),
+                description: "Revised invoice item",
+                quantity: "1",
+                unitPrice: String(invoice.subtotal ?? invoiceDisplayTotal(invoice)),
+              },
+            ],
+      );
+      setTaxMode(invoice.taxMode === "vat_15" ? "vat_15" : "no_vat");
+      setDueDate(invoice.dueDate || defaultDueDate());
+      setPaymentLink(invoice.paymentLink ?? "");
+      setPaymentInstructions(invoice.paymentInstructions ?? "");
+      setTerms(invoice.terms ?? "Due on receipt unless otherwise agreed.");
+      setNotes(invoice.notes ?? "Updated after client feedback.");
+      setNotice(`Amending ${invoice.invoiceNumber}. Save the amendment, then send it again.`);
+      setClientLink(null);
+      setEmailDraft(null);
+      document.getElementById("new-invoice")?.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to load invoice details.");
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   function clearAmendment() {
@@ -544,172 +686,323 @@ export function DashboardPage() {
     }
   }
 
+  const dashboardMetrics = [
+    {
+      label: "Outstanding",
+      value: formatMoney(stats?.totalOutstanding ?? 0),
+      detail: `${stats?.awaitingClientCount ?? 0} with client`,
+    },
+    {
+      label: "Paid",
+      value: formatMoney(stats?.totalPaid ?? 0),
+      detail: `${stats?.paidCount ?? 0} closed`,
+    },
+    {
+      label: "Active",
+      value: String(stats?.invoiceCount ?? 0),
+      detail: "Drafts to paid",
+    },
+    {
+      label: "Overdue",
+      value: String(stats?.overdueCount ?? 0),
+      detail: "Needs follow-up",
+    },
+  ];
+
   return (
-    <div className="db-page">
-      {/* Header */}
-      <div className="db-page-header">
-        <div>
-          <p className="db-page-eyebrow">Invoice pipeline</p>
-          <h1 className="db-page-title">Invoices</h1>
+    <div className="db-page db-dashboard-page">
+      <section className="db-workview">
+        <div className="db-workview-head">
+          <div>
+            <p className="db-breadcrumb">Payvio <span>/</span> Invoices</p>
+            <h1 className="db-workview-title">Invoices</h1>
+          </div>
+          <a href="#new-invoice" className="db-primary-btn db-new-invoice-btn">
+            New invoice
+          </a>
         </div>
-        <a href="#new-invoice" className="db-primary-btn" style={{ background: "#009b68" }}>
-          <FileText className="size-4" />
-          New Invoice
-        </a>
-      </div>
 
-      {/* Metric cards */}
-      <div className="db-stat-row db-stat-row-4">
-        <div className="db-stat-card">
-          <div className="db-stat-icon" style={{ background: "#dcfce7", color: "#16a34a" }}><WalletCards className="size-4" /></div>
-          <p className="db-stat-label">Outstanding</p>
-          <p className="db-stat-value">{formatMoney(stats?.totalOutstanding ?? 0)}</p>
-          <p className="db-stat-sub">{stats?.awaitingClientCount ?? 0} with the client</p>
+        <div className="db-metric-strip" aria-label="Invoice metrics">
+          {dashboardMetrics.map((metric) => (
+            <div key={metric.label} className="db-metric-cell">
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+              <small>{metric.detail}</small>
+            </div>
+          ))}
         </div>
-        <div className="db-stat-card">
-          <div className="db-stat-icon" style={{ background: "#dbeafe", color: "#1a6fc4" }}><CheckCircle2 className="size-4" /></div>
-          <p className="db-stat-label">Paid</p>
-          <p className="db-stat-value">{formatMoney(stats?.totalPaid ?? 0)}</p>
-          <p className="db-stat-sub">{stats?.paidCount ?? 0} closed invoices</p>
-        </div>
-        <div className="db-stat-card">
-          <div className="db-stat-icon" style={{ background: "#fef9c3", color: "#ca8a04" }}><Mail className="size-4" /></div>
-          <p className="db-stat-label">Active</p>
-          <p className="db-stat-value">{stats?.invoiceCount ?? 0}</p>
-          <p className="db-stat-sub">Drafts through paid</p>
-        </div>
-        <div className="db-stat-card">
-          <div className="db-stat-icon" style={{ background: "#fee2e2", color: "#dc2626" }}><Clock3 className="size-4" /></div>
-          <p className="db-stat-label">Overdue</p>
-          <p className="db-stat-value">{stats?.overdueCount ?? 0}</p>
-          <p className="db-stat-sub">Needs follow-up</p>
-        </div>
-      </div>
 
-      {/* Notice banner */}
       {notice || clientLink ? (
-        <div className="db-notice" style={{ marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
-          <span style={{ flex: 1, minWidth: 0, wordBreak: "break-word" }}>{notice ?? clientLink}</span>
+        <div className="db-notice db-notice-clean">
+          <span>{notice ?? clientLink}</span>
           {clientLink && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              <button className="db-outline-btn" style={{ height: "30px", fontSize: "0.78rem" }} onClick={() => copyText(clientLink)}><Copy className="size-3" /> Copy</button>
+            <div className="db-notice-actions">
+              <button type="button" className="db-outline-btn" onClick={() => copyText(clientLink)}>
+                Copy link
+              </button>
               {emailDraft && (
                 <>
-                  <a href={emailDraft.gmailHref} target="_blank" rel="noreferrer" className="db-primary-btn" style={{ height: "30px", fontSize: "0.78rem", background: "#009b68" }}><Mail className="size-3" /> Open email</a>
-                  <a href={emailDraft.mailtoHref} className="db-outline-btn" style={{ height: "30px", fontSize: "0.78rem" }}><Mail className="size-3" /> Email app</a>
-                  <button className="db-outline-btn" style={{ height: "30px", fontSize: "0.78rem" }} onClick={() => copyText(`${emailDraft.subject}\n\n${emailDraft.body}`)}><Copy className="size-3" /> Copy email</button>
+                  <a href={emailDraft.gmailHref} target="_blank" rel="noreferrer" className="db-primary-btn">
+                    Open email
+                  </a>
+                  <a href={emailDraft.mailtoHref} className="db-outline-btn">
+                    Email app
+                  </a>
+                  <a href={emailDraft.whatsappHref} target="_blank" rel="noreferrer" className="db-outline-btn">
+                    WhatsApp
+                  </a>
+                  <button
+                    type="button"
+                    className="db-outline-btn"
+                    onClick={() => copyText(`${emailDraft.subject}\n\n${emailDraft.body}`)}
+                  >
+                    Copy email
+                  </button>
                 </>
               )}
-              <a href={clientLink} target="_blank" rel="noreferrer" className="db-outline-btn" style={{ height: "30px", fontSize: "0.78rem" }}><ExternalLink className="size-3" /> Open</a>
+              <a href={clientLink} target="_blank" rel="noreferrer" className="db-outline-btn">
+                Open
+              </a>
             </div>
           )}
         </div>
       ) : null}
 
-      {/* New Invoice form */}
-      <div className="db-card" id="new-invoice" style={{ marginBottom: "20px" }}>
-        <div className="db-card-title" style={{ borderBottom: "1px solid #f3f4f6", paddingBottom: "16px", marginBottom: "20px" }}>
-          <ReceiptText className="size-4" />
-          {editingInvoiceId ? "Amend invoice" : "New Invoice"}
-          <span style={{ fontWeight: 400, fontSize: "0.82rem", color: "#9ca3af", marginLeft: "8px" }}>
-            Create the packet, preview it, then prepare an email draft with the secure client link.
-          </span>
+      {pendingProofRows.length ? (
+        <PaymentProofQueue
+          rows={pendingProofRows}
+          currency={workspace?.defaultCurrency ?? "NAD"}
+          pendingAction={pendingAction}
+          onReview={handleReviewProof}
+        />
+      ) : null}
+
+      <section className="db-card db-compose-card" id="new-invoice">
+        <div className="db-panel-header">
+          <div>
+            <p className="db-panel-kicker">Compose</p>
+            <h2>{editingInvoiceId ? "Amend invoice" : "New invoice"}</h2>
+          </div>
+          <span className="db-panel-meta">{workspace?.defaultCurrency ?? "NAD"}</span>
         </div>
-        <div className="grid xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.72fr)] gap-6">
-          <form onSubmit={handleCreate} className="grid content-start gap-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Client name"><Input value={clientName} onChange={(e) => setClientName(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
-              <Field label="Client email"><Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+
+        <div className="db-compose-grid">
+          <form onSubmit={handleCreate} className="db-compose-form">
+            <Field label="Onboarded client">
+              <select
+                value={selectedClientId ?? ""}
+                onChange={(event) => applySelectedClient(event.target.value)}
+                className="db-field-input"
+              >
+                <option value="">
+                  {activeClients.length ? "Manual client" : "No saved clients yet"}
+                </option>
+                {activeClients.map((client) => (
+                  <option key={client._id} value={client._id}>
+                    {client.name}
+                    {client.businessName || client.company
+                      ? ` - ${client.businessName ?? client.company}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {selectedClient ? (
+              <p className="text-[12px] text-[#6b7280]">
+                Using saved details for {selectedClient.name}.
+              </p>
+            ) : null}
+
+            <div className="db-form-grid db-form-grid-2">
+              <Field label="Client name">
+                <Input value={clientName} onChange={(e) => setClientName(e.target.value)} className="db-field-input" />
+              </Field>
+              <Field label="Client email">
+                <Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="db-field-input" />
+              </Field>
             </div>
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px_150px]">
-              <Field label="Line item"><Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
-              <Field label="Qty"><Input inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
-              <Field label="Unit price"><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+
+            <div className="db-form-grid db-form-grid-2">
+              <Field label="Client phone / WhatsApp">
+                <Input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="db-field-input" />
+              </Field>
+              <Field label="Client address">
+                <Input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className="db-field-input" />
+              </Field>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Due date"><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
-              <Field label="Payment link"><Input value={paymentLink} onChange={(e) => setPaymentLink(e.target.value)} placeholder="https://pay.example.com/invoice" className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+
+            <div className="db-line-items">
+              <div className="db-line-items-head">
+                <span>Line items</span>
+                <button type="button" className="db-link-btn" onClick={addDraftLineItem}>
+                  Add line
+                </button>
+              </div>
+              {draftLineItems.map((item, index) => (
+                <div key={item.id} className="db-line-item-row">
+                  <Field label={index === 0 ? "Description" : "Item"}>
+                    <Input value={item.description} onChange={(e) => updateDraftLineItem(item.id, { description: e.target.value })} className="db-field-input" />
+                  </Field>
+                  <Field label="Qty">
+                    <Input inputMode="decimal" value={item.quantity} onChange={(e) => updateDraftLineItem(item.id, { quantity: e.target.value })} className="db-field-input" />
+                  </Field>
+                  <Field label="Unit price">
+                    <Input inputMode="decimal" value={item.unitPrice} onChange={(e) => updateDraftLineItem(item.id, { unitPrice: e.target.value })} className="db-field-input" />
+                  </Field>
+                  <button
+                    type="button"
+                    className="db-remove-line"
+                    onClick={() => removeDraftLineItem(item.id)}
+                    disabled={draftLineItems.length === 1}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
             </div>
-            <Field label="Payment instructions"><Input value={paymentInstructions} onChange={(e) => setPaymentInstructions(e.target.value)} placeholder={workspace?.paymentInstructions ?? "Bank transfer or agreed method"} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Terms"><Input value={terms} onChange={(e) => setTerms(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
-              <Field label="Note"><Input value={notes} onChange={(e) => setNotes(e.target.value)} className="h-10 border-[#e5e7eb] bg-white px-3 text-[13px]" /></Field>
+
+            <div className="db-form-grid db-form-grid-3">
+              <Field label="Due date">
+                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="db-field-input" />
+              </Field>
+              <Field label="VAT">
+                <select
+                  value={effectiveTaxMode}
+                  disabled={!vatRegistered}
+                  onChange={(event) => setTaxMode(event.target.value === "vat_15" ? "vat_15" : "no_vat")}
+                  className="db-field-input"
+                >
+                  <option value="no_vat">No VAT</option>
+                  <option value="vat_15">VAT 15%</option>
+                </select>
+              </Field>
+              <Field label="Payment link">
+                <Input value={paymentLink} onChange={(e) => setPaymentLink(e.target.value)} placeholder="https://pay.example.com/invoice" className="db-field-input" />
+              </Field>
             </div>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <button type="submit" disabled={pendingAction === "create"} className="db-primary-btn" style={{ background: "#009b68" }}>
-                {pendingAction === "create" ? <Loader2 className="animate-spin size-4" /> : <ReceiptText className="size-4" />}
+
+            <Field label="Payment instructions">
+              <Input value={paymentInstructions} onChange={(e) => setPaymentInstructions(e.target.value)} placeholder={workspace?.paymentInstructions ?? "Bank transfer or agreed method"} className="db-field-input" />
+            </Field>
+
+            <div className="db-form-grid db-form-grid-2">
+              <Field label="Terms">
+                <Input value={terms} onChange={(e) => setTerms(e.target.value)} className="db-field-input" />
+              </Field>
+              <Field label="Note">
+                <Input value={notes} onChange={(e) => setNotes(e.target.value)} className="db-field-input" />
+              </Field>
+            </div>
+
+            <div className="db-form-actions">
+              <button type="submit" disabled={pendingAction === "create"} className="db-primary-btn">
+                {pendingAction === "create" ? <Loader2 className="size-4 animate-spin" /> : null}
                 {editingInvoiceId ? "Save amendment" : "Create draft"}
               </button>
               {editingInvoiceId && (
-                <button type="button" className="db-outline-btn" onClick={clearAmendment}>Cancel amendment</button>
+                <button type="button" className="db-outline-btn" onClick={clearAmendment}>
+                  Cancel amendment
+                </button>
               )}
             </div>
           </form>
+
           <InvoicePreview
-            clientName={clientName} clientEmail={clientEmail} description={description}
-            quantity={Number(quantity) || 0} unitPrice={Number(unitPrice) || 0}
-            dueDate={dueDate} terms={terms} notes={notes}
+            clientName={clientName}
+            clientEmail={clientEmail}
+            lineItems={draftLineItems}
+            taxMode={effectiveTaxMode}
+            dueDate={dueDate}
+            terms={terms}
+            notes={notes}
             paymentInstructions={paymentInstructions || workspace?.paymentInstructions || "Payment instructions appear here."}
             paymentLink={paymentLink || workspace?.paymentLink || ""}
-            currency={workspace?.defaultCurrency ?? "USD"}
+            currency={workspace?.defaultCurrency ?? "NAD"}
           />
         </div>
-      </div>
+      </section>
 
-      {/* Invoice table */}
-      <div className="db-card" id="invoices">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", borderBottom: "1px solid #f3f4f6", paddingBottom: "16px", marginBottom: "16px", flexWrap: "wrap" }}>
+      <section className="db-card db-list-card" id="invoices">
+        <div className="db-list-toolbar">
           <div>
-            <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827" }}>Invoice Pipeline</p>
-            <p style={{ fontSize: "0.82rem", color: "#9ca3af", marginTop: "2px" }}>Track the exact client state from draft to paid.</p>
+            <p className="db-panel-kicker">Pipeline</p>
+            <h2>Invoices</h2>
           </div>
-          <div className="db-tabs" style={{ margin: 0 }}>
+          <div className="db-tabs" role="tablist" aria-label="Invoice views">
             {tabs.map((tab) => (
-              <button key={tab.id} type="button" onClick={() => setActiveView(tab.id)}
-                className={`db-tab${activeView === tab.id ? " db-tab-active" : ""}`}>
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveView(tab.id)}
+                className={`db-tab${activeView === tab.id ? " db-tab-active" : ""}`}
+              >
                 {tab.label}
-                <span style={{ fontSize: "0.7rem", background: activeView === tab.id ? "#eff6ff" : "#f3f4f6", color: "#6b7280", padding: "1px 6px", borderRadius: "999px", marginLeft: "4px" }}>{tab.count}</span>
+                <span className="db-tab-count">{tab.count}</span>
               </button>
             ))}
           </div>
         </div>
 
         {isLoading ? (
-          <div style={{ display: "grid", gap: "8px", padding: "8px 0" }}>
-            {Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ height: "48px", borderRadius: "8px", background: "#f3f4f6" }} />)}
+          <div className="db-skeleton-list" aria-label="Loading invoices">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <span key={index} />
+            ))}
           </div>
         ) : filteredRows.length ? (
           <div className="db-table-wrap">
-            <table className="db-table">
+            <table className="db-table db-invoice-table">
               <thead>
                 <tr>
-                  <th>Invoice</th><th>Client</th><th>Status</th><th>Last activity</th><th style={{ textAlign: "right" }}>Amount</th><th style={{ textAlign: "right" }}>Action</th>
+                  <th>Invoice</th>
+                  <th>Client</th>
+                  <th>Status</th>
+                  <th>Last activity</th>
+                  <th className="db-align-right">Amount</th>
+                  <th className="db-align-right">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.map((row) => {
-                  const { invoice, events } = row;
+                  const { invoice, events, paymentProofs } = row;
+                  const pendingProofCount = (paymentProofs ?? []).filter((proof) => proof.status === "submitted").length;
+
                   return (
                     <tr key={invoice._id}>
                       <td>
                         <span className="db-inv-num">{invoice.invoiceNumber}</span>
-                        <span style={{ display: "block", fontSize: "0.72rem", color: "#9ca3af", marginTop: "2px" }}>Due {invoice.dueDate}</span>
+                        <span className="db-row-meta">Due {invoice.dueDate}</span>
                       </td>
                       <td>
-                        <span style={{ fontWeight: 600, color: "#111827" }}>{invoice.clientName ?? invoice.client ?? "Client"}</span>
-                        <span style={{ display: "block", fontSize: "0.72rem", color: "#9ca3af", marginTop: "2px" }}>{invoice.clientEmail ?? "No email"}</span>
+                        <span className="db-row-primary">{invoice.clientName ?? invoice.client ?? "Client"}</span>
+                        <span className="db-row-meta">{invoice.clientEmail ?? "No email"}</span>
                       </td>
                       <td>
-                        <Badge variant="outline" className={cn("border", statusClasses[invoice.status])}>
+                        <Badge variant="outline" className={`db-status-badge ${statusToneClasses[invoice.status]}`}>
+                          <span aria-hidden="true" />
                           {statusLabels[invoice.status]}
                         </Badge>
+                        {pendingProofCount ? (
+                          <span className="db-row-warning">{pendingProofCount} proof pending</span>
+                        ) : null}
                       </td>
-                      <td style={{ maxWidth: "220px", color: "#6b7280", fontSize: "0.82rem" }}>{events[0]?.message ?? "No activity yet."}</td>
-                      <td style={{ textAlign: "right", fontWeight: 600 }}>{formatMoney(invoice.amountTotal ?? invoice.amount ?? 0, invoice.currency ?? workspace?.defaultCurrency ?? "USD")}</td>
-                      <td style={{ textAlign: "right" }}>
-                        <InvoiceActions invoice={invoice} row={row} pendingAction={pendingAction}
-                          onSend={handleSend} onEmail={openEmailTemplate} onMarkSent={handleMarkSent}
-                          onAmend={handleAmend} onReminder={handleReminder} onMarkPaid={handleMarkPaid} onOverdue={handleOverdue} />
+                      <td className="db-activity-cell">{events[0]?.message ?? "No activity yet."}</td>
+                      <td className="db-align-right db-money-cell">
+                        {formatMoney(invoiceDisplayTotal(invoice), invoice.currency ?? workspace?.defaultCurrency ?? "NAD")}
+                      </td>
+                      <td className="db-align-right">
+                        <InvoiceActions
+                          invoice={invoice}
+                          row={row}
+                          pendingAction={pendingAction}
+                          onSend={handleSend}
+                          onEmail={openEmailTemplate}
+                          onMarkSent={handleMarkSent}
+                          onAmend={handleAmend}
+                          onReminder={handleReminder}
+                          onMarkPaid={handleMarkPaid}
+                          onOverdue={handleOverdue}
+                        />
                       </td>
                     </tr>
                   );
@@ -718,67 +1011,83 @@ export function DashboardPage() {
             </table>
           </div>
         ) : (
-          <div className="db-empty">
-            <FileText className="size-10 text-[#d1d5db]" />
+          <div className="db-empty db-empty-plain">
             <h3>No invoices in this view</h3>
             <p>Create an invoice above and send the secure client link from this pipeline.</p>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Clients + Reminders quick view */}
-      <div style={{ display: "grid", gap: "20px", gridTemplateColumns: "repeat(2, minmax(0,1fr))" }}>
-        <div className="db-card" id="clients">
-          <p className="db-card-title"><Users className="size-4" /> Clients</p>
-          {clients.length ? (
-            <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "1fr 1fr" }}>
-              {clients.map((client) => (
-                <div key={client.email} className="db-client-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
+      <div className="db-split-grid db-dashboard-lower">
+        <section className="db-card" id="clients">
+          <div className="db-panel-header db-panel-header-small">
+            <h2>Clients</h2>
+          </div>
+          {clientRows === undefined ? (
+            <div className="db-empty db-empty-plain db-empty-small">
+              <p>Loading clients.</p>
+            </div>
+          ) : clientSummaries.length ? (
+            <div className="db-mini-grid">
+              {clientSummaries.map((summary) => {
+                const client = {
+                  ...summary.client,
+                  value: summary.value,
+                  invoices: summary.invoices,
+                };
+
+                return (
+                <div key={client._id} className="db-client-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
                   <p style={{ fontWeight: 600, fontSize: "0.88rem", color: "#111827" }}>{client.name}</p>
-                  <p style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{client.email}</p>
-                  <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#111827", marginTop: "4px" }}>{formatMoney(client.value)} · {client.invoices} inv.</p>
+                  <p style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{client.email || "No email"}</p>
+                  <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#111827", marginTop: "4px" }}>{formatMoney(client.value)} - {client.invoices} inv.</p>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <div className="db-empty" style={{ minHeight: "160px" }}>
-              <Users className="size-8 text-[#d1d5db]" />
-              <p style={{ margin: "8px 0 0" }}>Clients appear after the first draft.</p>
+            <div className="db-empty db-empty-plain db-empty-small">
+              <p>No clients saved yet.</p>
+              <Link href="/dashboard/clients" className="db-outline-btn">
+                Add client
+              </Link>
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="db-card" id="reminders">
-          <p className="db-card-title"><Bell className="size-4" /> Reminders</p>
+        <section className="db-card" id="reminders">
+          <div className="db-panel-header db-panel-header-small">
+            <h2>Reminders</h2>
+          </div>
           {rows.some(({ invoice }) => isClientActive(invoice.status)) ? (
-            <div style={{ display: "grid", gap: "8px" }}>
+            <div className="db-reminder-list">
               {rows.filter(({ invoice }) => isClientActive(invoice.status)).slice(0, 4).map(({ invoice }) => (
                 <div key={invoice._id} className="db-reminder-item">
                   <div>
                     <p className="db-reminder-inv">{invoice.invoiceNumber} — {invoice.clientName ?? invoice.client}</p>
                     <p className="db-reminder-meta">{statusLabels[invoice.status]} · due {invoice.dueDate}</p>
                   </div>
-                  <button className="db-reminder-btn" onClick={() => handleReminder(invoice)}>
-                    <Bell className="size-3" /> Remind
+                  <button type="button" className="db-reminder-btn" onClick={() => handleReminder(invoice)}>
+                    Remind
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="db-empty" style={{ minHeight: "160px" }}>
-              <Bell className="size-8 text-[#d1d5db]" />
-              <p style={{ margin: "8px 0 0" }}>Active sent invoices will show up here.</p>
+            <div className="db-empty db-empty-plain db-empty-small">
+              <p>Active sent invoices will show up here.</p>
             </div>
           )}
-        </div>
+        </section>
       </div>
+      </section>
     </div>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="grid gap-2 text-[13px] font-medium text-[#374151]">
+    <label className="db-field">
       {label}
       {children}
     </label>
@@ -788,9 +1097,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function InvoicePreview({
   clientName,
   clientEmail,
-  description,
-  quantity,
-  unitPrice,
+  lineItems,
+  taxMode,
   dueDate,
   terms,
   notes,
@@ -800,9 +1108,8 @@ function InvoicePreview({
 }: {
   clientName: string;
   clientEmail: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
+  lineItems: DraftLineItem[];
+  taxMode: "no_vat" | "vat_15";
   dueDate: string;
   terms: string;
   notes: string;
@@ -810,78 +1117,135 @@ function InvoicePreview({
   paymentLink: string;
   currency: string;
 }) {
-  const total = Math.max(0, quantity) * Math.max(0, unitPrice);
+  const subtotal = lineItems.reduce(
+    (total, item) =>
+      total + Math.max(0, Number(item.quantity) || 0) * Math.max(0, Number(item.unitPrice) || 0),
+    0,
+  );
+  const vatAmount = taxMode === "vat_15" ? subtotal * 0.15 : 0;
+  const total = subtotal + vatAmount;
 
   return (
-    <aside className="border-t border-[#e5e7eb] bg-[#f9fafb] p-5 xl:border-l xl:border-t-0">
-      <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
-        <div className="flex h-[66px] items-center justify-between gap-4 border-b border-[#e5e7eb] bg-[#f9fafb] px-5">
+    <aside className="db-preview-panel">
+      <div className="db-preview-top">
+        <p>Invoice preview</p>
+        <Badge variant="outline" className="db-status-badge db-status-success">
+          <span aria-hidden="true" />
+          Ready packet
+        </Badge>
+      </div>
+
+      <div className="db-preview-body">
+        <h2>Invoice</h2>
+
+        <div className="db-preview-meta">
           <div>
-            <p className="text-[14px] font-medium text-[#4b5563]">Invoice preview</p>
+            <span>Bill to</span>
+            <strong>{clientName || "Client"}</strong>
+            <small>{clientEmail || "client@email.com"}</small>
           </div>
-          <Badge variant="outline" className="border-[#bfe8d8] bg-[#ecf8f2] px-3 py-1 text-xs font-semibold text-[#006545]">
-            Ready packet
-          </Badge>
+          <div>
+            <span>Due</span>
+            <strong>{dueDate}</strong>
+          </div>
         </div>
 
-        <div className="p-5">
-          <h2 className="text-[28px] font-semibold leading-none text-[#111827]">Invoice</h2>
-
-          <div className="mt-7 grid gap-4 border-y border-[#e5e7eb] py-4 sm:grid-cols-2">
-          <div>
-            <p className="text-xs text-[#6b7280]">Bill to</p>
-            <p className="mt-2 text-[15px] font-medium leading-tight text-[#111827]">{clientName || "Client"}</p>
-            <p className="text-xs text-[#6b7280]">{clientEmail || "client@email.com"}</p>
-          </div>
-          <div className="sm:text-right">
-            <p className="text-xs text-[#6b7280]">Due</p>
-            <p className="mt-2 text-[15px] font-medium leading-tight text-[#111827]">{dueDate}</p>
-          </div>
-        </div>
-
-        <div className="mt-5 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-sm">
-          <div className="grid grid-cols-[minmax(0,1fr)_64px_104px] border-b border-[#e5e7eb] bg-[#f3f4f6] px-4 py-3 text-xs font-semibold text-[#374151]">
+        <div className="db-preview-lines">
+          <div className="db-preview-lines-head">
             <span>Item</span>
             <span>Qty</span>
-            <span className="text-right">Amount</span>
+            <span>Amount</span>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_64px_104px] px-4 py-4 text-sm">
-            <span className="min-w-0 truncate">{description || "Invoice item"}</span>
-            <span>{quantity || 1}</span>
-            <span className="text-right font-medium">{formatMoney(total, currency)}</span>
+          {lineItems.map((item) => {
+            const lineTotal = Math.max(0, Number(item.quantity) || 0) * Math.max(0, Number(item.unitPrice) || 0);
+
+            return (
+              <div key={item.id} className="db-preview-line">
+                <span>{item.description || "Invoice item"}</span>
+                <span>{item.quantity || "1"}</span>
+                <span>{formatMoney(lineTotal, currency)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="db-preview-total">
+          <div>
+            <span>Subtotal (excl. VAT)</span>
+            <strong>{formatMoney(subtotal, currency)}</strong>
+          </div>
+          <div>
+            <span>{taxMode === "vat_15" ? "VAT (15%)" : "VAT"}</span>
+            <strong>{formatMoney(vatAmount, currency)}</strong>
+          </div>
+          <div>
+            <span>Total</span>
+            <strong>{formatMoney(total, currency)}</strong>
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <div className="w-full max-w-[240px]">
-            <div className="flex justify-between text-sm text-[#6b7280]">
-              <span>Subtotal (excl. VAT)</span>
-              <span>{formatMoney(total, currency)}</span>
-            </div>
-            <div className="mt-2 flex justify-between text-sm text-[#6b7280]">
-              <span>VAT (15%)</span>
-              <span>{formatMoney(total * 0.15, currency)}</span>
-            </div>
-            <div className="mt-3 flex justify-between border-t border-[#e5e7eb] pt-3 text-[18px] font-semibold leading-none text-[#111827]">
-              <span>Total (incl. VAT)</span>
-              <span>{formatMoney(total * 1.15, currency)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-7 grid gap-3 text-sm leading-6 text-[#374151]">
-          <p>
-            <span className="font-medium text-[#111827]">Terms:</span> {terms}
-          </p>
-          <p>
-            <span className="font-medium text-[#111827]">Payment:</span>{" "}
-            {paymentLink ? "Payment button included." : paymentInstructions}
-          </p>
+        <div className="db-preview-notes">
+          <p><strong>Terms:</strong> {terms}</p>
+          <p><strong>Payment:</strong> {paymentLink ? "Payment button included." : paymentInstructions}</p>
           <p>{notes}</p>
-        </div>
         </div>
       </div>
     </aside>
+  );
+}
+
+function PaymentProofQueue({
+  rows,
+  currency,
+  pendingAction,
+  onReview,
+}: {
+  rows: PaymentProofRow[];
+  currency: string;
+  pendingAction: string | null;
+  onReview: (proofId: Id<"paymentProofs">, status: "accepted" | "rejected") => void;
+}) {
+  return (
+    <div className="db-card db-proof-card">
+      <div className="db-panel-header db-panel-header-small">
+        <h2>Proofs to review</h2>
+      </div>
+      <div className="db-proof-list">
+        {rows.slice(0, 5).map(({ proof, invoice }) => (
+          <div key={proof._id} className="db-proof-row">
+            <div>
+              <p className="db-proof-title">
+                {invoice?.invoiceNumber ?? "Invoice"} - {proof.payerName}
+              </p>
+              <p className="db-proof-meta">
+                {formatMoney(proof.amount, proof.currency ?? currency)} paid on {proof.paymentDate}
+                {proof.bankReference ? ` - Ref ${proof.bankReference}` : ""}
+              </p>
+            </div>
+            <div className="db-proof-actions">
+              <button
+                type="button"
+                className="db-primary-btn"
+                disabled={pendingAction === `proof-${proof._id}-accepted`}
+                onClick={() => onReview(proof._id, "accepted")}
+              >
+                {pendingAction === `proof-${proof._id}-accepted` ? <Loader2 className="size-3 animate-spin" /> : null}
+                Accept
+              </button>
+              <button
+                type="button"
+                className="db-outline-btn"
+                disabled={pendingAction === `proof-${proof._id}-rejected`}
+                onClick={() => onReview(proof._id, "rejected")}
+              >
+                {pendingAction === `proof-${proof._id}-rejected` ? <Loader2 className="size-3 animate-spin" /> : null}
+                Reject
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -903,7 +1267,7 @@ function InvoiceActions({
   onSend: (invoice: Invoice) => void;
   onEmail: (invoice: Invoice) => void;
   onMarkSent: (invoice: Invoice) => void;
-  onAmend: (row: InvoiceRow) => void;
+  onAmend: (row: InvoiceRow) => void | Promise<void>;
   onReminder: (invoice: Invoice) => void;
   onMarkPaid: (invoice: Invoice) => void;
   onOverdue: (invoice: Invoice) => void;
@@ -913,27 +1277,29 @@ function InvoiceActions({
   const reminding = pendingAction === `reminder-${invoice._id}`;
   const paying = pendingAction === `paid-${invoice._id}`;
   const overduing = pendingAction === `overdue-${invoice._id}`;
+  const amending = pendingAction === `amend-${invoice._id}`;
 
   return (
-    <div className="flex flex-wrap justify-end gap-2">
+    <div className="db-action-row">
       {invoice.status === "draft" || invoice.status === "ready" ? (
         <Button
           size="sm"
-          className="h-8 bg-[#009b68] text-xs text-white hover:bg-[#00875b] hover:text-white"
+          className="db-action-primary"
           onClick={() => onSend(invoice)}
           disabled={sending}
         >
-          {sending ? <Loader2 className="animate-spin" /> : <Mail />}
+          {sending ? <Loader2 className="size-3 animate-spin" /> : null}
           Prepare email
         </Button>
       ) : null}
       {invoice.status === "rejected" ? (
         <Button
           size="sm"
-          className="h-8 bg-[#009b68] text-xs text-white hover:bg-[#00875b] hover:text-white"
+          className="db-action-primary"
           onClick={() => onAmend(row)}
+          disabled={amending}
         >
-          <PencilLine />
+          {amending ? <Loader2 className="size-3 animate-spin" /> : null}
           Amend
         </Button>
       ) : null}
@@ -942,10 +1308,9 @@ function InvoiceActions({
           asChild
           size="sm"
           variant="outline"
-          className="h-8 border-[#e5e7eb] bg-white px-2 text-xs hover:bg-[#f3f4f6]"
+          className="db-action-secondary"
         >
           <a href={`/invoice/${invoice.publicToken}`} target="_blank" rel="noreferrer">
-            <ExternalLink />
             Client
           </a>
         </Button>
@@ -954,10 +1319,9 @@ function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-[#e5e7eb] bg-white px-2 text-xs hover:bg-[#f3f4f6]"
+          className="db-action-secondary"
           onClick={() => onEmail(invoice)}
         >
-          <Mail />
           Email
         </Button>
       ) : null}
@@ -966,11 +1330,11 @@ function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-[#b9e7fb] bg-white px-2 text-xs text-[#0874a8] hover:bg-[#eef9fd]"
+          className="db-action-secondary"
           onClick={() => onMarkSent(invoice)}
           disabled={markingSent}
         >
-          {markingSent ? <Loader2 className="animate-spin" /> : <Send />}
+          {markingSent ? <Loader2 className="size-3 animate-spin" /> : null}
           Mark sent
         </Button>
       ) : null}
@@ -978,22 +1342,22 @@ function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-[#e5e7eb] bg-white px-2 text-xs hover:bg-[#f3f4f6]"
+          className="db-action-secondary"
           onClick={() => onReminder(invoice)}
           disabled={reminding}
         >
-          {reminding ? <Loader2 className="animate-spin" /> : <Bell />}
+          {reminding ? <Loader2 className="size-3 animate-spin" /> : null}
           Remind
         </Button>
       ) : null}
       {isClientActive(invoice.status) ? (
         <Button
           size="sm"
-          className="h-8 bg-[#009b68] px-2 text-xs text-white hover:bg-[#00875b]"
+          className="db-action-primary"
           onClick={() => onMarkPaid(invoice)}
           disabled={paying}
         >
-          {paying ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+          {paying ? <Loader2 className="size-3 animate-spin" /> : null}
           Mark paid
         </Button>
       ) : null}
@@ -1001,11 +1365,11 @@ function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 border-[#ffc7d1] bg-white px-2 text-xs text-[#a51f43] hover:bg-[#fff0f3]"
+          className="db-action-danger"
           onClick={() => onOverdue(invoice)}
           disabled={overduing}
         >
-          {overduing ? <Loader2 className="animate-spin" /> : <Clock3 />}
+          {overduing ? <Loader2 className="size-3 animate-spin" /> : null}
           Overdue
         </Button>
       ) : null}

@@ -2,123 +2,87 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 type AuthShellProps = {
-  eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
   footer: ReactNode;
+  note?: ReactNode;
 };
 
-export function AuthShell({ eyebrow, title, description, children, footer }: AuthShellProps) {
+export function AuthShell({
+  title,
+  description,
+  children,
+  footer,
+  note,
+}: AuthShellProps) {
   return (
-    <main className="new-auth-page">
-
-      {/* ── Left brand panel ── */}
-      <section className="new-auth-brand">
-        <div className="new-auth-brand-top">
-          <Link href="/" aria-label="Payvio home">
-            <img src="/payvio-logo.svg" alt="Payvio" className="new-auth-logo" />
-          </Link>
+    <main className="payvio-auth-screen">
+      <section className="payvio-auth-panel" aria-labelledby="auth-title">
+        <Link href="/" className="payvio-auth-logo" aria-label="Payvio home">
+          <PayvioAuthMark />
+        </Link>
+        <div className="payvio-auth-heading">
+          <h1 id="auth-title">{title}</h1>
+          {description ? <p>{description}</p> : null}
         </div>
-
-        {/* Dashboard preview mockup */}
-        <div className="new-auth-mockup">
-          {/* Sidebar strip */}
-          <div className="new-auth-mock-sidebar">
-            <div className="new-auth-mock-logo-dot" />
-            {["Invoices", "Clients", "Reminders", "Reports", "Ledger", "VAT"].map((item, i) => (
-              <div key={item} className={`new-auth-mock-nav-item${i === 0 ? " active" : ""}`}>
-                <div className="new-auth-mock-nav-dot" />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Main content strip */}
-          <div className="new-auth-mock-main">
-            {/* Stat cards */}
-            <div className="new-auth-mock-stats">
-              {[
-                { label: "Outstanding", color: "#dcfce7", accent: "#16a34a" },
-                { label: "Paid", color: "#dbeafe", accent: "#1a6fc4" },
-                { label: "Active", color: "#fef9c3", accent: "#ca8a04" },
-                { label: "Overdue", color: "#fee2e2", accent: "#dc2626" },
-              ].map((s) => (
-                <div key={s.label} className="new-auth-mock-stat" style={{ background: s.color }}>
-                  <div className="new-auth-mock-stat-dot" style={{ background: s.accent }} />
-                  <span style={{ color: s.accent, fontSize: "0.6rem", fontWeight: 600 }}>{s.label}</span>
-                  <div className="new-auth-mock-stat-bar" style={{ background: s.accent }} />
-                </div>
-              ))}
-            </div>
-
-            {/* Mini table */}
-            <div className="new-auth-mock-table">
-              <div className="new-auth-mock-table-header">
-                <span>Invoice</span><span>Client</span><span>Status</span><span>Amount</span>
-              </div>
-              {[
-                { inv: "INV-001", client: "Acme Ltd", status: "Paid", color: "#16a34a" },
-                { inv: "INV-002", client: "Delta Corp", status: "Sent", color: "#1a6fc4" },
-                { inv: "INV-003", client: "Vantage Co", status: "Draft", color: "#6b7280" },
-              ].map((row) => (
-                <div key={row.inv} className="new-auth-mock-table-row">
-                  <span>{row.inv}</span>
-                  <span>{row.client}</span>
-                  <span style={{ color: row.color, fontWeight: 600 }}>{row.status}</span>
-                  <span>N$1,250</span>
-                </div>
-              ))}
-            </div>
-
-            {/* NamRA badge */}
-            <div className="new-auth-mock-badge">
-              <div className="new-auth-mock-badge-dot" />
-              NamRA ITAS Compliant
-            </div>
-          </div>
-        </div>
-
-        <div className="new-auth-brand-copy">
-          <h2>Namibia&apos;s invoice platform for modern SMEs.</h2>
-          <p>Create, send, approve and track invoices — fully NamRA compliant. Built for Namibian businesses.</p>
-          <div className="new-auth-brand-stats">
-            <div><strong>40,000+</strong><span>Active SMEs</span></div>
-            <div><strong>NamRA</strong><span>ITAS Ready</span></div>
-            <div><strong>15%</strong><span>VAT Auto-calc</span></div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Right form panel ── */}
-      <section className="new-auth-form-panel" aria-labelledby="auth-title">
-        <div className="new-auth-card">
-          <Link href="/" className="new-auth-form-logo-link">
-            <img src="/payvio-logo.svg" alt="Payvio" className="new-auth-form-logo" />
-          </Link>
-          <span className="new-auth-eyebrow">{eyebrow}</span>
-          <h1 id="auth-title" className="new-auth-title">{title}</h1>
-          <p className="new-auth-description">{description}</p>
+        <div className="payvio-auth-card">
           {children}
-          <div className="new-auth-footer">{footer}</div>
+          {note ? <div className="payvio-auth-note">{note}</div> : null}
         </div>
+        <div className="payvio-auth-footer">{footer}</div>
       </section>
     </main>
   );
 }
 
+function PayvioAuthMark() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="payvio-auth-mark"
+      viewBox="0 0 48 48"
+      focusable="false"
+    >
+      <circle className="payvio-auth-mark-ink" cx="24" cy="24" r="21" />
+      <path className="payvio-auth-mark-letter" d="M16 35V13h10.2c5.1 0 8.5 3.1 8.5 7.6s-3.4 7.6-8.5 7.6H21" />
+      <path className="payvio-auth-mark-ledger" d="M24.5 35 33.8 17" />
+      <path className="payvio-auth-mark-ledger" d="M27.4 35h7.2" />
+      <circle className="payvio-auth-mark-dot" cx="35.5" cy="34.5" r="2.4" />
+    </svg>
+  );
+}
+
 export function AuthField({
-  label, id, type = "text", placeholder, autoComplete, required = true,
+  label,
+  id,
+  type = "text",
+  placeholder,
+  autoComplete,
+  required = true,
+  action,
 }: {
-  label: string; id: string; type?: string;
-  placeholder: string; autoComplete?: string; required?: boolean;
+  label: string;
+  id: string;
+  type?: string;
+  placeholder: string;
+  autoComplete?: string;
+  required?: boolean;
+  action?: ReactNode;
 }) {
   return (
-    <label className="new-auth-field" htmlFor={id}>
-      <span>{label}</span>
+    <label className="payvio-auth-field" htmlFor={id}>
+      <span className="payvio-auth-field-top">
+        <span>{label}</span>
+        {action}
+      </span>
       <input
-        id={id} name={id} type={type} placeholder={placeholder}
-        autoComplete={autoComplete} required={required}
+        id={id}
+        name={id}
+        type={type}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        required={required}
         minLength={type === "password" ? 8 : undefined}
       />
     </label>

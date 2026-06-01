@@ -4,20 +4,25 @@ import { AuthForm } from "../_components/AuthForm";
 import { AuthShell } from "../_components/AuthShell";
 
 export const metadata: Metadata = {
-  title: "Open Ledger | Payvio",
-  description: "Create an Payvio workspace.",
+  title: "Create Workspace | Payvio",
+  description: "Create a Payvio account.",
 };
 
 export default function SignupPage() {
   return (
     <AuthShell
-      eyebrow="Open Ledger"
-      title="Create your workspace."
-      description="Set up the account your team will use for invoice operations."
+      title="Create a Payvio workspace"
+      note={
+        <>
+          By signing up, you agree to our{" "}
+          <strong>Terms of Service</strong> and{" "}
+          <strong>Data Processing Agreement</strong>.
+        </>
+      }
       footer={
         <>
           Already have an account?{" "}
-          <Link href="/login">Login</Link>
+          <Link href="/login">Log in</Link>
         </>
       }
     >
