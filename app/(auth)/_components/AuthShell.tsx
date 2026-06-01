@@ -38,7 +38,7 @@ export function AuthShell({
 }
 
 function PayvioAuthMark() {
-  return <Image src="/payvio-logo.svg" alt="Payvio" width={54} height={54} priority />;
+  return <Image src="/payvio-logo.svg" alt="Payvio" width={120} height={54} priority style={{ objectFit: "contain" }} />;
 }
 
 export function AuthField({
