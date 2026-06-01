@@ -127,7 +127,7 @@ const SETTINGS_ITEM: NavItem = {
 const ALL_NAV_ITEMS = [...NAV_GROUPS.flatMap((group) => group.items), SETTINGS_ITEM];
 
 function PayvioGlyph() {
-  return <Image src="/payvio-logo.svg" alt="Payvio" width={100} height={40} style={{ objectFit: "contain", marginLeft: "-6px" }} />;
+  return <Image src="/payvio-logo.svg" alt="Payvio" width={100} height={40} style={{ objectFit: "contain", marginLeft: "-14px" }} />;
 }
 
 function ShellInner({ children }: { children: ReactNode }) {
