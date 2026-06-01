@@ -7414,7 +7414,7 @@ main {
   background: var(--db-hover) !important;
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1400px) {
   .db-root:has(.db-dashboard-page) .db-compose-grid {
     grid-template-columns: 1fr;
   }
