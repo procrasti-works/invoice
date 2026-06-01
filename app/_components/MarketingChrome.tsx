@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   BarChart3,
@@ -155,10 +156,7 @@ export function MarketingHeader() {
     <header className="il-header">
       <div className="il-header-shell">
         <Link aria-label="Payvio home" className="il-header-logo" href="/">
-          <span className="il-wordmark">
-            <span className="il-wordmark-mark">P</span>
-            <span>Payvio</span>
-          </span>
+          <Image src="/payvio-logo.svg" alt="Payvio" width={36} height={36} priority />
         </Link>
 
         <nav aria-label="Primary" className="il-header-nav">
@@ -212,10 +210,7 @@ export function MarketingFooter() {
     <footer className="bg-[#0d141c] py-16 text-white">
       <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-6">
         <div>
-          <span className="il-footer-wordmark">
-            <span className="il-footer-mark">P</span>
-            <span>Payvio</span>
-          </span>
+          <Image src="/payvio-logo.svg" alt="Payvio" width={40} height={40} />
           <p className="mt-6 text-sm leading-7 text-white/65">
             Invoice and ledger software for Namibian businesses.
           </p>

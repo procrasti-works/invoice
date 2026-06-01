@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -126,13 +127,7 @@ const SETTINGS_ITEM: NavItem = {
 const ALL_NAV_ITEMS = [...NAV_GROUPS.flatMap((group) => group.items), SETTINGS_ITEM];
 
 function PayvioGlyph() {
-  return (
-    <span className="db-payvio-glyph" aria-hidden="true">
-      <span />
-      <span />
-      <span />
-    </span>
-  );
+  return <Image src="/payvio-logo.svg" alt="Payvio" width={28} height={28} />;
 }
 
 function ShellInner({ children }: { children: ReactNode }) {
