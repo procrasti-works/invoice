@@ -5998,8 +5998,8 @@ main {
 
 .db-line-item-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 76px 124px auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 90px 140px auto;
+  gap: 12px;
   align-items: end;
 }
 
