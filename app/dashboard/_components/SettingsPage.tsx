@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type ComponentType, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import {
-  ArrowLeft,
   AlertTriangle,
   BadgeCheck,
   Building2,
@@ -15,23 +13,35 @@ import {
   KeyRound,
   Loader2,
   MailPlus,
+  Monitor,
   Save,
-  ShieldCheck,
   Trash2,
+  UploadCloud,
   UserCog,
   UserMinus,
   Users,
-} from "lucide-react";
+  X,
+} from "@/app/_components/IconPack";
+import { ThemeSegmentedControl, useThemeLabel } from "@/app/_components/ThemeSwitch";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { PLAN_LABELS, PLAN_COLORS, type PlanLevel } from "@/lib/plan";
+import { cn } from "@/lib/utils";
+import { PLAN_COLORS, PLAN_LABELS, type PlanLevel } from "@/lib/plan";
 
-type Workspace = Doc<"organizations">;
+type Workspace = Doc<"organizations"> & { imageUrl?: string | null };
 type MemberRole = Doc<"memberships">["role"];
 type AssignableRole = Exclude<MemberRole, "owner">;
 type PermissionKey =
@@ -79,16 +89,6 @@ type SettingsForm = {
   address: string;
   phone: string;
   taxId: string;
-  vatNumber: string;
-  vatRegistered: boolean;
-  vatRegistrationType: "not_registered" | "voluntary" | "mandatory";
-  vatFilingFrequency: "monthly" | "bi_monthly";
-  vatReturnDueDay: string;
-  vatRecordRetentionYears: string;
-  vatDefaultTaxMode: "no_vat" | "vat_15" | "zero_rated" | "exempt";
-  vedEnabled: boolean;
-  vedTransmissionMode: "manual_export" | "near_real_time" | "real_time";
-  itasRegistered: boolean;
   defaultCurrency: string;
   defaultTerms: string;
   invoicePrefix: string;
@@ -100,6 +100,28 @@ type SettingsForm = {
   branchCode: string;
   swiftCode: string;
 };
+
+const panelClassName = "rounded-lg border border-border bg-card p-5 shadow-none sm:p-[30px]";
+const compactPanelClassName = "rounded-lg border border-border bg-card p-5 shadow-none";
+const inputClassName = "h-11 rounded-lg border-border bg-background text-base shadow-sm";
+const compactInputClassName = "h-10 rounded-lg border-border bg-background text-sm shadow-sm";
+const textareaClassName =
+  "min-h-28 w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-base shadow-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20";
+const selectClassName =
+  "h-11 w-full rounded-lg border border-border bg-background px-3 text-base shadow-sm outline-none";
+const compactSelectClassName =
+  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none";
+const organizationImageAccept = "image/png,image/jpeg,image/webp,image/gif";
+const maxOrganizationImageBytes = 5 * 1024 * 1024;
+type SettingsSection = "profile" | "appearance" | "team" | "access" | "billing";
+
+const settingsSections: Array<{ value: SettingsSection; label: string }> = [
+  { value: "profile", label: "Profile" },
+  { value: "appearance", label: "Appearance" },
+  { value: "team", label: "Team" },
+  { value: "access", label: "Access" },
+  { value: "billing", label: "Billing" },
+];
 
 const roleOptions: Array<{ value: MemberRole; label: string }> = [
   { value: "owner", label: "Owner" },
@@ -125,7 +147,7 @@ const permissionRows: Array<{
   {
     key: "manageSettings",
     label: "Organization profile",
-    description: "Business details, VAT setup, bank details.",
+    description: "Business details, invoice defaults, bank details.",
   },
   {
     key: "manageMembers",
@@ -168,11 +190,6 @@ const permissionRows: Array<{
     description: "Scan, review, and post supplier invoices.",
   },
   {
-    key: "manageVat",
-    label: "VAT settings",
-    description: "Change VAT filing and export setup.",
-  },
-  {
     key: "exportReports",
     label: "Report exports",
     description: "Export ledger and accounting records.",
@@ -194,16 +211,6 @@ const defaultSettings: SettingsForm = {
   address: "",
   phone: "",
   taxId: "",
-  vatNumber: "",
-  vatRegistered: false,
-  vatRegistrationType: "not_registered",
-  vatFilingFrequency: "monthly",
-  vatReturnDueDay: "25",
-  vatRecordRetentionYears: "5",
-  vatDefaultTaxMode: "no_vat",
-  vedEnabled: false,
-  vedTransmissionMode: "manual_export",
-  itasRegistered: false,
   defaultCurrency: "NAD",
   defaultTerms: "Payment due within 7 days unless otherwise agreed.",
   invoicePrefix: "INV",
@@ -216,6 +223,39 @@ const defaultSettings: SettingsForm = {
   branchCode: "",
   swiftCode: "",
 };
+
+function SelectControl({
+  id,
+  value,
+  onValueChange,
+  disabled,
+  className = selectClassName,
+  ariaLabel,
+  options,
+}: {
+  id?: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  disabled?: boolean;
+  className?: string;
+  ariaLabel?: string;
+  options: Array<{ value: string; label: ReactNode }>;
+}) {
+  return (
+    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+      <SelectTrigger id={id} className={className} aria-label={ariaLabel}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 function settingsFromWorkspace(workspace: Workspace | null): SettingsForm {
   if (!workspace) {
@@ -231,20 +271,6 @@ function settingsFromWorkspace(workspace: Workspace | null): SettingsForm {
     address: workspace.address ?? "",
     phone: workspace.phone ?? "",
     taxId: workspace.taxId ?? "",
-    vatNumber: workspace.vatNumber ?? "",
-    vatRegistered: workspace.vatRegistered ?? false,
-    vatRegistrationType:
-      workspace.vatRegistrationType ??
-      (workspace.vatRegistered ? "mandatory" : "not_registered"),
-    vatFilingFrequency: workspace.vatFilingFrequency ?? "monthly",
-    vatReturnDueDay: String(workspace.vatReturnDueDay ?? 25),
-    vatRecordRetentionYears: String(workspace.vatRecordRetentionYears ?? 5),
-    vatDefaultTaxMode:
-      workspace.vatDefaultTaxMode ??
-      (workspace.vatRegistered ? "vat_15" : "no_vat"),
-    vedEnabled: workspace.vedEnabled ?? Boolean(workspace.vatRegistered),
-    vedTransmissionMode: workspace.vedTransmissionMode ?? "manual_export",
-    itasRegistered: workspace.itasRegistered ?? false,
     defaultCurrency: workspace.defaultCurrency,
     defaultTerms: workspace.defaultTerms ?? defaultSettings.defaultTerms,
     invoicePrefix: workspace.invoicePrefix ?? "INV",
@@ -261,53 +287,185 @@ function settingsFromWorkspace(workspace: Workspace | null): SettingsForm {
 export function SettingsPage() {
   const state = useQuery(api.organizations.settingsState);
   const workspace = state?.organization ?? null;
+  const [activeSection, setActiveSection] = useState<SettingsSection>("profile");
 
   const workspaceVersion = workspace
     ? `${workspace._id}:${workspace.updatedAt}:${state?.membership.role}`
     : "new";
 
-  return (
-    <div className="db-page db-dashboard-page db-settings-page">
-      <section className="db-workview">
-        <div className="db-workview-head">
-          <div>
-            <p className="db-breadcrumb">
-              Payvio <span>/</span> Settings
-            </p>
-            <h1 className="db-workview-title">Settings</h1>
+  if (state === undefined) {
+    return (
+      <div className="invoice-list-page">
+        <section className={cn(panelClassName, "flex min-h-[240px] items-center justify-center")}>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Loading settings
           </div>
-          <Link href="/dashboard" className="db-outline-btn db-settings-back-link">
-            <ArrowLeft className="size-4" />
-            Dashboard
-          </Link>
+        </section>
+      </div>
+    );
+  }
+
+  if (!state || !workspace) {
+    return (
+      <div className="invoice-list-page">
+        <section className={cn(panelClassName, "max-w-xl")}>
+          <PanelHeader
+            eyebrow="Workspace"
+            title="Workspace setup required"
+            description="Create or join an organization before editing settings."
+            icon={Building2}
+          />
+          <Button asChild className="mt-5 h-11 rounded-lg bg-neutral-950 px-5 text-base font-semibold !text-white hover:bg-neutral-800 hover:!text-white">
+            <a href="/onboarding">Open setup</a>
+          </Button>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="invoice-list-page">
+      <div className="space-y-6">
+        <div
+          className="grid w-full grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:grid-cols-3 xl:grid-cols-5"
+          role="tablist"
+          aria-label="Settings sections"
+        >
+          {settingsSections.map((section) => (
+            <button
+              key={section.value}
+              type="button"
+              role="tab"
+              aria-selected={activeSection === section.value}
+              className={cn(
+                "h-9 min-w-0 rounded-md px-4 text-sm font-semibold leading-none text-muted-foreground transition-colors hover:text-foreground",
+                activeSection === section.value && "bg-background text-foreground",
+              )}
+              onClick={() => setActiveSection(section.value)}
+            >
+              {section.label}
+            </button>
+          ))}
         </div>
 
-        {state === undefined ? null : state && workspace ? (
-          <div className="db-settings-layout">
+        {activeSection === "profile" ? (
+          <div className="grid gap-[30px] xl:grid-cols-[minmax(0,1fr)_360px]">
+            <SettingsEditor
+              key={workspaceVersion}
+              workspace={workspace}
+              initialForm={settingsFromWorkspace(workspace)}
+              canManageSettings={state.permissions.canManageSettings}
+            />
             <OrganizationSummaryPanel state={state} />
-            <div className="db-settings-main">
-              <SettingsEditor
-                key={workspaceVersion}
-                workspace={workspace}
-                initialForm={settingsFromWorkspace(workspace)}
-                canManageSettings={state.permissions.canManageSettings}
-              />
-              <RoleRulesPanel key={`rules:${workspaceVersion}`} state={state} />
-              <MembersPanel key={`members:${workspaceVersion}`} state={state} />
-              <TeamInvitationsPanel key={`invites:${workspaceVersion}`} state={state} />
-              <BillingPanel key={`billing:${workspaceVersion}`} state={state} />
-              <DangerZonePanel key={`danger:${workspaceVersion}`} state={state} />
-            </div>
           </div>
-        ) : (
-          <section className="db-card db-settings-empty">
-            <h2>Workspace setup required</h2>
-            <p>Create or join an organization before editing settings.</p>
-            <Link href="/onboarding" className="db-primary-btn">Open setup</Link>
-          </section>
-        )}
-      </section>
+        ) : null}
+
+        {activeSection === "appearance" ? (
+          <div className="max-w-xl">
+            <AppearancePanel />
+          </div>
+        ) : null}
+
+        {activeSection === "team" ? (
+          <div className="grid gap-[30px] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <TeamInvitationsPanel key={`invites:${workspaceVersion}`} state={state} />
+            <MembersPanel key={`members:${workspaceVersion}`} state={state} />
+          </div>
+        ) : null}
+
+        {activeSection === "access" ? (
+          <div className="grid gap-[30px] xl:grid-cols-[minmax(0,1fr)_360px]">
+            <RoleRulesPanel key={`rules:${workspaceVersion}`} state={state} />
+            <DangerZonePanel key={`danger:${workspaceVersion}`} state={state} />
+          </div>
+        ) : null}
+
+        {activeSection === "billing" ? (
+          <div className="max-w-xl">
+            <BillingPanel key={`billing:${workspaceVersion}`} state={state} />
+          </div>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+function AppearancePanel() {
+  const themeLabel = useThemeLabel();
+
+  return (
+    <section className={compactPanelClassName}>
+      <PanelHeader
+        eyebrow="Appearance"
+        title="Theme"
+        description="System is the default."
+        icon={Monitor}
+      />
+
+      <div className="mt-6 space-y-4">
+        <ThemeSegmentedControl />
+        <div className="divide-y divide-border rounded-lg border border-border">
+          <InfoRow label="Active theme" value={themeLabel} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PanelHeader({
+  eyebrow,
+  title,
+  description,
+  icon: Icon,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+  icon: ComponentType<{ className?: string }>;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{eyebrow}</p>
+        <h2 className="mt-1 truncate text-xl font-semibold leading-7 text-foreground">{title}</h2>
+        {description ? (
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {action}
+        <span className="grid size-10 place-items-center rounded-lg bg-muted text-muted-foreground">
+          <Icon className="size-5" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function StatusMessage({
+  tone,
+  children,
+}: {
+  tone: "success" | "warning" | "error";
+  children: ReactNode;
+}) {
+  const Icon = tone === "success" ? CheckCircle2 : AlertTriangle;
+
+  return (
+    <p
+      className={cn(
+        "mt-5 flex items-start gap-2 rounded-lg border px-3 py-2 text-sm leading-5",
+        tone === "success" && "border-teal-200 bg-teal-50 text-teal-700",
+        tone === "warning" && "border-amber-200 bg-amber-50 text-amber-700",
+        tone === "error" && "border-red-200 bg-red-50 text-red-700",
+      )}
+    >
+      <Icon className="mt-0.5 size-4 shrink-0" />
+      <span>{children}</span>
+    </p>
   );
 }
 
@@ -319,44 +477,34 @@ function OrganizationSummaryPanel({ state }: { state: SettingsState }) {
   ).length;
 
   return (
-    <aside className="db-settings-sidebar">
-      <section className="db-settings-card db-settings-org-card">
-        <div className="db-settings-mark">
-          <Building2 className="size-5" />
-        </div>
-        <p className="db-settings-kicker">Active organization</p>
-        <h2>{state.organization.name}</h2>
-        <div className="db-settings-meta-list">
-          <span>{state.organization.defaultCurrency}</span>
-          <span>{roleLabel(state.membership.role)}</span>
-          <span>{state.members.length} members</span>
-        </div>
-      </section>
+    <section className={compactPanelClassName}>
+      <PanelHeader
+        eyebrow="Organization"
+        title={state.organization.name}
+        description={state.organization.legalName || state.organization.tradingName || "Active workspace"}
+        icon={Building2}
+      />
 
-      <section className="db-settings-card">
-        <div className="db-settings-card-head">
-          <div>
-            <p className="db-settings-kicker">Access</p>
-            <h2>Control scope</h2>
-          </div>
-          <ShieldCheck className="size-4" />
-        </div>
-        <div className="db-settings-scope-list">
-          <div>
-            <span>Admins</span>
-            <strong>{adminCount}</strong>
-          </div>
-          <div>
-            <span>Invoice create</span>
-            <strong>{roleLabel(policy.createInvoices)}+</strong>
-          </div>
-          <div>
-            <span>Delete org</span>
-            <strong>{policy.deleteOrganization === "admin" ? "Admins" : "Owner"}</strong>
-          </div>
-        </div>
-      </section>
-    </aside>
+      <div className="mt-6 divide-y divide-border rounded-lg border border-border">
+        <InfoRow label="Currency" value={state.organization.defaultCurrency} />
+        <InfoRow label="Your role" value={roleLabel(state.membership.role)} />
+        <InfoRow label="Admins" value={String(adminCount)} />
+        <InfoRow label="Invoice access" value={`${roleLabel(policy.createInvoices)}+`} />
+        <InfoRow
+          label="Delete access"
+          value={policy.deleteOrganization === "admin" ? "Admins" : "Owner"}
+        />
+      </div>
+    </section>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3">
+      <span className="min-w-0 text-sm text-muted-foreground">{label}</span>
+      <strong className="min-w-0 truncate text-right text-sm font-semibold text-foreground">{value}</strong>
+    </div>
   );
 }
 
@@ -384,41 +532,30 @@ function RoleRulesPanel({ state }: { state: SettingsState }) {
   }
 
   return (
-    <section className="db-settings-card">
-      <div className="db-settings-card-head">
-        <div>
-          <p className="db-settings-kicker">Roles and rules</p>
-          <h2>Scoped organization access</h2>
-        </div>
-        <KeyRound className="size-4" />
-      </div>
+    <section className={panelClassName}>
+      <PanelHeader
+        eyebrow="Access"
+        title="Role rules"
+        description="Choose the minimum role required for real workspace actions."
+        icon={KeyRound}
+      />
 
-      {notice ? (
-        <p className="db-settings-success">
-          <CheckCircle2 className="size-4" />
-          {notice}
-        </p>
-      ) : null}
-
-      {error ? <p className="db-settings-error">{error}</p> : null}
-
+      {notice ? <StatusMessage tone="success">{notice}</StatusMessage> : null}
+      {error ? <StatusMessage tone="error">{error}</StatusMessage> : null}
       {!canManageRules ? (
-        <p className="db-settings-warning">
-          <AlertTriangle className="size-4" />
-          Your role cannot change permission rules.
-        </p>
+        <StatusMessage tone="warning">Your role cannot change permission rules.</StatusMessage>
       ) : null}
 
-      <div className="db-settings-role-grid">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {roleOptions.map((role) => (
-          <div key={role.value} className="db-settings-role-cell">
-            <strong>{role.label}</strong>
-            <span>{roleDescription(role.value)}</span>
+          <div key={role.value} className="rounded-lg border border-border bg-background p-4">
+            <strong className="block text-sm font-semibold text-foreground">{role.label}</strong>
+            <span className="mt-1 block text-xs leading-5 text-muted-foreground">{roleDescription(role.value)}</span>
           </div>
         ))}
       </div>
 
-      <div className="db-settings-rule-list">
+      <div className="mt-6 divide-y divide-border rounded-lg border border-border">
         {permissionRows.map((row) => {
           const options =
             row.key === "deleteOrganization"
@@ -428,31 +565,32 @@ function RoleRulesPanel({ state }: { state: SettingsState }) {
               : roleOptions;
 
           return (
-            <div key={row.key} className="db-settings-rule-row">
-              <div>
-                <span className={row.destructive ? "db-settings-danger-text" : ""}>
+            <div
+              key={row.key}
+              className="grid gap-3 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center"
+            >
+              <div className="min-w-0">
+                <span className={cn("block text-sm font-semibold text-foreground", row.destructive && "text-red-600")}>
                   {row.label}
                 </span>
-                <small>{row.description}</small>
+                <small className="mt-1 block text-sm leading-5 text-muted-foreground">{row.description}</small>
               </div>
-              <select
+              <SelectControl
                 value={policy[row.key]}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   setPolicy((current) => ({
                     ...current,
-                    [row.key]: event.target.value as PermissionPolicy[typeof row.key],
+                    [row.key]: value as PermissionPolicy[typeof row.key],
                   }))
                 }
                 disabled={!canManageRules || pending}
-                className="db-settings-select"
-                aria-label={`${row.label} minimum role`}
-              >
-                {options.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.value === "owner" ? "Owner only" : `${role.label}+`}
-                  </option>
-                ))}
-              </select>
+                className={compactSelectClassName}
+                ariaLabel={`${row.label} minimum role`}
+                options={options.map((role) => ({
+                  value: role.value,
+                  label: role.value === "owner" ? "Owner only" : `${role.label}+`,
+                }))}
+              />
             </div>
           );
         })}
@@ -462,9 +600,9 @@ function RoleRulesPanel({ state }: { state: SettingsState }) {
         type="button"
         disabled={!canManageRules || pending}
         onClick={handleSave}
-        className="db-settings-action"
+        className="mt-6 h-11 rounded-lg bg-neutral-950 px-5 text-base font-semibold !text-white hover:bg-neutral-800 hover:!text-white"
       >
-        {pending ? <Loader2 className="animate-spin" /> : <Save />}
+        {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
         Save role rules
       </Button>
     </section>
@@ -513,25 +651,18 @@ function MembersPanel({ state }: { state: SettingsState }) {
   }
 
   return (
-    <section className="db-settings-card">
-      <div className="db-settings-card-head">
-        <div>
-          <p className="db-settings-kicker">Members</p>
-          <h2>Organization roles</h2>
-        </div>
-        <UserCog className="size-4" />
-      </div>
+    <section className={panelClassName}>
+      <PanelHeader
+        eyebrow="Team"
+        title="Organization members"
+        description="Manage the roles already assigned to this workspace."
+        icon={UserCog}
+      />
 
-      {notice ? (
-        <p className="db-settings-success">
-          <CheckCircle2 className="size-4" />
-          {notice}
-        </p>
-      ) : null}
+      {notice ? <StatusMessage tone="success">{notice}</StatusMessage> : null}
+      {error ? <StatusMessage tone="error">{error}</StatusMessage> : null}
 
-      {error ? <p className="db-settings-error">{error}</p> : null}
-
-      <div className="db-settings-member-list">
+      <div className="mt-6 divide-y divide-border rounded-lg border border-border">
         {state.members.map((member) => {
           const role = member.membership.role;
           const canChangeRole =
@@ -540,40 +671,42 @@ function MembersPanel({ state }: { state: SettingsState }) {
             state.permissions.canManageMembers && role !== "owner" && !member.current;
 
           return (
-            <div key={member.membership._id} className="db-settings-member-row">
-              <div className="db-settings-member-main">
-                <span className="db-settings-avatar">
+            <div
+              key={member.membership._id}
+              className="flex flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
                   {memberInitial(member.user.email || member.user.name)}
                 </span>
-                <div>
-                  <strong>{member.user.name || member.user.email || "Team member"}</strong>
-                  <small>
+                <div className="min-w-0">
+                  <strong className="block truncate text-sm font-semibold text-foreground">
+                    {member.user.name || member.user.email || "Team member"}
+                  </strong>
+                  <small className="block truncate text-sm text-muted-foreground">
                     {member.user.email || "No email"}{member.current ? " - you" : ""}
                   </small>
                 </div>
               </div>
-              <div className="db-settings-member-actions">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
                 {canChangeRole ? (
-                  <select
+                  <SelectControl
                     value={role}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       handleRoleChange(
                         member.membership._id,
-                        event.target.value as AssignableRole,
+                        value as AssignableRole,
                       )
                     }
                     disabled={changingId === member.membership._id}
-                    className="db-settings-select"
-                    aria-label="Member role"
-                  >
-                    {assignableRoleOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    className={compactSelectClassName}
+                    ariaLabel="Member role"
+                    options={assignableRoleOptions}
+                  />
                 ) : (
-                  <Badge variant="secondary">{roleLabel(role)}</Badge>
+                  <Badge variant="secondary" className="h-8 rounded-full px-3 text-sm">
+                    {roleLabel(role)}
+                  </Badge>
                 )}
 
                 {canRemove ? (
@@ -581,14 +714,14 @@ function MembersPanel({ state }: { state: SettingsState }) {
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="db-settings-remove-btn"
+                    className="h-9 rounded-lg px-3 text-sm text-red-600 hover:text-red-700"
                     onClick={() => handleRemove(member.membership._id)}
                     disabled={removingId === member.membership._id}
                   >
                     {removingId === member.membership._id ? (
-                      <Loader2 className="animate-spin" />
+                      <Loader2 className="size-4 animate-spin" />
                     ) : (
-                      <UserMinus />
+                      <UserMinus className="size-4" />
                     )}
                     Remove
                   </Button>
@@ -661,121 +794,116 @@ function TeamInvitationsPanel({ state }: { state: SettingsState }) {
   }
 
   return (
-    <section className="db-settings-card db-settings-invitations-card">
-      <div className="db-settings-card-head">
-        <div>
-          <p className="db-settings-kicker">Team access</p>
-          <h2>Invite links</h2>
-          <p className="db-settings-card-copy">Create invite links for this organization.</p>
-        </div>
-        <Users className="size-4" />
-        <Badge variant={canManageTeam ? "success" : "warning"}>
-          {canManageTeam ? "Can invite" : "Restricted"}
-        </Badge>
-      </div>
+    <section className={panelClassName}>
+      <PanelHeader
+        eyebrow="Team access"
+        title="Invite links"
+        description="Create invite links for this organization."
+        icon={Users}
+        action={
+          <Badge variant={canManageTeam ? "success" : "warning"} className="h-8 rounded-full px-3 text-sm">
+            {canManageTeam ? "Can invite" : "Restricted"}
+          </Badge>
+        }
+      />
 
-      {notice ? (
-        <p className="db-settings-success">
-          <CheckCircle2 className="size-4 shrink-0" />
-          {notice}
-        </p>
-      ) : null}
-
-      {error ? <p className="db-settings-error">{error}</p> : null}
+      {notice ? <StatusMessage tone="success">{notice}</StatusMessage> : null}
+      {error ? <StatusMessage tone="error">{error}</StatusMessage> : null}
 
       {canManageTeam ? (
-        <form onSubmit={handleInvite} className="db-settings-invite-form">
-          <div className="grid gap-3 sm:grid-cols-[1fr_160px_auto]">
+        <form onSubmit={handleInvite} className="mt-6">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_auto] lg:items-end">
             <SettingsField label="Email" htmlFor="invite-email">
               <Input
                 id="invite-email"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px]"
+                className={inputClassName}
                 required
               />
             </SettingsField>
             <SettingsField label="Role" htmlFor="invite-role">
-              <select
+              <SelectControl
                 id="invite-role"
                 value={role}
-                onChange={(event) => setRole(event.target.value as AssignableRole)}
-                className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none"
-              >
-                <option value="admin">Admin</option>
-                <option value="finance">Finance</option>
-                <option value="viewer">Viewer</option>
-                <option value="member">Member</option>
-              </select>
+                onValueChange={(value) => setRole(value as AssignableRole)}
+                className={selectClassName}
+                options={[
+                  { value: "admin", label: "Admin" },
+                  { value: "finance", label: "Finance" },
+                  { value: "viewer", label: "Viewer" },
+                  { value: "member", label: "Member" },
+                ]}
+              />
             </SettingsField>
             <Button
               type="submit"
               disabled={pending}
-              className="db-primary-btn db-settings-invite-btn"
+              className="h-11 rounded-lg bg-neutral-950 px-5 text-base font-semibold !text-white hover:bg-neutral-800 hover:!text-white"
             >
-              {pending ? <Loader2 className="animate-spin" /> : <MailPlus />}
+              {pending ? <Loader2 className="size-4 animate-spin" /> : <MailPlus className="size-4" />}
               Create link
             </Button>
           </div>
         </form>
       ) : (
-        <p className="db-settings-warning">
-          Your current role cannot invite teammates.
-        </p>
+        <StatusMessage tone="warning">Your current role cannot invite teammates.</StatusMessage>
       )}
 
-      <div className="db-settings-pending-list">
-        <p className="db-settings-section-title">Pending invites</p>
+      <div className="mt-6">
+        <p className="mb-3 text-sm font-semibold text-foreground">Pending invites</p>
         {invitations.length === 0 ? (
-          <p className="db-settings-empty-row">
+          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
             No pending invites.
-          </p>
+          </div>
         ) : (
-          invitations.map((invitation) => (
-            <div
-              key={invitation._id}
-              className="db-settings-invite-row"
-            >
-              <div>
-                <p className="db-settings-invite-email">{invitation.email}</p>
-                <p className="db-settings-invite-meta">
-                  {roleLabel(invitation.role)} access
-                  {invitation.expired ? " - expired" : ""}
-                </p>
-              </div>
-              {canManageTeam ? (
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="db-settings-copy-btn"
-                    onClick={() => copyInviteUrl(invitation.token)}
-                    disabled={!invitation.token || invitation.expired}
-                  >
-                    <Copy />
-                    Copy
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="db-settings-delete-btn"
-                    onClick={() => handleRevoke(invitation._id)}
-                    disabled={revokingId === invitation._id}
-                  >
-                    {revokingId === invitation._id ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <Trash2 />
-                    )}
-                    Revoke
-                  </Button>
+          <div className="divide-y divide-border rounded-lg border border-border">
+            {invitations.map((invitation) => (
+              <div
+                key={invitation._id}
+                className="flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{invitation.email}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {roleLabel(invitation.role)} access
+                    {invitation.expired ? " - expired" : ""}
+                  </p>
                 </div>
-              ) : null}
-            </div>
-          ))
+                {canManageTeam ? (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-lg px-3 text-sm"
+                      onClick={() => copyInviteUrl(invitation.token)}
+                      disabled={!invitation.token || invitation.expired}
+                    >
+                      <Copy className="size-4" />
+                      Copy
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-lg px-3 text-sm text-red-600 hover:text-red-700"
+                      onClick={() => handleRevoke(invitation._id)}
+                      disabled={revokingId === invitation._id}
+                    >
+                      {revokingId === invitation._id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-4" />
+                      )}
+                      Revoke
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </section>
@@ -803,19 +931,21 @@ function BillingPanel({ state }: { state: SettingsState }) {
   const [error, setError] = useState<string | null>(null);
 
   const currentPlan = (subscription?.plan ?? "trial") as PlanLevel;
-  const planColor = PLAN_COLORS[currentPlan] ?? "#6b7280";
+  const planColor = PLAN_COLORS[currentPlan] ?? "var(--muted-foreground)";
   const planLabel = PLAN_LABELS[currentPlan] ?? "Trial";
 
-  async function handleApplyCode(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleApplyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setNotice(null);
     setError(null);
     const trimmed = code.trim().toUpperCase();
     const plan: BillingPlan | undefined = ACCESS_CODES[trimmed];
+
     if (!plan) {
       setError("Invalid access code. Please check and try again.");
       return;
     }
+
     setPending(true);
     try {
       await upsertSubscription({ plan, status: "active" });
@@ -829,59 +959,65 @@ function BillingPanel({ state }: { state: SettingsState }) {
   }
 
   return (
-    <section className="db-settings-card">
-      <div className="db-settings-card-head">
-        <div>
-          <p className="db-settings-kicker">Billing</p>
-          <h2>Plan &amp; access</h2>
-          <p className="db-settings-card-copy">Your current workspace plan and access level.</p>
-        </div>
-        <CreditCard className="size-4" />
-      </div>
+    <section className={compactPanelClassName}>
+      <PanelHeader
+        eyebrow="Billing"
+        title="Plan access"
+        description="Current workspace plan."
+        icon={CreditCard}
+      />
 
-      {notice && (
-        <p className="db-settings-success">
-          <CheckCircle2 className="size-4 shrink-0" />
-          {notice}
-        </p>
-      )}
-      {error && <p className="db-settings-error">{error}</p>}
+      {notice ? <StatusMessage tone="success">{notice}</StatusMessage> : null}
+      {error ? <StatusMessage tone="error">{error}</StatusMessage> : null}
 
-      <div className="db-billing-current">
-        <span className="db-billing-plan-badge" style={{ background: planColor + "18", color: planColor, borderColor: planColor + "40" }}>
+      <div className="mt-6 rounded-lg border border-border p-4">
+        <span
+          className="inline-flex h-8 items-center gap-2 rounded-full border px-3 text-sm font-semibold"
+          style={{
+            background: `color-mix(in oklch, ${planColor} 12%, transparent)`,
+            borderColor: `color-mix(in oklch, ${planColor} 25%, transparent)`,
+            color: planColor,
+          }}
+        >
           <BadgeCheck className="size-4" />
           {planLabel}
         </span>
-        <p className="db-billing-plan-note">
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
           {currentPlan === "trial"
-            ? "You are on the free trial. Apply an access code to unlock paid features."
+            ? "Apply an access code to unlock paid features."
             : "Your plan is active. Contact the team to change your subscription."}
         </p>
       </div>
 
-      {isOwner && (
-        <form onSubmit={handleApplyCode} className="db-billing-code-form">
-          <p className="db-settings-field-label">Apply access code</p>
-          <div className="db-billing-code-row">
+      {isOwner ? (
+        <form onSubmit={handleApplyCode} className="mt-5 space-y-3">
+          <SettingsField label="Apply access code" htmlFor="billing-access-code">
             <Input
+              id="billing-access-code"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(event) => setCode(event.target.value)}
               placeholder="e.g. ENT-2026"
-              className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-mono"
+              className={cn(compactInputClassName, "font-mono")}
               disabled={pending}
             />
-            <Button type="submit" disabled={!code.trim() || pending} className="db-primary-btn h-10 shrink-0">
-              {pending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
-              Apply
-            </Button>
-          </div>
-          <p className="db-billing-code-hint">
+          </SettingsField>
+          <Button
+            type="submit"
+            disabled={!code.trim() || pending}
+            className="h-10 w-full rounded-lg bg-neutral-950 px-4 text-sm font-semibold !text-white hover:bg-neutral-800 hover:!text-white"
+          >
+            {pending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
+            Apply
+          </Button>
+          <p className="text-xs leading-5 text-muted-foreground">
             Access codes are provided by the Payvio team. Contact{" "}
-            <a href="mailto:info.procrasti@gmail.com" className="underline">info.procrasti@gmail.com</a>{" "}
+            <a href="mailto:info.procrasti@gmail.com" className="underline">
+              info.procrasti@gmail.com
+            </a>{" "}
             to get one.
           </p>
         </form>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -910,32 +1046,27 @@ function DangerZonePanel({ state }: { state: SettingsState }) {
   }
 
   return (
-    <section className="db-settings-card db-settings-danger-zone">
-      <div className="db-settings-card-head">
-        <div>
-          <p className="db-settings-kicker">Danger zone</p>
-          <h2>Delete organization</h2>
-        </div>
-        <AlertTriangle className="size-4" />
-      </div>
+    <section className={compactPanelClassName}>
+      <PanelHeader
+        eyebrow="Danger zone"
+        title="Delete organization"
+        description="Only use this when this workspace should be removed."
+        icon={AlertTriangle}
+      />
 
-      {error ? <p className="db-settings-error">{error}</p> : null}
-
+      {error ? <StatusMessage tone="error">{error}</StatusMessage> : null}
       {!canDelete ? (
-        <p className="db-settings-warning">
-          <AlertTriangle className="size-4" />
-          Your role cannot delete this organization.
-        </p>
+        <StatusMessage tone="warning">Your role cannot delete this organization.</StatusMessage>
       ) : null}
 
-      <div className="db-settings-delete-row">
+      <div className="mt-6 space-y-3">
         <SettingsField label="Confirm organization name" htmlFor="delete-organization-name">
           <Input
             id="delete-organization-name"
             value={confirmationName}
             onChange={(event) => setConfirmationName(event.target.value)}
             disabled={!canDelete || pending}
-            className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px]"
+            className={compactInputClassName}
           />
         </SettingsField>
         <Button
@@ -943,13 +1074,493 @@ function DangerZonePanel({ state }: { state: SettingsState }) {
           variant="outline"
           disabled={!canDelete || !confirmed || pending}
           onClick={handleDelete}
-          className="db-settings-delete-btn"
+          className="h-10 w-full rounded-lg px-4 text-sm text-red-600 hover:text-red-700"
         >
-          {pending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+          {pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
           Delete organization
         </Button>
       </div>
     </section>
+  );
+}
+
+function SettingsEditor({
+  workspace,
+  initialForm,
+  canManageSettings,
+}: {
+  workspace: Workspace | null;
+  initialForm: SettingsForm;
+  canManageSettings: boolean;
+}) {
+  const updateWorkspace = useMutation(api.invoices.updateWorkspace);
+  const generateImageUploadUrl = useMutation(
+    api.organizations.generateOrganizationImageUploadUrl,
+  );
+  const updateOrganizationImage = useMutation(api.organizations.updateOrganizationImage);
+  const removeOrganizationImage = useMutation(api.organizations.removeOrganizationImage);
+  const [form, setForm] = useState<SettingsForm>(initialForm);
+  const [pending, setPending] = useState(false);
+  const [pendingImage, setPendingImage] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageInputKey, setImageInputKey] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const workspaceImageUrl = workspace?.imageUrl ?? "";
+  const workspaceInitial = (workspace?.name ?? form.name).trim().slice(0, 1).toUpperCase() || "W";
+
+  async function handleImageUpload() {
+    setNotice(null);
+    setError(null);
+
+    if (!canManageSettings) {
+      setError("Your role cannot change organization profile settings.");
+      return;
+    }
+
+    if (!imageFile) {
+      setError("Choose an image file first.");
+      return;
+    }
+
+    if (!organizationImageAccept.split(",").includes(imageFile.type)) {
+      setError("Use a PNG, JPG, WebP, or GIF image.");
+      return;
+    }
+
+    if (imageFile.size > maxOrganizationImageBytes) {
+      setError("Organization image must be 5 MB or smaller.");
+      return;
+    }
+
+    setPendingImage(true);
+
+    try {
+      const uploadUrl = await generateImageUploadUrl({});
+      const upload = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": imageFile.type || "application/octet-stream" },
+        body: imageFile,
+      });
+
+      if (!upload.ok) {
+        throw new Error("Unable to upload organization image.");
+      }
+
+      const uploadJson = (await upload.json()) as { storageId: string };
+
+      await updateOrganizationImage({
+        storageId: uploadJson.storageId as Id<"_storage">,
+        fileName: imageFile.name,
+      });
+      setImageFile(null);
+      setImageInputKey((current) => current + 1);
+      setNotice("Organization image saved.");
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Unable to save organization image.",
+      );
+    } finally {
+      setPendingImage(false);
+    }
+  }
+
+  async function handleRemoveImage() {
+    setNotice(null);
+    setError(null);
+
+    if (!canManageSettings) {
+      setError("Your role cannot change organization profile settings.");
+      return;
+    }
+
+    setPendingImage(true);
+
+    try {
+      await removeOrganizationImage({});
+      setImageFile(null);
+      setImageInputKey((current) => current + 1);
+      setNotice("Organization image removed.");
+    } catch (removeError) {
+      setError(
+        removeError instanceof Error
+          ? removeError.message
+          : "Unable to remove organization image.",
+      );
+    } finally {
+      setPendingImage(false);
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNotice(null);
+    setError(null);
+
+    if (!canManageSettings) {
+      setError("Your role cannot change organization profile settings.");
+      return;
+    }
+
+    if (!/^[A-Z]{3}$/.test(form.defaultCurrency)) {
+      setError("Currency must be a 3-letter code.");
+      return;
+    }
+
+    setPending(true);
+
+    try {
+      await updateWorkspace({
+        name: form.name,
+        legalName: form.legalName,
+        tradingName: form.tradingName,
+        entityType: form.entityType,
+        region: form.region,
+        address: form.address,
+        phone: form.phone,
+        taxId: form.taxId,
+        defaultCurrency: form.defaultCurrency,
+        defaultTerms: form.defaultTerms,
+        invoicePrefix: form.invoicePrefix,
+        paymentInstructions: form.paymentInstructions,
+        paymentLink: form.paymentLink,
+        bankName: form.bankName,
+        bankAccountName: form.bankAccountName,
+        bankAccountNumber: form.bankAccountNumber,
+        branchCode: form.branchCode,
+        swiftCode: form.swiftCode,
+      });
+      setNotice(workspace ? "Settings saved." : "Workspace created.");
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error ? saveError.message : "Unable to save settings.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={panelClassName}>
+      <PanelHeader
+        eyebrow="Workspace"
+        title="Organization profile"
+        description="Details used on invoices and client payment instructions."
+        icon={Building2}
+      />
+
+      {notice ? <StatusMessage tone="success">{notice}</StatusMessage> : null}
+      {error ? <StatusMessage tone="error">{error}</StatusMessage> : null}
+      {!canManageSettings ? (
+        <StatusMessage tone="warning">Your role cannot change organization profile settings.</StatusMessage>
+      ) : null}
+
+      <fieldset disabled={!canManageSettings || pending || pendingImage} className="mt-6 space-y-8">
+        <FormSection title="Business details">
+          <div className="grid gap-4 rounded-lg border border-border bg-background p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+            {workspaceImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={workspaceImageUrl}
+                alt=""
+                className="size-16 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <span className="grid size-16 shrink-0 place-items-center rounded-lg bg-primary text-xl font-semibold text-primary-foreground">
+                {workspaceInitial}
+              </span>
+            )}
+            <div className="min-w-0">
+              <SettingsField label="Organization image" htmlFor="organization-image">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                  <Input
+                    key={imageInputKey}
+                    id="organization-image"
+                    type="file"
+                    accept={organizationImageAccept}
+                    onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                    className={inputClassName}
+                  />
+                  <Button
+                    type="button"
+                    disabled={!imageFile || pendingImage || !canManageSettings}
+                    onClick={handleImageUpload}
+                    className="h-11 rounded-lg bg-neutral-950 px-5 text-base font-semibold !text-white hover:bg-neutral-800 hover:!text-white"
+                  >
+                    {pendingImage ? <Loader2 className="size-4 animate-spin" /> : <UploadCloud className="size-4" />}
+                    Upload
+                  </Button>
+                  {workspaceImageUrl ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={pendingImage || !canManageSettings}
+                      onClick={handleRemoveImage}
+                      className="h-11 rounded-lg px-4 text-base"
+                    >
+                      {pendingImage ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+              </SettingsField>
+            </div>
+          </div>
+
+          <SettingsField label="Workspace name" htmlFor="workspace-name">
+            <Input
+              id="workspace-name"
+              value={form.name}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
+              }
+              className={inputClassName}
+            />
+          </SettingsField>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SettingsField label="Legal name" htmlFor="legal-name">
+              <Input
+                id="legal-name"
+                value={form.legalName}
+                onChange={(event) => setForm((current) => ({ ...current, legalName: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+            <SettingsField label="Trading name" htmlFor="trading-name">
+              <Input
+                id="trading-name"
+                value={form.tradingName}
+                onChange={(event) => setForm((current) => ({ ...current, tradingName: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SettingsField label="Entity type" htmlFor="entity-type">
+              <SelectControl
+                id="entity-type"
+                value={form.entityType}
+                onValueChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    entityType: value as SettingsForm["entityType"],
+                  }))
+                }
+                disabled={!canManageSettings || pending}
+                className={selectClassName}
+                options={[
+                  { value: "sole_proprietor", label: "Sole proprietor" },
+                  { value: "close_corporation", label: "Close corporation" },
+                  { value: "private_company", label: "Private company" },
+                  { value: "partnership", label: "Partnership" },
+                  { value: "ngo", label: "NGO" },
+                  { value: "other", label: "Other" },
+                ]}
+              />
+            </SettingsField>
+            <SettingsField label="Region" htmlFor="region">
+              <Input
+                id="region"
+                value={form.region}
+                onChange={(event) => setForm((current) => ({ ...current, region: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SettingsField label="Phone / WhatsApp" htmlFor="phone">
+              <Input
+                id="phone"
+                value={form.phone}
+                onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+            <SettingsField label="Tax ID" htmlFor="tax-id">
+              <Input
+                id="tax-id"
+                value={form.taxId}
+                onChange={(event) => setForm((current) => ({ ...current, taxId: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+          </div>
+
+          <SettingsField label="Business address" htmlFor="business-address">
+            <Textarea
+              id="business-address"
+              value={form.address}
+              onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))}
+              className={textareaClassName}
+            />
+          </SettingsField>
+        </FormSection>
+
+        <FormSection title="Invoice defaults">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SettingsField label="Default currency" htmlFor="default-currency">
+              <Input
+                id="default-currency"
+                value={form.defaultCurrency}
+                maxLength={3}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    defaultCurrency: event.target.value.toUpperCase(),
+                  }))
+                }
+                className={cn(inputClassName, "uppercase")}
+              />
+            </SettingsField>
+            <SettingsField label="Invoice prefix" htmlFor="invoice-prefix">
+              <Input
+                id="invoice-prefix"
+                value={form.invoicePrefix}
+                onChange={(event) => setForm((current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))}
+                className={cn(inputClassName, "uppercase")}
+              />
+            </SettingsField>
+          </div>
+
+          <SettingsField label="Default terms" htmlFor="default-terms">
+            <Input
+              id="default-terms"
+              value={form.defaultTerms}
+              onChange={(event) => setForm((current) => ({ ...current, defaultTerms: event.target.value }))}
+              className={inputClassName}
+            />
+          </SettingsField>
+        </FormSection>
+
+        <FormSection title="EFT bank details">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SettingsField label="Bank name" htmlFor="bank-name">
+              <Input
+                id="bank-name"
+                value={form.bankName}
+                onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+            <SettingsField label="Account name" htmlFor="bank-account-name">
+              <Input
+                id="bank-account-name"
+                value={form.bankAccountName}
+                onChange={(event) => setForm((current) => ({ ...current, bankAccountName: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+            <SettingsField label="Account number" htmlFor="bank-account-number">
+              <Input
+                id="bank-account-number"
+                value={form.bankAccountNumber}
+                onChange={(event) => setForm((current) => ({ ...current, bankAccountNumber: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+            <SettingsField label="Branch code" htmlFor="branch-code">
+              <Input
+                id="branch-code"
+                value={form.branchCode}
+                onChange={(event) => setForm((current) => ({ ...current, branchCode: event.target.value }))}
+                className={inputClassName}
+              />
+            </SettingsField>
+          </div>
+          <SettingsField label="SWIFT code" htmlFor="swift-code">
+            <Input
+              id="swift-code"
+              value={form.swiftCode}
+              onChange={(event) => setForm((current) => ({ ...current, swiftCode: event.target.value.toUpperCase() }))}
+              className={cn(inputClassName, "uppercase")}
+            />
+          </SettingsField>
+        </FormSection>
+
+        <FormSection title="Payment instructions">
+          <SettingsField label="Payment instructions" htmlFor="payment-instructions">
+            <Textarea
+              id="payment-instructions"
+              value={form.paymentInstructions}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  paymentInstructions: event.target.value,
+                }))
+              }
+              className={textareaClassName}
+            />
+          </SettingsField>
+
+          <SettingsField label="Default payment link" htmlFor="payment-link">
+            <Input
+              id="payment-link"
+              type="url"
+              value={form.paymentLink}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  paymentLink: event.target.value,
+                }))
+              }
+              placeholder="https://pay.example.com"
+              className={inputClassName}
+            />
+          </SettingsField>
+        </FormSection>
+
+        <Button
+          type="submit"
+          disabled={pending || pendingImage || !canManageSettings}
+          className="h-11 rounded-lg bg-neutral-950 px-5 text-base font-semibold !text-white hover:bg-neutral-800 hover:!text-white"
+        >
+          {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          Save settings
+        </Button>
+      </fieldset>
+    </form>
+  );
+}
+
+function FormSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-4 border-t border-border pt-6 first:border-t-0 first:pt-0">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function SettingsField({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="min-w-0 space-y-2">
+      <Label htmlFor={htmlFor} className="text-sm font-semibold text-foreground">
+        {label}
+      </Label>
+      {children}
+    </div>
   );
 }
 
@@ -991,7 +1602,7 @@ function roleDescription(role: MemberRole) {
   }
 
   if (role === "finance") {
-    return "Invoices, payments, VAT";
+    return "Invoices and payments";
   }
 
   if (role === "member") {
@@ -1003,396 +1614,4 @@ function roleDescription(role: MemberRole) {
 
 function memberInitial(value: string) {
   return (value.trim().slice(0, 1) || "P").toUpperCase();
-}
-
-function SettingsEditor({
-  workspace,
-  initialForm,
-  canManageSettings,
-}: {
-  workspace: Workspace | null;
-  initialForm: SettingsForm;
-  canManageSettings: boolean;
-}) {
-  const updateWorkspace = useMutation(api.invoices.updateWorkspace);
-  const [form, setForm] = useState<SettingsForm>(initialForm);
-  const [pending, setPending] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setNotice(null);
-    setError(null);
-
-    if (!canManageSettings) {
-      setError("Your role cannot change organization profile settings.");
-      return;
-    }
-
-    if (!/^[A-Z]{3}$/.test(form.defaultCurrency)) {
-      setError("Currency must be a 3-letter code.");
-      return;
-    }
-
-    const vatReturnDueDay = Math.min(28, Math.max(1, Number(form.vatReturnDueDay) || 25));
-    const vatRecordRetentionYears = Math.max(5, Number(form.vatRecordRetentionYears) || 5);
-
-    setPending(true);
-
-    try {
-      await updateWorkspace({
-        name: form.name,
-        legalName: form.legalName,
-        tradingName: form.tradingName,
-        entityType: form.entityType,
-        region: form.region,
-        address: form.address,
-        phone: form.phone,
-        taxId: form.taxId,
-        vatNumber: form.vatNumber,
-        vatRegistered: form.vatRegistered,
-        vatRegistrationType: form.vatRegistered
-          ? form.vatRegistrationType === "not_registered"
-            ? "mandatory"
-            : form.vatRegistrationType
-          : "not_registered",
-        vatFilingFrequency: form.vatFilingFrequency,
-        vatReturnDueDay,
-        vatRecordRetentionYears,
-        vatDefaultTaxMode: form.vatRegistered ? form.vatDefaultTaxMode : "no_vat",
-        vedEnabled: form.vatRegistered && form.vedEnabled,
-        vedTransmissionMode: form.vedTransmissionMode,
-        itasRegistered: form.itasRegistered,
-        defaultCurrency: form.defaultCurrency,
-        defaultTerms: form.defaultTerms,
-        invoicePrefix: form.invoicePrefix,
-        paymentInstructions: form.paymentInstructions,
-        paymentLink: form.paymentLink,
-        bankName: form.bankName,
-        bankAccountName: form.bankAccountName,
-        bankAccountNumber: form.bankAccountNumber,
-        branchCode: form.branchCode,
-        swiftCode: form.swiftCode,
-      });
-      setNotice(workspace ? "Settings saved." : "Workspace created.");
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error ? saveError.message : "Unable to save settings.",
-      );
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="db-settings-card db-settings-editor-card"
-    >
-      {notice ? (
-        <p className="db-settings-success">
-          <CheckCircle2 className="size-4 shrink-0" />
-          {notice}
-        </p>
-      ) : null}
-
-      {error ? <p className="db-settings-error">{error}</p> : null}
-
-      {!canManageSettings ? (
-        <p className="db-settings-warning">
-          <AlertTriangle className="size-4" />
-          Your role cannot change organization profile settings.
-        </p>
-      ) : null}
-
-      <fieldset disabled={!canManageSettings || pending} className="db-settings-editor-fields">
-      <SettingsField label="Workspace name" htmlFor="workspace-name">
-        <Input
-          id="workspace-name"
-          value={form.name}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              name: event.target.value,
-            }))
-          }
-          className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal"
-        />
-      </SettingsField>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SettingsField label="Legal name" htmlFor="legal-name">
-          <Input id="legal-name" value={form.legalName} onChange={(event) => setForm((current) => ({ ...current, legalName: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal" />
-        </SettingsField>
-        <SettingsField label="Trading name" htmlFor="trading-name">
-          <Input id="trading-name" value={form.tradingName} onChange={(event) => setForm((current) => ({ ...current, tradingName: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal" />
-        </SettingsField>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SettingsField label="Entity type" htmlFor="entity-type">
-          <select id="entity-type" value={form.entityType} onChange={(event) => setForm((current) => ({ ...current, entityType: event.target.value as SettingsForm["entityType"] }))} className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f1f1ee] px-3 text-[13px] outline-none">
-            <option value="sole_proprietor">Sole proprietor</option>
-            <option value="close_corporation">Close corporation</option>
-            <option value="private_company">Private company</option>
-            <option value="partnership">Partnership</option>
-            <option value="ngo">NGO</option>
-            <option value="other">Other</option>
-          </select>
-        </SettingsField>
-        <SettingsField label="Region" htmlFor="region">
-          <Input id="region" value={form.region} onChange={(event) => setForm((current) => ({ ...current, region: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal" />
-        </SettingsField>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SettingsField label="Phone / WhatsApp" htmlFor="phone">
-          <Input id="phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal" />
-        </SettingsField>
-        <SettingsField label="Tax ID" htmlFor="tax-id">
-          <Input id="tax-id" value={form.taxId} onChange={(event) => setForm((current) => ({ ...current, taxId: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal" />
-        </SettingsField>
-      </div>
-
-      <SettingsField label="Business address" htmlFor="business-address">
-        <textarea id="business-address" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} className="min-h-20 w-full resize-y rounded-lg border border-[#d7d7d1] bg-[#f1f1ee] px-3 py-2 text-[13px] font-normal outline-none transition-colors focus:border-[#009b68] focus:ring-2 focus:ring-[#009b68]/20" />
-      </SettingsField>
-
-      <div className="db-settings-form-section">
-        <label className="db-settings-toggle">
-          <input
-            type="checkbox"
-            checked={form.vatRegistered}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                vatRegistered: event.target.checked,
-                vatRegistrationType: event.target.checked ? "mandatory" : "not_registered",
-                vatDefaultTaxMode: event.target.checked ? "vat_15" : "no_vat",
-                vedEnabled: event.target.checked,
-              }))
-            }
-          />
-          VAT registered
-        </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SettingsField label="VAT number" htmlFor="vat-number">
-            <Input id="vat-number" value={form.vatNumber} onChange={(event) => setForm((current) => ({ ...current, vatNumber: event.target.value }))} disabled={!form.vatRegistered} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal disabled:text-[#9ca3af]" />
-          </SettingsField>
-          <SettingsField label="Registration type" htmlFor="vat-registration-type">
-            <select
-              id="vat-registration-type"
-              value={form.vatRegistrationType}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  vatRegistrationType: event.target.value as SettingsForm["vatRegistrationType"],
-                }))
-              }
-              disabled={!form.vatRegistered}
-              className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none disabled:text-[#9ca3af]"
-            >
-              <option value="not_registered">Not registered</option>
-              <option value="voluntary">Voluntary</option>
-              <option value="mandatory">Mandatory</option>
-            </select>
-          </SettingsField>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <SettingsField label="Default VAT mode" htmlFor="vat-default-tax-mode">
-            <select
-              id="vat-default-tax-mode"
-              value={form.vatRegistered ? form.vatDefaultTaxMode : "no_vat"}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  vatDefaultTaxMode: event.target.value as SettingsForm["vatDefaultTaxMode"],
-                }))
-              }
-              disabled={!form.vatRegistered}
-              className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none disabled:text-[#9ca3af]"
-            >
-              <option value="vat_15">VAT 15%</option>
-              <option value="zero_rated">Zero-rated</option>
-              <option value="exempt">Exempt</option>
-              <option value="no_vat">No VAT</option>
-            </select>
-          </SettingsField>
-          <SettingsField label="Filing frequency" htmlFor="vat-filing-frequency">
-            <select
-              id="vat-filing-frequency"
-              value={form.vatFilingFrequency}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  vatFilingFrequency: event.target.value as SettingsForm["vatFilingFrequency"],
-                }))
-              }
-              disabled={!form.vatRegistered}
-              className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none disabled:text-[#9ca3af]"
-            >
-              <option value="monthly">Monthly</option>
-              <option value="bi_monthly">Bi-monthly</option>
-            </select>
-          </SettingsField>
-          <SettingsField label="Return due day" htmlFor="vat-return-due-day">
-            <Input id="vat-return-due-day" inputMode="numeric" value={form.vatReturnDueDay} onChange={(event) => setForm((current) => ({ ...current, vatReturnDueDay: event.target.value }))} disabled={!form.vatRegistered} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal disabled:text-[#9ca3af]" />
-          </SettingsField>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <SettingsField label="Retention years" htmlFor="vat-retention-years">
-            <Input id="vat-retention-years" inputMode="numeric" value={form.vatRecordRetentionYears} onChange={(event) => setForm((current) => ({ ...current, vatRecordRetentionYears: event.target.value }))} disabled={!form.vatRegistered} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal disabled:text-[#9ca3af]" />
-          </SettingsField>
-          <SettingsField label="VAT transmission" htmlFor="ved-transmission-mode">
-            <select
-              id="ved-transmission-mode"
-              value={form.vedTransmissionMode}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  vedTransmissionMode: event.target.value as SettingsForm["vedTransmissionMode"],
-                }))
-              }
-              disabled={!form.vatRegistered}
-              className="h-10 rounded-lg border border-[#d7d7d1] bg-[#f6f6f4] px-3 text-[13px] outline-none disabled:text-[#9ca3af]"
-            >
-              <option value="manual_export">Manual export</option>
-              <option value="near_real_time">Near real-time</option>
-              <option value="real_time">Real-time</option>
-            </select>
-          </SettingsField>
-          <SettingsField label="ITAS profile" htmlFor="itas-registered">
-            <label className="db-settings-checkbox-row">
-              <input
-                id="itas-registered"
-                type="checkbox"
-                checked={form.itasRegistered}
-                disabled={!form.vatRegistered}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, itasRegistered: event.target.checked }))
-                }
-              />
-              Saved
-            </label>
-          </SettingsField>
-        </div>
-        <label className="db-settings-toggle db-settings-toggle-compact">
-          <input
-            type="checkbox"
-            checked={form.vatRegistered && form.vedEnabled}
-            disabled={!form.vatRegistered}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, vedEnabled: event.target.checked }))
-            }
-          />
-          Enable VAT records and ITAS export preparation
-        </label>
-      </div>
-
-      <SettingsField label="Default currency" htmlFor="default-currency">
-        <Input
-          id="default-currency"
-          value={form.defaultCurrency}
-          maxLength={3}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              defaultCurrency: event.target.value.toUpperCase(),
-            }))
-          }
-          className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal uppercase"
-        />
-      </SettingsField>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SettingsField label="Invoice prefix" htmlFor="invoice-prefix">
-          <Input id="invoice-prefix" value={form.invoicePrefix} onChange={(event) => setForm((current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))} className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal uppercase" />
-        </SettingsField>
-        <SettingsField label="Default terms" htmlFor="default-terms">
-          <Input id="default-terms" value={form.defaultTerms} onChange={(event) => setForm((current) => ({ ...current, defaultTerms: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal" />
-        </SettingsField>
-      </div>
-
-      <div className="db-settings-form-section">
-        <p className="db-settings-section-title">EFT bank details</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SettingsField label="Bank name" htmlFor="bank-name">
-            <Input id="bank-name" value={form.bankName} onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal" />
-          </SettingsField>
-          <SettingsField label="Account name" htmlFor="bank-account-name">
-            <Input id="bank-account-name" value={form.bankAccountName} onChange={(event) => setForm((current) => ({ ...current, bankAccountName: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal" />
-          </SettingsField>
-          <SettingsField label="Account number" htmlFor="bank-account-number">
-            <Input id="bank-account-number" value={form.bankAccountNumber} onChange={(event) => setForm((current) => ({ ...current, bankAccountNumber: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal" />
-          </SettingsField>
-          <SettingsField label="Branch code" htmlFor="branch-code">
-            <Input id="branch-code" value={form.branchCode} onChange={(event) => setForm((current) => ({ ...current, branchCode: event.target.value }))} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal" />
-          </SettingsField>
-        </div>
-        <SettingsField label="SWIFT code" htmlFor="swift-code">
-          <Input id="swift-code" value={form.swiftCode} onChange={(event) => setForm((current) => ({ ...current, swiftCode: event.target.value.toUpperCase() }))} className="h-10 border-[#d7d7d1] bg-[#f6f6f4] text-[13px] font-normal uppercase" />
-        </SettingsField>
-      </div>
-
-      <SettingsField label="Payment instructions" htmlFor="payment-instructions">
-        <textarea
-          id="payment-instructions"
-          value={form.paymentInstructions}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              paymentInstructions: event.target.value,
-            }))
-          }
-          className="min-h-28 w-full resize-y rounded-lg border border-[#d7d7d1] bg-[#f1f1ee] px-3 py-2 text-[13px] font-normal outline-none transition-colors focus:border-[#009b68] focus:ring-2 focus:ring-[#009b68]/20"
-        />
-      </SettingsField>
-
-      <SettingsField label="Default payment link" htmlFor="payment-link">
-        <Input
-          id="payment-link"
-          type="url"
-          value={form.paymentLink}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              paymentLink: event.target.value,
-            }))
-          }
-          placeholder="https://pay.example.com"
-          className="h-10 border-[#d7d7d1] bg-[#f1f1ee] text-[13px] font-normal"
-        />
-      </SettingsField>
-
-      <Button
-        type="submit"
-        disabled={pending || !canManageSettings}
-        className="db-primary-btn db-settings-save-btn"
-      >
-        {pending ? <Loader2 className="animate-spin" /> : <Save />}
-        Save settings
-      </Button>
-      </fieldset>
-    </form>
-  );
-}
-
-function SettingsField({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="db-settings-field">
-      <Label htmlFor={htmlFor} className="db-settings-field-label">
-        {label}
-      </Label>
-      {children}
-    </div>
-  );
 }

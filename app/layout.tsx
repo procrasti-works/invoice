@@ -1,14 +1,18 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import "./globals.css";
 import { ConvexClientProvider } from "./providers";
 import { PerformanceBoot } from "./_components/PerformanceBoot";
 import { PwaInstallPrompt } from "./_components/PwaInstallPrompt";
+import { themeBootstrapScript } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const geist = Geist({
   subsets: ["latin"],
+  display: "swap",
+  variable: "--font-geist",
 });
 
 const geistMono = Geist_Mono({
@@ -43,10 +47,6 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#fbfbfc",
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -55,9 +55,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={cn("h-full font-sans antialiased", geist.variable, geistMono.variable)}
     >
-      <body className="min-h-full">
+      <body className={cn("min-h-full bg-background text-foreground", geist.className)}>
+        <Script
+          id="payvio-theme-bootstrap"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeBootstrapScript }}
+        />
         <PerformanceBoot />
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>

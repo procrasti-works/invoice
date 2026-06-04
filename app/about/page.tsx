@@ -11,7 +11,7 @@ import {
   Landmark,
   ReceiptText,
   ShieldCheck,
-} from "lucide-react";
+} from "@/app/_components/IconPack";
 
 export const metadata: Metadata = {
   title: "About | Payvio",
@@ -66,45 +66,45 @@ const founders = [
 
 export default function AboutPage() {
   return (
-    <div className="il-page min-h-screen bg-white text-[#0d141c]">
+    <div className="il-page min-h-screen bg-background text-foreground">
       <MarketingHeader />
       <main>
-        <section className="bg-white px-5 py-20 text-center sm:px-8 sm:py-28">
-          <p className="mx-auto inline-flex rounded-full bg-[#c9ecff] px-5 py-2 text-sm font-black text-[#04120f]">
+        <section className="bg-background px-5 py-20 text-center sm:px-8 sm:py-28">
+          <p className="mx-auto inline-flex rounded-full bg-secondary px-5 py-2 text-sm font-semibold text-foreground">
             Built in Namibia
           </p>
-          <h1 className="mx-auto mt-8 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl">
+          <h1 className="mx-auto mt-8 max-w-5xl text-5xl font-semibold leading-[1.02] sm:text-7xl">
             Invoice software built for local businesses.
           </h1>
-          <p className="mx-auto mt-7 max-w-3xl text-xl font-medium leading-8 text-[#4e5961]">
+          <p className="mx-auto mt-7 max-w-3xl text-xl font-medium leading-8 text-muted-foreground">
             Payvio exists because too many businesses still manage invoices through
             paper, spreadsheets, and message threads. We are building a cleaner way
             to send invoices, track clients, and keep records ready.
           </p>
         </section>
 
-        <section className="border-y border-[#e4e8e0] bg-[#f8fbfa] px-5 py-10 sm:px-8">
+        <section className="border-y border-border bg-muted px-5 py-10 sm:px-8">
           <div className="mx-auto grid max-w-[1180px] gap-4 md:grid-cols-4">
             {stats.map(([value, label]) => (
-              <div className="rounded-[8px] border border-[#e4e8e0] bg-white p-5 text-center" key={label}>
-                <strong className="block text-3xl font-black text-[#0d141c]">{value}</strong>
-                <span className="mt-2 block text-sm font-bold text-[#687076]">{label}</span>
+              <div className="rounded-[8px] border border-border bg-background p-5 text-center" key={label}>
+                <strong className="block text-3xl font-semibold text-foreground">{value}</strong>
+                <span className="mt-2 block text-sm font-medium text-muted-foreground">{label}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="bg-white px-5 py-20 sm:px-8 sm:py-28">
+        <section className="bg-background px-5 py-20 sm:px-8 sm:py-28">
           <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-center">
             <div>
-              <p className="text-xs font-black uppercase text-[#0978e1]">Mission</p>
-              <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+              <p className="text-xs font-semibold uppercase text-primary">Mission</p>
+              <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
                 Make invoice operations simple enough for every SME.
               </h2>
             </div>
-            <div className="rounded-[8px] bg-[#f5f7f2] p-8 sm:p-10">
-              <Building2 aria-hidden="true" className="size-7 text-[#0978e1]" />
-              <p className="mt-6 text-lg font-medium leading-8 text-[#4e5961]">
+            <div className="rounded-[8px] bg-muted p-8 sm:p-10">
+              <Building2 aria-hidden="true" className="size-7 text-primary" />
+              <p className="mt-6 text-lg font-medium leading-8 text-muted-foreground">
                 Payvio gives local businesses a focused workspace for invoices,
                 clients, reminders, purchase records, reports, and VAT-ready totals.
                 The goal is not more software complexity. The goal is better records
@@ -114,11 +114,11 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="bg-[#f5f7f2] px-5 py-20 sm:px-8 sm:py-28">
+        <section className="bg-muted px-5 py-20 sm:px-8 sm:py-28">
           <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-start">
             <div>
-              <p className="text-xs font-black uppercase text-[#0978e1]">Values</p>
-              <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+              <p className="text-xs font-semibold uppercase text-primary">Values</p>
+              <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
                 The product should feel practical, local, and clear.
               </h2>
             </div>
@@ -126,10 +126,10 @@ export default function AboutPage() {
               {values.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <article className="rounded-[8px] border border-[#e4e8e0] bg-white p-5" key={item.title}>
-                    <Icon aria-hidden="true" className="size-6 text-[#0978e1]" strokeWidth={1.8} />
-                    <h3 className="mt-4 text-xl font-black">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-6 text-[#4e5961]">{item.body}</p>
+                  <article className="rounded-[8px] border border-border bg-background p-5" key={item.title}>
+                    <Icon aria-hidden="true" className="size-6 text-primary" strokeWidth={1.8} />
+                    <h3 className="mt-4 text-xl font-semibold">{item.title}</h3>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.body}</p>
                   </article>
                 );
               })}
@@ -137,31 +137,31 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="bg-white px-5 py-20 sm:px-8 sm:py-28">
+        <section className="bg-background px-5 py-20 sm:px-8 sm:py-28">
           <div className="mx-auto max-w-[1180px]">
             <div className="grid gap-7 lg:grid-cols-[0.78fr_1fr] lg:items-end">
               <div>
-                <p className="text-xs font-black uppercase text-[#0978e1]">Team</p>
-                <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+                <p className="text-xs font-semibold uppercase text-primary">Team</p>
+                <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
                   The people building Payvio.
                 </h2>
               </div>
-              <p className="max-w-xl text-lg leading-8 text-[#4e5961] lg:justify-self-end">
+              <p className="max-w-xl text-lg leading-8 text-muted-foreground lg:justify-self-end">
                 A small product team focused on making invoice work easier for
                 Namibian business owners.
               </p>
             </div>
             <div className="mt-10 grid gap-4 md:grid-cols-2">
               {founders.map((founder) => (
-                <article className="rounded-[8px] border border-[#e4e8e0] bg-white p-6" key={founder.name}>
+                <article className="rounded-[8px] border border-border bg-background p-6" key={founder.name}>
                   <div className="flex items-start gap-4">
-                    <span className="grid size-14 shrink-0 place-items-center rounded-[8px] bg-[#0978e1] text-lg font-black text-white">
+                    <span className="grid size-14 shrink-0 place-items-center rounded-[8px] bg-primary text-lg font-semibold text-primary-foreground">
                       {founder.initials}
                     </span>
                     <div>
-                      <h3 className="text-2xl font-black">{founder.name}</h3>
-                      <p className="mt-1 text-sm font-black text-[#0978e1]">{founder.role}</p>
-                      <p className="mt-4 text-sm leading-6 text-[#4e5961]">{founder.body}</p>
+                      <h3 className="text-2xl font-semibold">{founder.name}</h3>
+                      <p className="mt-1 text-sm font-semibold text-primary">{founder.role}</p>
+                      <p className="mt-4 text-sm leading-6 text-muted-foreground">{founder.body}</p>
                     </div>
                   </div>
                 </article>
@@ -170,15 +170,15 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="bg-[#0978e1] px-5 py-20 text-white sm:px-8 sm:py-28">
+        <section className="bg-primary px-5 py-20 text-primary-foreground sm:px-8 sm:py-28">
           <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[1fr_0.65fr] lg:items-center">
             <div>
-              <p className="text-xs font-black uppercase text-white/80">Next step</p>
-              <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] sm:text-7xl">
+              <p className="text-xs font-semibold uppercase text-primary-foreground/80">Next step</p>
+              <h2 className="mt-5 max-w-4xl text-4xl font-semibold leading-[1.02] sm:text-7xl">
                 Start with one clean invoice.
               </h2>
             </div>
-            <div className="grid gap-3 rounded-[8px] bg-white p-5">
+            <div className="grid gap-3 rounded-[8px] bg-background p-5">
               <Link className="il-dark-button" href="/signup">
                 Open workspace
                 <ArrowRight aria-hidden="true" className="size-4" />

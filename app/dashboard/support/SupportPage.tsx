@@ -12,10 +12,20 @@ import {
   Settings,
   ShieldCheck,
   UserCog,
-} from "lucide-react";
+} from "@/app/_components/IconPack";
 
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 type SupportState = {
   user: { name: string; email: string };
@@ -57,7 +67,7 @@ const supportTracks = [
   },
   {
     title: "VAT and compliance",
-    copy: "VAT settings, ITAS-ready exports, record checks, and supplier purchase capture.",
+    copy: "VAT settings, record checks, report exports, and supplier purchase capture.",
   },
   {
     title: "Security and billing",
@@ -71,6 +81,7 @@ const supportChecklist = [
   "Screenshot or exact error text",
   "What changed and what result you expected",
 ];
+const primaryButtonClass = "bg-primary text-primary-foreground hover:bg-primary/90";
 
 function roleLabel(role: string) {
   if (role === "owner") {
@@ -186,55 +197,56 @@ export function SupportPage() {
   }
 
   return (
-    <div className="db-page db-dashboard-page db-support-page">
-      <section className="db-workview">
-        <div className="db-workview-head">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="db-breadcrumb">
-              Payvio <span>/</span> Support
-            </p>
-            <h1 className="db-workview-title">Support</h1>
+            <p className="text-sm text-muted-foreground">Payvio / Support</p>
+            <h1 className="text-2xl font-semibold tracking-tight">Support</h1>
           </div>
-          <a className="db-primary-btn db-support-primary" href={primaryMailto}>
-            <Mail className="size-4" />
-            Email support
-          </a>
+          <Button asChild className={primaryButtonClass}>
+            <a href={primaryMailto}>
+              <Mail className="size-4" />
+              Email support
+            </a>
+          </Button>
         </div>
 
-        <div className="db-support-hero">
-          <div>
-            <span className="db-support-hero-icon">
-              <LifeBuoy className="size-5" />
-            </span>
-            <h2>Support desk</h2>
-            <p>
-              Email Payvio for product issues. Use workspace admins for access
-              and role changes.
-            </p>
-          </div>
-          <div className="db-support-hero-meta">
-            <span>{workspaceName}</span>
-            <strong>{currentRole}</strong>
-          </div>
-        </div>
-
-        <div className="db-support-grid">
-          <section className="db-card db-support-card db-support-contact-card">
-            <div className="db-support-card-head">
-              <div>
-                <p className="db-panel-kicker">Contact</p>
-                <h2>Payvio support</h2>
-              </div>
-              <MessageSquareText className="size-4" />
+        <Card>
+          <CardHeader className="gap-4 sm:flex sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <LifeBuoy className="size-5" />
+                Support desk
+              </CardTitle>
+              <CardDescription>Email Payvio for product issues. Ask admins for access changes.</CardDescription>
             </div>
-            <div className="db-support-contact-list">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">{workspaceName}</Badge>
+              <Badge variant="outline">{currentRole}</Badge>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquareText className="size-4" />
+                  Payvio support
+                </CardTitle>
+                <CardDescription>Contact one of the support leads.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-3">
               {supportTeam.map((person) => (
-                <article className="db-support-person" key={person.email}>
-                  <span className="db-support-avatar">{person.initials}</span>
-                  <div>
-                    <strong>{person.name}</strong>
-                    <small>{person.role}</small>
-                    <a href={buildMailto({
+                <article className="flex items-center gap-3 rounded-lg border p-3" key={person.email}>
+                  <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-sm font-medium">{person.initials}</span>
+                  <div className="min-w-0">
+                    <div className="font-medium">{person.name}</div>
+                    <div className="text-xs text-muted-foreground">{person.role}</div>
+                    <a className="break-all text-sm text-muted-foreground hover:text-foreground" href={buildMailto({
                       to: person.email,
                       workspaceName,
                       userEmail,
@@ -245,37 +257,41 @@ export function SupportPage() {
                   </div>
                 </article>
               ))}
-            </div>
-          </section>
+            </CardContent>
+          </Card>
 
-          <section className="db-card db-support-card">
-            <div className="db-support-card-head">
+          <Card>
+            <CardHeader>
               <div>
-                <p className="db-panel-kicker">Details</p>
-                <h2>Support packet</h2>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="size-4" />
+                  Support packet
+                </CardTitle>
+                <CardDescription>Copy these details when reporting an issue.</CardDescription>
               </div>
-              <ShieldCheck className="size-4" />
-            </div>
-            <div className="db-support-info-list">
-              <div>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <span>Workspace</span>
-                <strong>{workspaceName}</strong>
+                <strong className="text-right">{workspaceName}</strong>
               </div>
-              <div>
+              <div className="flex items-center justify-between gap-3">
                 <span>Your email</span>
-                <strong>{userEmail || "Not available"}</strong>
+                <strong className="text-right">{userEmail || "Not available"}</strong>
               </div>
-              <div>
+              <div className="flex items-center justify-between gap-3">
                 <span>Your role</span>
                 <strong>{currentRole}</strong>
               </div>
-              <div>
+              <div className="flex items-center justify-between gap-3">
                 <span>Currency</span>
                 <strong>{state?.organization.defaultCurrency ?? "NAD"}</strong>
               </div>
             </div>
-            <button
-              className="db-outline-btn db-support-copy"
+            <Separator />
+            <Button
+              variant="outline"
               type="button"
               disabled={!state}
               onClick={copySupportDetails}
@@ -286,89 +302,96 @@ export function SupportPage() {
                 <Copy className="size-4" />
               )}
               {copied ? "Copied" : "Copy details"}
-            </button>
-          </section>
+            </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="db-support-grid db-support-grid-wide">
-          <section className="db-card db-support-card db-support-wide">
-            <div className="db-support-card-head">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <Card>
+            <CardHeader>
               <div>
-                <p className="db-panel-kicker">Standard support</p>
-                <h2>What to include</h2>
+                <CardTitle className="flex items-center gap-2">
+                  <LifeBuoy className="size-4" />
+                  What to include
+                </CardTitle>
+                <CardDescription>Send the basics first.</CardDescription>
               </div>
-              <LifeBuoy className="size-4" />
-            </div>
-            <div className="db-support-checklist">
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
               {supportChecklist.map((item) => (
-                <div key={item}>
+                <div className="flex items-center gap-2 rounded-lg border p-3 text-sm" key={item}>
                   <CheckCircle2 className="size-4" />
                   <span>{item}</span>
                 </div>
               ))}
-            </div>
-          </section>
+            </CardContent>
+          </Card>
 
-          <section className="db-card db-support-card">
-            <div className="db-support-card-head">
+          <Card>
+            <CardHeader>
               <div>
-                <p className="db-panel-kicker">Admins</p>
-                <h2>Workspace contacts</h2>
+                <CardTitle className="flex items-center gap-2">
+                  <UserCog className="size-4" />
+                  Workspace contacts
+                </CardTitle>
+                <CardDescription>Admins can help with access.</CardDescription>
               </div>
-              <UserCog className="size-4" />
-            </div>
-            <div className="db-support-admin-list">
+            </CardHeader>
+            <CardContent className="grid gap-3">
               {state === undefined ? (
-                <span className="db-support-empty-row">Loading admins...</span>
+                <span className="text-sm text-muted-foreground">Loading admins...</span>
               ) : ownerAndAdmins.length > 0 ? (
                 ownerAndAdmins.map((member) => (
-                  <article className="db-support-admin" key={member.membership._id}>
-                    <span className="db-support-avatar">
+                  <article className="flex items-center gap-3 rounded-lg border p-3" key={member.membership._id}>
+                    <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-sm font-medium">
                       {memberInitial(member.user.email || member.user.name)}
                     </span>
-                    <div>
-                      <strong>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">
                         {member.user.name || member.user.email || "Workspace admin"}
-                      </strong>
-                      <small>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
                         {roleLabel(member.membership.role)}
                         {member.current ? " - you" : ""}
-                      </small>
+                      </div>
                     </div>
                     {member.user.email ? (
-                      <a href={`mailto:${member.user.email}`}>
-                        <Mail className="size-4" />
-                      </a>
+                      <Button asChild variant="outline" size="icon">
+                        <a href={`mailto:${member.user.email}`} aria-label="Email admin">
+                          <Mail className="size-4" />
+                        </a>
+                      </Button>
                     ) : null}
                   </article>
                 ))
               ) : (
-                <span className="db-support-empty-row">No admins found.</span>
+                <span className="text-sm text-muted-foreground">No admins found.</span>
               )}
-            </div>
-            <Link href="/dashboard/settings" className="db-outline-btn db-support-copy">
-              <Settings className="size-4" />
-              Manage access
-            </Link>
-          </section>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/settings">
+                  <Settings className="size-4" />
+                  Manage access
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        <section className="db-card db-support-card db-support-wide">
-          <div className="db-support-card-head">
-            <div>
-              <p className="db-panel-kicker">Topics</p>
-              <h2>Support areas</h2>
-            </div>
-          </div>
-          <div className="db-support-track-grid">
+        <Card>
+          <CardHeader>
+            <CardTitle>Support areas</CardTitle>
+            <CardDescription>Pick the closest topic.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {supportTracks.map((track) => (
-              <article key={track.title}>
-                <strong>{track.title}</strong>
-                <span>{track.copy}</span>
+              <article className="rounded-lg border p-4" key={track.title}>
+                <div className="font-medium">{track.title}</div>
+                <p className="mt-2 text-sm text-muted-foreground">{track.copy}</p>
               </article>
             ))}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

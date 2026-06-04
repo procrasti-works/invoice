@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
-import { CheckCircle2, Loader2, Mail, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2, Mail, ShieldCheck } from "@/app/_components/IconPack";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -40,10 +40,10 @@ export function JoinInvitationPage({ token }: { token: string }) {
   if (!invitation) {
     return (
       <JoinShell>
-        <section className="grid gap-4 rounded-xl border border-[#e6e7ec] bg-white p-4 shadow-sm">
+        <section className="grid gap-4 rounded-xl border border-border bg-background p-4 shadow-sm">
           <Badge variant="destructive">Invalid link</Badge>
-          <h1 className="text-xl font-semibold text-[#17181c]">Invitation not found</h1>
-          <p className="text-sm leading-6 text-[#6f727b]">
+          <h1 className="text-xl font-semibold text-foreground">Invitation not found</h1>
+          <p className="text-sm leading-6 text-muted-foreground">
             Ask your organization owner to send a fresh invite.
           </p>
         </section>
@@ -62,61 +62,61 @@ export function JoinInvitationPage({ token }: { token: string }) {
     <JoinShell>
       <div className="grid gap-5">
         <header className="grid justify-items-center gap-4 text-center">
-          <div className="grid size-12 place-items-center rounded-2xl border border-[#e6e7ec] bg-white shadow-sm">
-            <PayvioMark className="size-8 text-[#009b68]" />
+          <div className="grid size-12 place-items-center rounded-2xl border border-border bg-background shadow-sm">
+            <PayvioMark className="size-8 text-primary" />
           </div>
           <div className="grid gap-1">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#868891]">
+            <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
               Workspace invitation
             </p>
-            <h1 className="text-[1.55rem] font-semibold leading-tight text-[#17181c]">
+            <h1 className="text-[1.55rem] font-semibold leading-tight text-foreground">
               Join {invitation.organizationName}
             </h1>
-            <p className="text-sm leading-6 text-[#6f727b]">
+            <p className="text-sm leading-6 text-muted-foreground">
               This invite is for {invitation.email} with {roleLabel(invitation.role)}
               {" "}access.
             </p>
           </div>
         </header>
 
-        <section className="grid gap-4 rounded-xl border border-[#e6e7ec] bg-white p-4 shadow-sm">
-          <div className="flex items-start gap-3 rounded-lg border border-[#e6e7ec] bg-[#fbfbfc] p-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#eff6f3] text-[#25745a]">
+        <section className="grid gap-4 rounded-xl border border-border bg-background p-4 shadow-sm">
+          <div className="flex items-start gap-3 rounded-lg border border-border bg-muted p-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-primary">
               <ShieldCheck className="size-4" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[#17181c]">
+              <p className="truncate text-sm font-medium text-foreground">
                 {invitation.organizationName}
               </p>
-              <p className="text-xs text-[#6f727b]">
+              <p className="text-xs text-muted-foreground">
                 {roleLabel(invitation.role)} access
               </p>
             </div>
           </div>
 
         {inactive ? (
-          <p className="rounded-lg border border-[#ffc7d1] bg-[#fff0f3] p-3 text-sm text-[#a51f43]">
+          <p className="rounded-lg border border-destructive/30 bg-[var(--danger-soft)] p-3 text-sm text-destructive">
             This invitation is {invitation.status}. Ask for a new invite.
           </p>
         ) : null}
 
         {error ? (
-          <p className="rounded-lg border border-[#ffc7d1] bg-[#fff0f3] p-3 text-sm text-[#a51f43]">
+          <p className="rounded-lg border border-destructive/30 bg-[var(--danger-soft)] p-3 text-sm text-destructive">
             {error}
           </p>
         ) : null}
 
         {!user ? (
-          <div className="grid gap-3 rounded-lg border border-[#deded8] bg-[#f6f6f4] p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[#505258]">
-              <Mail className="size-4 text-[#009b68]" />
+          <div className="grid gap-3 rounded-lg border border-border bg-muted p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <Mail className="size-4 text-primary" />
               Sign in to accept
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button asChild className="bg-[#17181c] text-white hover:bg-[#2a2c33]">
+              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <Link href={`/login?next=${next}`}>Login</Link>
               </Button>
-              <Button asChild variant="outline" className="border-[#deded8] bg-white">
+              <Button asChild variant="outline" className="border-border bg-background">
                 <Link href={`/signup?next=${next}`}>Create account</Link>
               </Button>
             </div>
@@ -124,7 +124,7 @@ export function JoinInvitationPage({ token }: { token: string }) {
         ) : (
           <div className="grid gap-3">
             {!emailMatches ? (
-              <p className="rounded-lg border border-[#f7e09b] bg-[#fff9df] p-3 text-sm text-[#7d6000]">
+              <p className="rounded-lg border border-[color:var(--warning)]/30 bg-[var(--warning-soft)] p-3 text-sm text-[var(--warning)]">
                 You are signed in as {user.email ?? "another account"}. Use{" "}
                 {invitation.email} to accept this invitation.
               </p>
@@ -133,7 +133,7 @@ export function JoinInvitationPage({ token }: { token: string }) {
               type="button"
               disabled={pending || inactive || !emailMatches}
               onClick={handleAccept}
-              className="h-10 w-full bg-[#17181c] text-white hover:bg-[#2a2c33]"
+              className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {pending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
               Join workspace
@@ -154,15 +154,15 @@ function JoinShell({
   loading?: boolean;
 }) {
   return (
-    <main className="grid min-h-dvh place-items-center bg-[#fbfbfc] px-4 py-6 text-[#17181c]">
+    <main className="grid min-h-dvh place-items-center bg-muted px-4 py-6 text-foreground">
       <div className="grid w-full max-w-[420px]">
         {loading ? (
           <div className="grid justify-items-center gap-3 text-center">
-            <div className="grid size-12 place-items-center rounded-2xl border border-[#e6e7ec] bg-white shadow-sm">
-              <PayvioMark className="size-8 text-[#009b68]" />
+            <div className="grid size-12 place-items-center rounded-2xl border border-border bg-background shadow-sm">
+              <PayvioMark className="size-8 text-primary" />
             </div>
-            <Loader2 className="size-5 animate-spin text-[#17181c]" />
-            <p className="text-sm text-[#6f727b]">Loading invitation...</p>
+            <Loader2 className="size-5 animate-spin text-foreground" />
+            <p className="text-sm text-muted-foreground">Loading invitation...</p>
           </div>
         ) : (
           children

@@ -11,8 +11,6 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     display_override: ["window-controls-overlay", "standalone", "browser"],
-    background_color: "#fbfbfc",
-    theme_color: "#fbfbfc",
     categories: ["business", "finance", "productivity"],
     icons: [
       {
@@ -45,7 +43,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "New invoice",
         short_name: "Invoice",
         description: "Create a Payvio invoice.",
-        url: "/dashboard#new-invoice",
+        url: "/dashboard/invoices/create",
         icons: [{ src: "/payvio-app-icon-192.png", sizes: "192x192" }],
       },
       {

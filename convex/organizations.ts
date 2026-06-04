@@ -15,6 +15,10 @@ import {
   normalizeOrganizationPermissionPolicy,
   organizationPermissionPolicyValidator,
 } from "./organizationPermissions";
+import {
+  organizationWithImageUrl,
+  validateOrganizationImageStorage,
+} from "./organizationImages";
 
 const dayMs = 1000 * 60 * 60 * 24;
 const trialDays = 14;
@@ -175,8 +179,6 @@ async function createOrganizationMembership(
     vatRecordRetentionYears: 5,
     vatDefaultTaxMode: vatRegistered ? "vat_15" : "no_vat",
     vedEnabled: vatRegistered,
-    vedTransmissionMode: "manual_export",
-    itasRegistered: false,
     ownerUserId: userId,
     defaultCurrency: cleanCurrency(input.defaultCurrency),
     paymentInstructions: defaultPaymentInstructions,
@@ -332,17 +334,23 @@ export const switcherState = query({
     const pendingInvitations = email
       ? await pendingInvitationsForEmail(ctx, email)
       : [];
+    const currentOrganization = current.organization
+      ? await organizationWithImageUrl(ctx, current.organization)
+      : null;
+    const organizationRows = await Promise.all(
+      memberships.map(async (item) => ({
+        membership: item.membership,
+        organization: await organizationWithImageUrl(ctx, item.organization),
+        active: item.organization._id === current.organization?._id,
+      })),
+    );
 
     return {
       authenticated: true,
       user,
       membership: current.membership,
-      organization: current.organization,
-      organizations: memberships.map((item) => ({
-        membership: item.membership,
-        organization: item.organization,
-        active: item.organization._id === current.organization?._id,
-      })),
+      organization: currentOrganization,
+      organizations: organizationRows,
       pendingInvitations,
     };
   },
@@ -353,6 +361,7 @@ export const settingsState = query({
   handler: async (ctx) => {
     const { userId, user } = await requireUser(ctx);
     const { membership, organization } = await requireOrganization(ctx, userId);
+    const organizationWithImage = await organizationWithImageUrl(ctx, organization);
     const permissionPolicy = normalizeOrganizationPermissionPolicy(
       organization.permissionPolicy,
     );
@@ -404,7 +413,7 @@ export const settingsState = query({
         email: typeof user.email === "string" ? user.email : "",
       },
       membership,
-      organization,
+      organization: organizationWithImage,
       permissionPolicy,
       permissions,
       members,
@@ -414,6 +423,87 @@ export const settingsState = query({
         expired: invitation.expiresAt <= Date.now(),
       })),
     };
+  },
+});
+
+export const generateOrganizationImageUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { userId } = await requireUser(ctx);
+    const { membership, organization } = await requireOrganization(ctx, userId);
+
+    if (!membershipCan(membership, organization, "manageSettings")) {
+      throw new Error("You do not have permission to change organization settings");
+    }
+
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const updateOrganizationImage = mutation({
+  args: {
+    storageId: v.id("_storage"),
+    fileName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireUser(ctx);
+    const { membership, organization } = await requireOrganization(ctx, userId);
+
+    if (!membershipCan(membership, organization, "manageSettings")) {
+      throw new Error("You do not have permission to change organization settings");
+    }
+
+    await validateOrganizationImageStorage(ctx, args.storageId);
+
+    const now = Date.now();
+    const previousImageStorageId = organization.imageStorageId;
+
+    await ctx.db.patch(organization._id, {
+      imageStorageId: args.storageId,
+      imageFileName: maybeString(args.fileName),
+      imageUpdatedAt: now,
+      updatedAt: now,
+    });
+
+    if (
+      previousImageStorageId &&
+      previousImageStorageId !== args.storageId
+    ) {
+      await ctx.storage.delete(previousImageStorageId);
+    }
+
+    const updated = await ctx.db.get(organization._id);
+
+    return updated ? await organizationWithImageUrl(ctx, updated) : null;
+  },
+});
+
+export const removeOrganizationImage = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { userId } = await requireUser(ctx);
+    const { membership, organization } = await requireOrganization(ctx, userId);
+
+    if (!membershipCan(membership, organization, "manageSettings")) {
+      throw new Error("You do not have permission to change organization settings");
+    }
+
+    const previousImageStorageId = organization.imageStorageId;
+
+    await ctx.db.patch(organization._id, {
+      imageStorageId: undefined,
+      imageFileName: undefined,
+      imageUpdatedAt: undefined,
+      updatedAt: Date.now(),
+    });
+
+    if (previousImageStorageId) {
+      await ctx.storage.delete(previousImageStorageId);
+    }
+
+    const updated = await ctx.db.get(organization._id);
+
+    return updated ? await organizationWithImageUrl(ctx, updated) : null;
   },
 });
 

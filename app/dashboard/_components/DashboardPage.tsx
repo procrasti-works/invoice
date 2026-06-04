@@ -1,57 +1,67 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
-import { useConvex, useMutation, useQuery } from "convex/react";
-import { Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import {
+  Banknote,
+  Bell,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Eye,
+  ExternalLink,
+  FileText,
+  Loader2,
+  MoreHorizontal,
+  ReceiptText,
+  Search,
+  Send,
+  Trash2,
+  WalletCards,
+  XCircle,
+} from "@/app/_components/IconPack";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 type Invoice = Doc<"invoices">;
 type Client = Doc<"clients">;
-type InvoiceLineItem = Doc<"invoiceLineItems">;
 type InvoiceEvent = Doc<"invoiceEvents">;
+type InvoiceLineItem = Doc<"invoiceLineItems">;
 type PaymentProof = Doc<"paymentProofs">;
 type InvoiceStatus = Invoice["status"];
+type ViewFilter = "all" | "paid" | "overdue" | "pending" | "draft";
+type SortKey = "created" | "due";
+
 type InvoiceRow = {
   invoice: Invoice;
   client: Client | null;
   events: InvoiceEvent[];
   lineItems: InvoiceLineItem[];
   paymentProofs?: PaymentProof[];
-};
-type PaymentProofRow = {
-  proof: PaymentProof;
-  invoice: Invoice | null;
-  proofFileUrl?: string | null;
-};
-type DraftLineItem = {
-  id: string;
-  description: string;
-  quantity: string;
-  unitPrice: string;
-};
-type TaxMode = "no_vat" | "vat_15" | "zero_rated" | "exempt";
-type ViewFilter =
-  | "all"
-  | "drafts"
-  | "sent"
-  | "approved"
-  | "rejected"
-  | "overdue"
-  | "paid";
-
-type EmailDraft = {
-  to: string;
-  subject: string;
-  body: string;
-  gmailHref: string;
-  mailtoHref: string;
-  whatsappHref: string;
 };
 
 const statusLabels: Record<InvoiceStatus, string> = {
@@ -67,56 +77,89 @@ const statusLabels: Record<InvoiceStatus, string> = {
   void: "Void",
 };
 
-const statusToneClasses: Record<InvoiceStatus, string> = {
-  draft: "db-status-neutral",
-  ready: "db-status-info",
-  sent: "db-status-info",
-  viewed: "db-status-info",
-  approved: "db-status-success",
-  awaiting_payment: "db-status-warning",
-  rejected: "db-status-danger",
-  paid: "db-status-success",
-  overdue: "db-status-danger",
-  void: "db-status-neutral",
-};
-
 function formatMoney(amount: number, currency = "NAD") {
   try {
     return new Intl.NumberFormat("en-NA", {
-      style: "currency",
       currency,
       maximumFractionDigits: 2,
+      style: "currency",
     }).format(amount);
   } catch {
     return `${currency} ${amount.toFixed(2)}`;
   }
 }
 
-function defaultDueDate() {
-  return new Date(Date.now() + 1000 * 60 * 60 * 24 * 14)
-    .toISOString()
-    .slice(0, 10);
+function invoiceTotal(invoice: Invoice) {
+  return invoice.total ?? invoice.amountTotal ?? invoice.amount ?? 0;
 }
 
-function isClientActive(status: InvoiceStatus) {
-  return (
-    status === "sent" ||
-    status === "viewed" ||
-    status === "approved" ||
-    status === "awaiting_payment" ||
-    status === "overdue"
-  );
+function invoiceBalance(invoice: Invoice) {
+  return invoice.balanceDue ?? (invoice.status === "paid" ? 0 : invoiceTotal(invoice));
 }
 
-function emailHref(to: string, subject: string, body: string) {
-  return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+function isActiveInvoice(status: InvoiceStatus) {
+  return ["sent", "viewed", "approved", "awaiting_payment", "overdue"].includes(status);
 }
 
-function gmailHref(to: string, subject: string, body: string) {
+function isDraftInvoice(status: InvoiceStatus) {
+  return status === "draft" || status === "ready";
+}
+
+function isPendingInvoice(status: InvoiceStatus) {
+  return ["sent", "viewed", "approved", "awaiting_payment", "rejected"].includes(status);
+}
+
+function formatDate(value?: string, fallbackTime?: number) {
+  const date = value
+    ? new Date(`${value}T00:00:00`)
+    : fallbackTime
+      ? new Date(fallbackTime)
+      : null;
+
+  if (!date || Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function dateValue(value?: string, fallbackTime = 0) {
+  if (!value) {
+    return fallbackTime;
+  }
+
+  const time = new Date(`${value}T00:00:00`).getTime();
+  return Number.isNaN(time) ? fallbackTime : time;
+}
+
+function metricPercent(value: number, max: number) {
+  if (max <= 0 || value <= 0) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, Math.round((value / max) * 100)));
+}
+
+function buildInvoiceEmail(invoice: Invoice, invoiceUrl: string, senderName: string) {
+  const clientName = invoice.clientName ?? invoice.client ?? "there";
+  const subject = `${invoice.invoiceNumber} from ${senderName}`;
+  const body = [
+    `Hi ${clientName},`,
+    "",
+    `Please review ${invoice.invoiceNumber}:`,
+    invoiceUrl,
+    "",
+    "Thanks,",
+    senderName,
+  ].join("\n");
   const params = new URLSearchParams({
     view: "cm",
     fs: "1",
-    to,
+    to: invoice.clientEmail ?? "",
     su: subject,
     body,
   });
@@ -124,1324 +167,842 @@ function gmailHref(to: string, subject: string, body: string) {
   return `https://mail.google.com/mail/?${params.toString()}`;
 }
 
-function whatsappHref(subject: string, body: string) {
-  return `https://wa.me/?text=${encodeURIComponent(`${subject}\n\n${body}`)}`;
-}
-
-function invoiceDisplayTotal(invoice: Invoice) {
-  return invoice.total ?? invoice.amountTotal ?? invoice.amount ?? 0;
-}
-
-function taxModeLabel(taxMode: TaxMode) {
-  if (taxMode === "vat_15") {
-    return "VAT 15%";
-  }
-
-  if (taxMode === "zero_rated") {
-    return "Zero-rated";
-  }
-
-  if (taxMode === "exempt") {
-    return "Exempt";
-  }
-
-  return "No VAT";
-}
-
-function newLineItem(): DraftLineItem {
-  return {
-    id: crypto.randomUUID(),
-    description: "",
-    quantity: "1",
-    unitPrice: "0",
-  };
-}
-
-function buildEmailDraft(invoice: Invoice, invoiceUrl: string, senderName: string) {
-  const clientName = invoice.clientName ?? invoice.client ?? "there";
-  const subject = `${invoice.invoiceNumber} from ${senderName}`;
-  const reviewCopy = invoice.requiresApproval
-    ? "Approve the invoice if everything looks correct. Approval does not mark it paid; payment stays due by the agreed terms."
-    : "Please review the invoice and arrange payment by the agreed terms.";
-  const body = [
-    `Hi ${clientName},`,
-    "",
-    `Please review ${invoice.invoiceNumber} here:`,
-    invoiceUrl,
-    "",
-    reviewCopy,
-    "",
-    "Thanks,",
-    senderName,
-  ].join("\n");
-
-  return {
-    to: invoice.clientEmail ?? "",
-    subject,
-    body,
-    gmailHref: gmailHref(invoice.clientEmail ?? "", subject, body),
-    mailtoHref: emailHref(invoice.clientEmail ?? "", subject, body),
-    whatsappHref: whatsappHref(subject, body),
-  };
-}
-
-function buildFollowUpDraft(
-  invoice: Invoice,
-  invoiceUrl: string,
-  senderName: string,
-  kind: "reminder" | "overdue",
-) {
-  const clientName = invoice.clientName ?? invoice.client ?? "there";
-  const invoiceTotal = formatMoney(
-    invoiceDisplayTotal(invoice),
-    invoice.currency ?? "NAD",
-  );
-  const subject =
-    kind === "overdue"
-      ? `Overdue invoice ${invoice.invoiceNumber}`
-      : `Reminder: ${invoice.invoiceNumber}`;
-  const body =
-    kind === "overdue"
-      ? [
-          `Hi ${clientName},`,
-          "",
-          `${invoice.invoiceNumber} for ${invoiceTotal} is now overdue.`,
-          `You can review the invoice here: ${invoiceUrl}`,
-          "",
-          "Please arrange payment or reply if anything needs attention.",
-          "",
-          "Thanks,",
-          senderName,
-        ].join("\n")
-      : [
-          `Hi ${clientName},`,
-          "",
-          `Just a quick reminder about ${invoice.invoiceNumber} for ${invoiceTotal}, due ${invoice.dueDate}.`,
-          `You can review the invoice here: ${invoiceUrl}`,
-          "",
-          "Please approve it if everything looks correct, or reply with any questions.",
-          "",
-          "Thanks,",
-          senderName,
-        ].join("\n");
-
-  return {
-    to: invoice.clientEmail ?? "",
-    subject,
-    body,
-    gmailHref: gmailHref(invoice.clientEmail ?? "", subject, body),
-    mailtoHref: emailHref(invoice.clientEmail ?? "", subject, body),
-    whatsappHref: whatsappHref(subject, body),
-  };
-}
-
 export function DashboardPage() {
-  const convex = useConvex();
-  const invoiceRows = useQuery(api.invoices.list);
-  const stats = useQuery(api.invoices.stats);
-  const workspace = useQuery(api.invoices.workspace);
-  const clientRows = useQuery(api.invoices.listClients) as Client[] | undefined;
-  const createDraft = useMutation(api.invoices.createDraft);
-  const amendInvoice = useMutation(api.invoices.amend);
+  const overview = useQuery(api.invoices.dashboardOverview);
+  const invoiceRows = overview?.rows;
+  const stats = overview?.stats;
+  const workspace = overview?.workspace;
   const sendInvoice = useMutation(api.invoices.send);
   const markSent = useMutation(api.invoices.markSent);
   const markPaid = useMutation(api.invoices.markPaid);
   const scheduleReminder = useMutation(api.invoices.scheduleReminder);
   const updateStatus = useMutation(api.invoices.updateStatus);
-  const proofRows = useQuery(api.invoices.listPaymentProofs, { status: "submitted" });
+  const voidInvoice = useMutation(api.invoices.voidInvoice);
   const reviewPaymentProof = useMutation(api.invoices.reviewPaymentProof);
 
   const [activeView, setActiveView] = useState<ViewFilter>("all");
-  const [selectedClientId, setSelectedClientId] = useState<Id<"clients"> | null>(null);
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
-  const [clientAddress, setClientAddress] = useState("");
-  const [draftLineItems, setDraftLineItems] = useState<DraftLineItem[]>([
-    {
-      id: crypto.randomUUID(),
-      description: "Monthly service invoice",
-      quantity: "1",
-      unitPrice: "1250",
-    },
-  ]);
-  const [taxMode, setTaxMode] = useState<TaxMode>("vat_15");
-  const [dueDate, setDueDate] = useState(defaultDueDate);
-  const [paymentLink, setPaymentLink] = useState("");
-  const [paymentInstructions, setPaymentInstructions] = useState("");
-  const [terms, setTerms] = useState("Due on receipt unless otherwise agreed.");
-  const [notes, setNotes] = useState("Thank you for your business.");
-  const [requiresApproval, setRequiresApproval] = useState(false);
-  const [editingInvoiceId, setEditingInvoiceId] = useState<Id<"invoices"> | null>(null);
-  const [taxModeTouched, setTaxModeTouched] = useState(false);
-  const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const [clientLink, setClientLink] = useState<string | null>(null);
-  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortKey>("created");
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(() => new Set());
+  const [pendingAction, setPendingAction] = useState("");
+  const [notice, setNotice] = useState("");
 
   const rows = useMemo(() => (invoiceRows ?? []) as InvoiceRow[], [invoiceRows]);
-  const activeClients = useMemo(
-    () => (clientRows ?? []).filter((client) => client.active ?? true),
-    [clientRows],
-  );
-  const selectedClient = useMemo(
-    () => activeClients.find((client) => client._id === selectedClientId) ?? null,
-    [activeClients, selectedClientId],
-  );
-  const pendingProofRows = useMemo(
-    () => (proofRows ?? []) as PaymentProofRow[],
-    [proofRows],
-  );
-  const vatRegistered = workspace?.vatRegistered ?? false;
-  const defaultTaxMode = vatRegistered
-    ? workspace?.vatDefaultTaxMode ?? "vat_15"
-    : "no_vat";
-  const effectiveTaxMode = vatRegistered
-    ? editingInvoiceId || taxModeTouched
-      ? taxMode
-      : defaultTaxMode
-    : "no_vat";
+  const currency = workspace?.defaultCurrency ?? "NAD";
 
   const filteredRows = useMemo(() => {
-    if (activeView === "drafts") {
-      return rows.filter(({ invoice }) =>
-        invoice.status === "draft" || invoice.status === "ready",
-      );
-    }
+    const query = invoiceSearch.trim().toLowerCase();
+    const matchesView = (invoice: Invoice) => {
+      if (activeView === "paid") {
+        return invoice.status === "paid";
+      }
 
-    if (activeView === "sent") {
-      return rows.filter(({ invoice }) =>
-        invoice.status === "sent" || invoice.status === "viewed",
-      );
-    }
+      if (activeView === "overdue") {
+        return invoice.status === "overdue";
+      }
 
-    if (activeView === "approved") {
-      return rows.filter(({ invoice }) =>
-        invoice.status === "approved" ||
-        invoice.status === "awaiting_payment",
-      );
-    }
+      if (activeView === "pending") {
+        return isPendingInvoice(invoice.status);
+      }
 
-    if (activeView === "rejected") {
-      return rows.filter(({ invoice }) => invoice.status === "rejected");
-    }
+      if (activeView === "draft") {
+        return isDraftInvoice(invoice.status);
+      }
 
-    if (activeView === "overdue") {
-      return rows.filter(({ invoice }) => invoice.status === "overdue");
-    }
-
-    if (activeView === "paid") {
-      return rows.filter(({ invoice }) => invoice.status === "paid");
-    }
-
-    return rows;
-  }, [activeView, rows]);
-
-  const tabs: { id: ViewFilter; label: string; count: number }[] = [
-    { id: "all", label: "All", count: rows.length },
-    {
-      id: "drafts",
-      label: "Drafts",
-      count: rows.filter(({ invoice }) =>
-        invoice.status === "draft" || invoice.status === "ready",
-      ).length,
-    },
-    {
-      id: "sent",
-      label: "Sent",
-      count: rows.filter(({ invoice }) =>
-        invoice.status === "sent" || invoice.status === "viewed",
-      ).length,
-    },
-    {
-      id: "approved",
-      label: "Approved",
-      count: rows.filter(({ invoice }) =>
-        invoice.status === "approved" ||
-        invoice.status === "awaiting_payment",
-      ).length,
-    },
-    {
-      id: "rejected",
-      label: "Rejected",
-      count: rows.filter(({ invoice }) => invoice.status === "rejected").length,
-    },
-    { id: "overdue", label: "Overdue", count: stats?.overdueCount ?? 0 },
-    { id: "paid", label: "Paid", count: stats?.paidCount ?? 0 },
-  ];
-
-  const clientSummaries = useMemo(() => {
-    const statsByClient = new Map<string, { value: number; invoices: number }>();
-
-    rows.forEach(({ invoice }) => {
-      const keys = [
-        invoice.clientId,
-        invoice.clientEmail?.toLowerCase(),
-        invoice.clientName?.toLowerCase(),
-      ].filter(Boolean) as string[];
-
-      keys.forEach((key) => {
-        const current = statsByClient.get(key) ?? { value: 0, invoices: 0 };
-        current.value += invoiceDisplayTotal(invoice);
-        current.invoices += 1;
-        statsByClient.set(key, current);
-      });
-    });
-
-    return activeClients.slice(0, 6).map((client) => {
-      const stats =
-        statsByClient.get(client._id) ??
-        statsByClient.get(client.email.toLowerCase()) ??
-        statsByClient.get(client.name.toLowerCase()) ??
-        { value: 0, invoices: 0 };
-
-      return { client, ...stats };
-    });
-  }, [activeClients, rows]);
-
-  async function copyText(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setNotice("Client link copied.");
-    } catch {
-      setNotice(value);
-    }
-  }
-
-  function updateDraftLineItem(id: string, patch: Partial<DraftLineItem>) {
-    setDraftLineItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
-  }
-
-  function addDraftLineItem() {
-    setDraftLineItems((current) => [...current, newLineItem()]);
-  }
-
-  function removeDraftLineItem(id: string) {
-    setDraftLineItems((current) =>
-      current.length === 1 ? current : current.filter((item) => item.id !== id),
-    );
-  }
-
-  function applySelectedClient(clientId: string) {
-    if (!clientId) {
-      setSelectedClientId(null);
-      return;
-    }
-
-    const client = activeClients.find((item) => item._id === clientId);
-
-    if (!client) {
-      return;
-    }
-
-    setSelectedClientId(client._id);
-    setClientName(client.name);
-    setClientEmail(client.email);
-    setClientPhone(client.phone ?? "");
-    setClientAddress(client.address ?? "");
-
-    if (client.paymentTerms) {
-      setTerms(client.paymentTerms);
-    }
-  }
-
-  async function handleReviewProof(proofId: Id<"paymentProofs">, status: "accepted" | "rejected") {
-    setPendingAction(`proof-${proofId}-${status}`);
-    setNotice(null);
-
-    try {
-      await reviewPaymentProof({ proofId, status });
-      setNotice(status === "accepted" ? "Payment proof accepted." : "Payment proof rejected.");
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to review proof.");
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPendingAction("create");
-    setNotice(null);
-    setClientLink(null);
-    setEmailDraft(null);
-
-    const payload = {
-      clientId: selectedClientId ?? undefined,
-      clientName,
-      clientEmail,
-      clientPhone,
-      clientAddress,
-      clientVatNumber: selectedClient?.vatNumber ?? undefined,
-      clientTaxId: selectedClient?.taxId ?? undefined,
-      dueDate,
-      currency: workspace?.defaultCurrency ?? "NAD",
-      taxMode: effectiveTaxMode,
-      paymentInstructions,
-      paymentLink: paymentLink || workspace?.paymentLink || "",
-      terms,
-      notes,
-      requiresApproval,
-      lineItems: draftLineItems.map((item) => ({
-        description: item.description,
-        quantity: Number(item.quantity) || 1,
-        unitPrice: Number(item.unitPrice) || 0,
-      })),
+      return true;
     };
 
-    try {
-      if (editingInvoiceId) {
-        await amendInvoice({ id: editingInvoiceId, ...payload });
-        setEditingInvoiceId(null);
-        setNotice("Amendment saved. Send the revised invoice back to the client.");
-      } else {
-        await createDraft(payload);
-        setNotice("Draft created. Send it when the preview looks right.");
-      }
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to create draft.");
-    } finally {
-      setPendingAction(null);
-    }
-  }
+    return rows
+      .filter(({ invoice }) => {
+        if (!matchesView(invoice)) {
+          return false;
+        }
 
-  async function handleAmend(row: InvoiceRow) {
-    setPendingAction(`amend-${row.invoice._id}`);
-    setNotice(null);
+        if (!query) {
+          return true;
+        }
 
-    try {
-      const details = row.lineItems.length
-        ? row
-        : await convex.query(api.invoices.getEditDetails, { id: row.invoice._id });
-      const { invoice, lineItems, client } = details;
+        return [
+          invoice.invoiceNumber,
+          invoice.clientName,
+          invoice.client,
+          invoice.clientEmail,
+          invoice.issueDate,
+          invoice.dueDate,
+          statusLabels[invoice.status],
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+      })
+      .sort((a, b) => {
+        const aValue =
+          sortBy === "due"
+            ? dateValue(a.invoice.dueDate, a.invoice.createdAt)
+            : dateValue(a.invoice.issueDate, a.invoice.createdAt);
+        const bValue =
+          sortBy === "due"
+            ? dateValue(b.invoice.dueDate, b.invoice.createdAt)
+            : dateValue(b.invoice.issueDate, b.invoice.createdAt);
 
-      setEditingInvoiceId(invoice._id);
-      setSelectedClientId(invoice.clientId ?? client?._id ?? null);
-      setClientName(invoice.clientName ?? invoice.client ?? "Client");
-      setClientEmail(invoice.clientEmail ?? "");
-      setClientPhone(invoice.clientSnapshot?.phone ?? "");
-      setClientAddress(invoice.clientSnapshot?.address ?? "");
-      setDraftLineItems(
-        lineItems.length
-          ? lineItems.map((item) => ({
-              id: item._id,
-              description: item.description,
-              quantity: String(item.quantity ?? 1),
-              unitPrice: String(item.unitPrice ?? 0),
-            }))
-          : [
-              {
-                id: crypto.randomUUID(),
-                description: "Revised invoice item",
-                quantity: "1",
-                unitPrice: String(invoice.subtotal ?? invoiceDisplayTotal(invoice)),
-              },
-            ],
-      );
-      setTaxMode((invoice.taxMode ?? "no_vat") as TaxMode);
-      setTaxModeTouched(true);
-      setDueDate(invoice.dueDate || defaultDueDate());
-      setPaymentLink(invoice.paymentLink ?? "");
-      setPaymentInstructions(invoice.paymentInstructions ?? "");
-      setTerms(invoice.terms ?? "Due on receipt unless otherwise agreed.");
-      setNotes(invoice.notes ?? "Updated after client feedback.");
-      setRequiresApproval(invoice.requiresApproval ?? false);
-      setNotice(`Amending ${invoice.invoiceNumber}. Save the amendment, then send it again.`);
-      setClientLink(null);
-      setEmailDraft(null);
-      document.getElementById("new-invoice")?.scrollIntoView({ behavior: "smooth" });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to load invoice details.");
-    } finally {
-      setPendingAction(null);
-    }
-  }
+        return bValue - aValue;
+      });
+  }, [activeView, invoiceSearch, rows, sortBy]);
 
-  function clearAmendment() {
-    setEditingInvoiceId(null);
-    setTaxModeTouched(false);
-    setNotice(null);
-  }
+  const paidCount = rows.filter(({ invoice }) => invoice.status === "paid").length;
+  const overdueRows = rows.filter(({ invoice }) => invoice.status === "overdue");
+  const draftRows = rows.filter(({ invoice }) => isDraftInvoice(invoice.status));
+  const pendingRows = rows.filter(({ invoice }) => isPendingInvoice(invoice.status));
+  const unpaidRows = rows.filter(({ invoice }) => invoice.status !== "paid" && invoice.status !== "void");
 
-  function openEmailTemplate(invoice: Invoice) {
-    if (!invoice.publicToken) {
-      setNotice("Prepare the email first to create a client link.");
-      return;
-    }
-
-    const link = `${window.location.origin}/invoice/${invoice.publicToken}`;
-    const draft = buildEmailDraft(
-      invoice,
-      link,
-      workspace?.name ?? "Invoice Ledger",
-    );
-    setClientLink(link);
-    setEmailDraft(draft);
-    window.open(draft.gmailHref, "_blank");
-    setNotice("Email composer opened. After you send it, mark the invoice sent.");
-  }
+  const tabs: { id: ViewFilter; label: string; count: number; tone: string }[] = [
+    { id: "all", label: "All Invoice", count: rows.length, tone: "bg-muted text-foreground" },
+    { id: "paid", label: "Paid", count: stats?.paidCount ?? paidCount, tone: "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200 dark:ring-1 dark:ring-teal-400/20" },
+    { id: "overdue", label: "Overdue", count: stats?.overdueCount ?? overdueRows.length, tone: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200 dark:ring-1 dark:ring-red-400/20" },
+    { id: "pending", label: "Pending", count: pendingRows.length, tone: "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200 dark:ring-1 dark:ring-amber-300/20" },
+    { id: "draft", label: "Draft", count: draftRows.length, tone: "bg-orange-100 text-orange-700 dark:bg-orange-400/15 dark:text-orange-200 dark:ring-1 dark:ring-orange-300/20" },
+  ];
 
   async function handleSend(invoice: Invoice) {
     setPendingAction(`send-${invoice._id}`);
-    setNotice(null);
-    setEmailDraft(null);
+    setNotice("");
     const emailWindow = window.open("", "_blank");
-
     try {
       const result = await sendInvoice({ id: invoice._id });
       const link = `${window.location.origin}${result.urlPath}`;
-      const draft = buildEmailDraft(
-        invoice,
-        link,
-        workspace?.name ?? "Invoice Ledger",
-      );
-      setClientLink(link);
-      setEmailDraft(draft);
+      if (emailWindow) {
+        emailWindow.location.href = buildInvoiceEmail(invoice, link, workspace?.name ?? "Payvio");
+      }
       try {
         await navigator.clipboard.writeText(link);
       } catch {
-        // Opening the email template still works if the browser blocks clipboard access.
+        // The email window still contains the link.
       }
-      if (emailWindow) {
-        emailWindow.location.href = draft.gmailHref;
-      }
-      setNotice("Email composer opened. After you send it, mark the invoice sent.");
+      setNotice("Client link prepared.");
     } catch (error) {
       emailWindow?.close();
-      setNotice(error instanceof Error ? error.message : "Unable to send invoice.");
+      setNotice(error instanceof Error ? error.message : "Unable to prepare invoice.");
     } finally {
-      setPendingAction(null);
+      setPendingAction("");
     }
   }
 
-  async function handleMarkSent(invoice: Invoice) {
-    setPendingAction(`mark-sent-${invoice._id}`);
-    setNotice(null);
-
+  async function runInvoiceAction(action: string, callback: () => Promise<unknown>, message: string) {
+    setPendingAction(action);
+    setNotice("");
     try {
-      await markSent({ id: invoice._id });
-      setNotice(`${invoice.invoiceNumber} marked sent.`);
+      await callback();
+      setNotice(message);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to mark sent.");
+      setNotice(error instanceof Error ? error.message : "Action failed.");
     } finally {
-      setPendingAction(null);
+      setPendingAction("");
     }
   }
 
-  async function handleMarkPaid(invoice: Invoice) {
-    setPendingAction(`paid-${invoice._id}`);
-    setNotice(null);
+  const overdueTotal = overdueRows.reduce((total, { invoice }) => total + invoiceBalance(invoice), 0);
+  const draftTotalAmount = draftRows.reduce((total, { invoice }) => total + invoiceTotal(invoice), 0);
+  const unpaidTotal = unpaidRows.reduce((total, { invoice }) => total + invoiceBalance(invoice), 0);
+  const paidTotal = stats?.totalPaid ?? rows.reduce(
+    (total, { invoice }) => total + (invoice.status === "paid" ? invoiceTotal(invoice) : 0),
+    0,
+  );
+  const pipelineTotal = Math.max(paidTotal + unpaidTotal, 0);
+  const invoiceTotalBase = Math.max(pipelineTotal, draftTotalAmount, 1);
+  const outstandingBase = Math.max(unpaidTotal, 1);
 
-    try {
-      await markPaid({ id: invoice._id });
-      setNotice(`${invoice.invoiceNumber} marked paid.`);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to mark paid.");
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function handleReminder(invoice: Invoice) {
-    setPendingAction(`reminder-${invoice._id}`);
-    setNotice(null);
-    setEmailDraft(null);
-
-    if (!invoice.publicToken) {
-      setNotice("Prepare the invoice email first so the reminder has a client link.");
-      setPendingAction(null);
-      return;
-    }
-
-    const emailWindow = window.open("", "_blank");
-
-    try {
-      const link = `${window.location.origin}/invoice/${invoice.publicToken}`;
-      const draft = buildFollowUpDraft(
-        invoice,
-        link,
-        workspace?.name ?? "Invoice Ledger",
-        "reminder",
-      );
-      await scheduleReminder({
-        id: invoice._id,
-        message: `Reminder email prepared for ${invoice.clientName ?? invoice.client ?? "client"}.`,
-      });
-      setClientLink(link);
-      setEmailDraft(draft);
-      if (emailWindow) {
-        emailWindow.location.href = draft.gmailHref;
-      }
-      setNotice("Reminder email opened. Send it from your business email.");
-    } catch (error) {
-      emailWindow?.close();
-      setNotice(error instanceof Error ? error.message : "Unable to schedule reminder.");
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  async function handleOverdue(invoice: Invoice) {
-    setPendingAction(`overdue-${invoice._id}`);
-    setNotice(null);
-    setEmailDraft(null);
-
-    if (!invoice.publicToken) {
-      setNotice("Prepare the invoice email first so the overdue notice has a client link.");
-      setPendingAction(null);
-      return;
-    }
-
-    const emailWindow = window.open("", "_blank");
-
-    try {
-      const link = `${window.location.origin}/invoice/${invoice.publicToken}`;
-      const draft = buildFollowUpDraft(
-        invoice,
-        link,
-        workspace?.name ?? "Invoice Ledger",
-        "overdue",
-      );
-      await updateStatus({ id: invoice._id, status: "overdue" });
-      setClientLink(link);
-      setEmailDraft(draft);
-      if (emailWindow) {
-        emailWindow.location.href = draft.gmailHref;
-      }
-      setNotice(`${invoice.invoiceNumber} marked overdue. Overdue email opened.`);
-    } catch (error) {
-      emailWindow?.close();
-      setNotice(error instanceof Error ? error.message : "Unable to update status.");
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
-  const dashboardMetrics = [
+  const metricCards = [
     {
-      label: "Outstanding",
-      value: formatMoney(stats?.totalOutstanding ?? 0),
-      detail: `${stats?.awaitingClientCount ?? 0} with client`,
+      label: "Overdue amount",
+      value: formatMoney(overdueTotal, currency),
+      icon: WalletCards,
+      iconClassName: "bg-amber-50 text-amber-500 dark:bg-amber-400/15 dark:text-amber-200",
+      barClassName: "bg-amber-400 dark:bg-amber-300",
+      progress: metricPercent(overdueTotal, outstandingBase),
     },
     {
-      label: "Paid",
-      value: formatMoney(stats?.totalPaid ?? 0),
-      detail: `${stats?.paidCount ?? 0} closed`,
+      label: "Drafted totals",
+      value: formatMoney(draftTotalAmount, currency),
+      icon: FileText,
+      iconClassName: "bg-neutral-100 text-neutral-700 dark:bg-white/10 dark:text-neutral-200",
+      barClassName: "bg-neutral-900 dark:bg-neutral-500",
+      progress: metricPercent(draftTotalAmount, invoiceTotalBase),
     },
     {
-      label: "Active",
-      value: String(stats?.invoiceCount ?? 0),
-      detail: "Drafts to paid",
+      label: "Unpaid totals",
+      value: formatMoney(unpaidTotal || stats?.totalOutstanding || 0, currency),
+      icon: ReceiptText,
+      iconClassName: "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-200",
+      barClassName: "bg-red-600 dark:bg-red-400",
+      progress: metricPercent(unpaidTotal || stats?.totalOutstanding || 0, invoiceTotalBase),
     },
     {
-      label: "Overdue",
-      value: String(stats?.overdueCount ?? 0),
-      detail: "Needs follow-up",
+      label: "Paid totals",
+      value: formatMoney(paidTotal, currency),
+      icon: CheckCircle2,
+      iconClassName: "bg-teal-50 text-teal-600 dark:bg-teal-500/15 dark:text-teal-200",
+      barClassName: "bg-teal-600 dark:bg-teal-400",
+      progress: metricPercent(paidTotal, invoiceTotalBase),
     },
   ];
 
+  const visibleInvoiceIds = filteredRows.map(({ invoice }) => invoice._id);
+  const allVisibleSelected =
+    visibleInvoiceIds.length > 0 && visibleInvoiceIds.every((id) => selectedInvoiceIds.has(id));
+
+  function toggleInvoiceSelection(id: string, checked: boolean) {
+    setSelectedInvoiceIds((current) => {
+      const next = new Set(current);
+
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleVisibleSelection(checked: boolean) {
+    setSelectedInvoiceIds((current) => {
+      const next = new Set(current);
+
+      visibleInvoiceIds.forEach((id) => {
+        if (checked) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+      });
+
+      return next;
+    });
+  }
+
   return (
-    <div className="db-page db-dashboard-page">
-      <section className="db-workview">
-        <div className="db-workview-head">
-          <div>
-            <p className="db-breadcrumb">Payvio <span>/</span> Invoices</p>
-            <h1 className="db-workview-title">Invoices</h1>
-          </div>
-          <a href="#new-invoice" className="db-primary-btn db-new-invoice-btn">
-            New invoice
-          </a>
-        </div>
-
-        <div className="db-metric-strip" aria-label="Invoice metrics">
-          {dashboardMetrics.map((metric) => (
-            <div key={metric.label} className="db-metric-cell">
-              <span>{metric.label}</span>
-              <strong>{metric.value}</strong>
-              <small>{metric.detail}</small>
-            </div>
-          ))}
-        </div>
-
-      {notice || clientLink ? (
-        <div className="db-notice db-notice-clean">
-          <span>{notice ?? clientLink}</span>
-          {clientLink && (
-            <div className="db-notice-actions">
-              <button type="button" className="db-outline-btn" onClick={() => copyText(clientLink)}>
-                Copy link
-              </button>
-              {emailDraft && (
-                <>
-                  <a href={emailDraft.gmailHref} target="_blank" rel="noreferrer" className="db-primary-btn">
-                    Open email
-                  </a>
-                  <a href={emailDraft.mailtoHref} className="db-outline-btn">
-                    Email app
-                  </a>
-                  <a href={emailDraft.whatsappHref} target="_blank" rel="noreferrer" className="db-outline-btn">
-                    WhatsApp
-                  </a>
-                  <button
-                    type="button"
-                    className="db-outline-btn"
-                    onClick={() => copyText(`${emailDraft.subject}\n\n${emailDraft.body}`)}
-                  >
-                    Copy email
-                  </button>
-                </>
-              )}
-              <a href={clientLink} target="_blank" rel="noreferrer" className="db-outline-btn">
-                Open
-              </a>
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      {pendingProofRows.length ? (
-        <PaymentProofQueue
-          rows={pendingProofRows}
-          currency={workspace?.defaultCurrency ?? "NAD"}
-          pendingAction={pendingAction}
-          onReview={handleReviewProof}
-        />
-      ) : null}
-
-      <section className="db-card db-compose-card" id="new-invoice">
-        <div className="db-panel-header">
-          <div>
-            <p className="db-panel-kicker">Compose</p>
-            <h2>{editingInvoiceId ? "Amend invoice" : "New invoice"}</h2>
-          </div>
-          <span className="db-panel-meta">{workspace?.defaultCurrency ?? "NAD"}</span>
-        </div>
-
-        <div className="db-compose-grid">
-          <form onSubmit={handleCreate} className="db-compose-form">
-            <Field label="Onboarded client">
-              <select
-                value={selectedClientId ?? ""}
-                onChange={(event) => applySelectedClient(event.target.value)}
-                className="db-field-input"
-              >
-                <option value="">
-                  {activeClients.length ? "Manual client" : "No saved clients yet"}
-                </option>
-                {activeClients.map((client) => (
-                  <option key={client._id} value={client._id}>
-                    {client.name}
-                    {client.businessName || client.company
-                      ? ` - ${client.businessName ?? client.company}`
-                      : ""}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {selectedClient ? (
-              <p className="text-[12px] text-[#6b7280]">
-                Using saved details for {selectedClient.name}.
-              </p>
-            ) : null}
-
-            <div className="db-form-grid db-form-grid-2">
-              <Field label="Client name">
-                <Input value={clientName} onChange={(e) => setClientName(e.target.value)} className="db-field-input" />
-              </Field>
-              <Field label="Client email">
-                <Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="db-field-input" />
-              </Field>
-            </div>
-
-            <div className="db-form-grid db-form-grid-2">
-              <Field label="Client phone / WhatsApp">
-                <Input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className="db-field-input" />
-              </Field>
-              <Field label="Client address">
-                <Input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className="db-field-input" />
-              </Field>
-            </div>
-
-            <div className="db-line-items">
-              <div className="db-line-items-head">
-                <span>Line items</span>
-                <button type="button" className="db-link-btn" onClick={addDraftLineItem}>
-                  Add line
-                </button>
-              </div>
-              {draftLineItems.map((item, index) => (
-                <div key={item.id} className="db-line-item-row">
-                  <Field label={index === 0 ? "Description" : "Item"}>
-                    <Input value={item.description} onChange={(e) => updateDraftLineItem(item.id, { description: e.target.value })} className="db-field-input" />
-                  </Field>
-                  <Field label="Qty">
-                    <Input inputMode="decimal" value={item.quantity} onChange={(e) => updateDraftLineItem(item.id, { quantity: e.target.value })} className="db-field-input" />
-                  </Field>
-                  <Field label="Unit price">
-                    <Input inputMode="decimal" value={item.unitPrice} onChange={(e) => updateDraftLineItem(item.id, { unitPrice: e.target.value })} className="db-field-input" />
-                  </Field>
-                  <button
-                    type="button"
-                    className="db-remove-line"
-                    onClick={() => removeDraftLineItem(item.id)}
-                    disabled={draftLineItems.length === 1}
-                  >
-                    Remove
-                  </button>
+    <div className="invoice-list-page space-y-4 sm:space-y-[30px]">
+      <section className="grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-4">
+        {metricCards.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <article
+              key={metric.label}
+              className="min-h-[112px] rounded-lg border border-border bg-card p-3.5 shadow-none sm:min-h-[156px] sm:p-[30px] xl:h-[156px]"
+            >
+              <div className="flex items-start justify-between gap-3 sm:gap-6">
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-semibold leading-tight tracking-normal text-foreground sm:text-[30px] sm:leading-none">
+                    {metric.value}
+                  </p>
+                  <p className="mt-1 truncate text-xs leading-4 text-muted-foreground sm:mt-2 sm:text-[20px] sm:leading-6">{metric.label}</p>
                 </div>
-              ))}
-            </div>
-
-            <div className="db-form-grid db-form-grid-3">
-              <Field label="Due date">
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="db-field-input" />
-              </Field>
-              <Field label="VAT">
-                <select
-                  value={effectiveTaxMode}
-                  disabled={!vatRegistered}
-                  onChange={(event) => {
-                    setTaxMode(event.target.value as TaxMode);
-                    setTaxModeTouched(true);
-                  }}
-                  className="db-field-input"
-                >
-                  <option value="vat_15">VAT 15%</option>
-                  <option value="zero_rated">Zero-rated</option>
-                  <option value="exempt">Exempt</option>
-                  <option value="no_vat">No VAT</option>
-                </select>
-              </Field>
-              <Field label="Payment link">
-                <Input value={paymentLink} onChange={(e) => setPaymentLink(e.target.value)} placeholder="https://pay.example.com/invoice" className="db-field-input" />
-              </Field>
-            </div>
-
-            <label className="db-approval-toggle">
-              <input
-                type="checkbox"
-                checked={requiresApproval}
-                onChange={(event) => setRequiresApproval(event.target.checked)}
-              />
-              <span>
-                <strong>Ask client to approve this invoice</strong>
-                <small>Off by default. Use it when the client must confirm before payment.</small>
-              </span>
-            </label>
-
-            <Field label="Payment instructions">
-              <Input value={paymentInstructions} onChange={(e) => setPaymentInstructions(e.target.value)} placeholder={workspace?.paymentInstructions ?? "Bank transfer or agreed method"} className="db-field-input" />
-            </Field>
-
-            <div className="db-form-grid db-form-grid-2">
-              <Field label="Terms">
-                <Input value={terms} onChange={(e) => setTerms(e.target.value)} className="db-field-input" />
-              </Field>
-              <Field label="Note">
-                <Input value={notes} onChange={(e) => setNotes(e.target.value)} className="db-field-input" />
-              </Field>
-            </div>
-
-            <div className="db-form-actions">
-              <button type="submit" disabled={pendingAction === "create"} className="db-primary-btn">
-                {pendingAction === "create" ? <Loader2 className="size-4 animate-spin" /> : null}
-                {editingInvoiceId ? "Save amendment" : "Create draft"}
-              </button>
-              {editingInvoiceId && (
-                <button type="button" className="db-outline-btn" onClick={clearAmendment}>
-                  Cancel amendment
-                </button>
-              )}
-            </div>
-          </form>
-
-          <InvoicePreview
-            clientName={clientName}
-            clientEmail={clientEmail}
-            lineItems={draftLineItems}
-            taxMode={effectiveTaxMode}
-            dueDate={dueDate}
-            terms={terms}
-            notes={notes}
-            paymentInstructions={paymentInstructions || workspace?.paymentInstructions || "Payment instructions appear here."}
-            paymentLink={paymentLink || workspace?.paymentLink || ""}
-            requiresApproval={requiresApproval}
-            currency={workspace?.defaultCurrency ?? "NAD"}
-          />
-        </div>
+                <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg sm:size-[60px]", metric.iconClassName)}>
+                  <Icon className="size-5 sm:size-7" />
+                </span>
+              </div>
+              <div className="mt-3 h-1 rounded-full bg-muted sm:mt-[27px]">
+                <div
+                  className={cn("h-full rounded-full", metric.barClassName)}
+                  style={{ width: `${metric.progress}%` }}
+                />
+              </div>
+            </article>
+          );
+        })}
       </section>
 
-      <section className="db-card db-list-card" id="invoices">
-        <div className="db-list-toolbar">
-          <div>
-            <p className="db-panel-kicker">Pipeline</p>
-            <h2>Invoices</h2>
-          </div>
-          <div className="db-tabs" role="tablist" aria-label="Invoice views">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveView(tab.id)}
-                className={`db-tab${activeView === tab.id ? " db-tab-active" : ""}`}
-              >
-                {tab.label}
-                <span className="db-tab-count">{tab.count}</span>
-              </button>
-            ))}
-          </div>
+      {notice ? (
+        <Card className="rounded-lg bg-background">
+          <CardContent className="py-3 text-sm text-muted-foreground">{notice}</CardContent>
+        </Card>
+      ) : null}
+
+      <section className="rounded-none border-0 bg-transparent p-0 shadow-none sm:min-h-[560px] sm:rounded-lg sm:border sm:border-border sm:bg-card sm:p-[30px]">
+        <div className="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <Tabs value={activeView} onValueChange={(value) => setActiveView(value as ViewFilter)} className="min-w-0">
+            <TabsList className="flex h-auto w-full max-w-full flex-nowrap items-center justify-start gap-2 overflow-x-auto rounded-none bg-transparent p-0 pb-1 [scrollbar-width:none] sm:flex-wrap sm:gap-x-9 sm:gap-y-3 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="h-10 min-w-fit flex-none gap-2 rounded-lg px-3 text-sm text-muted-foreground after:hidden data-active:bg-muted data-active:text-foreground data-active:shadow-none sm:h-12 sm:gap-3 sm:px-4 sm:text-base"
+                >
+                  <span className="whitespace-nowrap">{tab.label}</span>
+                  <span className={cn("grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold sm:size-9 sm:text-base", tab.tone)}>
+                    {tab.count}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <Button asChild className="hidden h-11 rounded-lg bg-neutral-950 px-5 text-base font-semibold !text-white hover:bg-neutral-800 hover:!text-white sm:inline-flex">
+            <Link href="/dashboard/invoices/create" className="whitespace-nowrap">
+              New invoice
+            </Link>
+          </Button>
         </div>
 
-        {filteredRows.length ? (
-          <div className="db-table-wrap">
-            <table className="db-table db-invoice-table">
-              <thead>
-                <tr>
-                  <th>Invoice</th>
-                  <th>Client</th>
-                  <th>Status</th>
-                  <th>Last activity</th>
-                  <th className="db-align-right">Amount</th>
-                  <th className="db-align-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row) => {
-                  const { invoice, events, paymentProofs } = row;
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-[30px] lg:flex lg:items-center">
+          <label className="relative col-span-2 w-full lg:max-w-[304px]" htmlFor="invoice-search">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="invoice-search"
+              value={invoiceSearch}
+              onChange={(event) => setInvoiceSearch(event.target.value)}
+              placeholder="Search bill..."
+              className="h-11 rounded-lg border-border bg-background pl-12 text-sm shadow-sm sm:text-base"
+            />
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn("h-10 min-w-0 rounded-lg px-3 text-sm sm:h-11 sm:px-4 sm:text-base", sortBy === "created" && "bg-muted text-foreground")}
+            onClick={() => setSortBy("created")}
+          >
+            <CalendarDays className="size-4" />
+            <span className="truncate">Created Date</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn("h-10 min-w-0 rounded-lg px-3 text-sm sm:h-11 sm:px-4 sm:text-base", sortBy === "due" && "bg-muted text-foreground")}
+            onClick={() => setSortBy("due")}
+          >
+            <CalendarDays className="size-4" />
+            <span className="truncate">Due Date</span>
+          </Button>
+        </div>
+
+        <div className="mt-4 [scrollbar-color:color-mix(in_oklch,var(--foreground)_35%,transparent)_transparent] [scrollbar-width:thin] lg:mt-8 lg:max-h-[430px] lg:overflow-y-auto lg:pr-1">
+          {filteredRows.length > 0 ? (
+            <>
+            <div className="grid gap-3 lg:hidden">
+              {filteredRows.map((row) => (
+                <InvoiceMobileCard
+                  key={row.invoice._id}
+                  row={row}
+                  currency={currency}
+                  pendingAction={pendingAction}
+                  onSend={handleSend}
+                  onMarkSent={(id) =>
+                    runInvoiceAction(`sent-${id}`, () => markSent({ id }), "Invoice marked sent.")
+                  }
+                  onMarkPaid={(id) =>
+                    runInvoiceAction(`paid-${id}`, () => markPaid({ id }), "Invoice marked paid.")
+                  }
+                  onReminder={(id) =>
+                    runInvoiceAction(
+                      `reminder-${id}`,
+                      () => scheduleReminder({ id }),
+                      "Reminder scheduled.",
+                    )
+                  }
+                  onOverdue={(id) =>
+                    runInvoiceAction(
+                      `overdue-${id}`,
+                      () => updateStatus({ id, status: "overdue" }),
+                      "Invoice marked overdue.",
+                    )
+                  }
+                  onVoid={(id) =>
+                    runInvoiceAction(
+                      `void-${id}`,
+                      () => voidInvoice({ id, reason: "Voided from invoice list." }),
+                      "Invoice voided.",
+                    )
+                  }
+                  onAcceptProof={(proofId) =>
+                    runInvoiceAction(
+                      `proof-accept-${proofId}`,
+                      () => reviewPaymentProof({ proofId, status: "accepted" }),
+                      "Payment confirmed.",
+                    )
+                  }
+                  onRejectProof={(proofId) =>
+                    runInvoiceAction(
+                      `proof-reject-${proofId}`,
+                      () => reviewPaymentProof({ proofId, status: "rejected" }),
+                      "Payment proof rejected.",
+                    )
+                  }
+                />
+              ))}
+            </div>
+            <Table className="hidden table-fixed text-base lg:table">
+              <colgroup>
+                <col className="w-11" />
+                <col className="w-[14%]" />
+                <col className="w-[12%]" />
+                <col className="w-[18%]" />
+                <col className="w-[12%]" />
+                <col className="w-[11%]" />
+                <col className="w-[13%]" />
+                <col className="w-[12%]" />
+                <col className="w-[132px]" />
+              </colgroup>
+              <TableHeader className="sticky top-0 z-10 bg-card">
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="px-3">
+                    <Checkbox
+                      aria-label="Select visible invoices"
+                      checked={allVisibleSelected}
+                      onCheckedChange={(checked) => toggleVisibleSelection(checked === true)}
+                      className="border-border bg-background"
+                    />
+                  </TableHead>
+                  <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Id</TableHead>
+                  <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Bill From</TableHead>
+                  <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Bill To</TableHead>
+                  <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Total Cost</TableHead>
+                  <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Status</TableHead>
+                  <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Created</TableHead>
+                  <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Due</TableHead>
+                  <TableHead className="h-14 px-3 text-center font-semibold text-foreground">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRows.map(({ invoice, paymentProofs }) => {
                   const pendingProofCount = (paymentProofs ?? []).filter((proof) => proof.status === "submitted").length;
+                  const invoiceCurrency = invoice.currency ?? currency;
 
                   return (
-                    <tr key={invoice._id}>
-                      <td>
-                        <span className="db-inv-num">{invoice.invoiceNumber}</span>
-                        <span className="db-row-meta">Due {invoice.dueDate}</span>
-                      </td>
-                      <td>
-                        <span className="db-row-primary">{invoice.clientName ?? invoice.client ?? "Client"}</span>
-                        <span className="db-row-meta">{invoice.clientEmail ?? "No email"}</span>
-                      </td>
-                      <td>
-                        <Badge variant="outline" className={`db-status-badge ${statusToneClasses[invoice.status]}`}>
-                          <span aria-hidden="true" />
-                          {statusLabels[invoice.status]}
-                        </Badge>
-                        {pendingProofCount ? (
-                          <span className="db-row-warning">{pendingProofCount} proof pending</span>
+                    <TableRow key={invoice._id} className="h-[71px] border-border hover:bg-muted/40">
+                      <TableCell className="px-3">
+                        <Checkbox
+                          aria-label={`Select ${invoice.invoiceNumber}`}
+                          checked={selectedInvoiceIds.has(invoice._id)}
+                          onCheckedChange={(checked) => toggleInvoiceSelection(invoice._id, checked === true)}
+                          className="border-border bg-background"
+                        />
+                      </TableCell>
+                      <TableCell className="overflow-hidden px-3 font-medium text-foreground">
+                        <span className="block truncate">{invoice.invoiceNumber}</span>
+                      </TableCell>
+                      <TableCell className="overflow-hidden px-3 text-foreground">
+                        <span className="block truncate">{workspace?.name ?? "Payvio"}</span>
+                      </TableCell>
+                      <TableCell className="overflow-hidden px-3">
+                        <span className="block truncate text-foreground">{invoice.clientName ?? invoice.client ?? "Client"}</span>
+                        {pendingProofCount > 0 ? (
+                          <span className="mt-1 block text-xs text-muted-foreground">{pendingProofCount} proof pending</span>
                         ) : null}
-                      </td>
-                      <td className="db-activity-cell">{events[0]?.message ?? "No activity yet."}</td>
-                      <td className="db-align-right db-money-cell">
-                        {formatMoney(invoiceDisplayTotal(invoice), invoice.currency ?? workspace?.defaultCurrency ?? "NAD")}
-                      </td>
-                      <td className="db-align-right">
+                      </TableCell>
+                      <TableCell className="overflow-hidden px-3 text-foreground">
+                        <span className="block truncate">{formatMoney(invoiceTotal(invoice), invoiceCurrency)}</span>
+                      </TableCell>
+                      <TableCell className="overflow-hidden px-3">
+                        <InvoiceStatusBadge status={invoice.status} />
+                      </TableCell>
+                      <TableCell className="overflow-hidden px-3 text-foreground">
+                        <span className="block truncate">{formatDate(invoice.issueDate, invoice.createdAt)}</span>
+                      </TableCell>
+                      <TableCell className="overflow-hidden px-3 text-foreground">
+                        <span className="block truncate">{formatDate(invoice.dueDate)}</span>
+                      </TableCell>
+                      <TableCell className="px-3">
                         <InvoiceActions
                           invoice={invoice}
-                          row={row}
+                          paymentProofs={paymentProofs ?? []}
                           pendingAction={pendingAction}
                           onSend={handleSend}
-                          onEmail={openEmailTemplate}
-                          onMarkSent={handleMarkSent}
-                          onAmend={handleAmend}
-                          onReminder={handleReminder}
-                          onMarkPaid={handleMarkPaid}
-                          onOverdue={handleOverdue}
+                          onMarkSent={(id) =>
+                            runInvoiceAction(`sent-${id}`, () => markSent({ id }), "Invoice marked sent.")
+                          }
+                          onMarkPaid={(id) =>
+                            runInvoiceAction(`paid-${id}`, () => markPaid({ id }), "Invoice marked paid.")
+                          }
+                          onReminder={(id) =>
+                            runInvoiceAction(
+                              `reminder-${id}`,
+                              () => scheduleReminder({ id }),
+                              "Reminder scheduled.",
+                            )
+                          }
+                          onOverdue={(id) =>
+                            runInvoiceAction(
+                              `overdue-${id}`,
+                              () => updateStatus({ id, status: "overdue" }),
+                              "Invoice marked overdue.",
+                            )
+                          }
+                          onVoid={(id) =>
+                            runInvoiceAction(
+                              `void-${id}`,
+                              () => voidInvoice({ id, reason: "Voided from invoice list." }),
+                              "Invoice voided.",
+                            )
+                          }
+                          onAcceptProof={(proofId) =>
+                            runInvoiceAction(
+                              `proof-accept-${proofId}`,
+                              () => reviewPaymentProof({ proofId, status: "accepted" }),
+                              "Payment confirmed.",
+                            )
+                          }
+                          onRejectProof={(proofId) =>
+                            runInvoiceAction(
+                              `proof-reject-${proofId}`,
+                              () => reviewPaymentProof({ proofId, status: "rejected" }),
+                              "Payment proof rejected.",
+                            )
+                          }
                         />
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="db-empty db-empty-plain">
-            <h3>No invoices in this view</h3>
-            <p>Create an invoice above and send the secure client link from this pipeline.</p>
-          </div>
-        )}
-      </section>
-
-      <div className="db-split-grid db-dashboard-lower">
-        <section className="db-card" id="clients">
-          <div className="db-panel-header db-panel-header-small">
-            <h2>Clients</h2>
-          </div>
-          {clientSummaries.length ? (
-            <div className="db-mini-grid">
-              {clientSummaries.map((summary) => {
-                const client = {
-                  ...summary.client,
-                  value: summary.value,
-                  invoices: summary.invoices,
-                };
-
-                return (
-                  <div key={client._id} className="db-client-card db-client-card-compact">
-                    <span className="db-client-mini-avatar" aria-hidden="true">
-                      {client.name.slice(0, 1).toUpperCase()}
-                    </span>
-                    <span className="db-client-mini-main">
-                      <span className="db-client-name">{client.name}</span>
-                      <span className="db-client-email">{client.email || "No email"}</span>
-                    </span>
-                    <span className="db-client-value">
-                      <strong>{formatMoney(client.value)}</strong>
-                      <small>{client.invoices} inv.</small>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+              </TableBody>
+            </Table>
+            </>
           ) : (
-            <div className="db-empty db-empty-plain db-empty-small">
-              <p>No clients saved yet.</p>
-              <Link href="/dashboard/clients" className="db-outline-btn">
-                Add client
-              </Link>
+            <div className="grid min-h-52 place-items-center rounded-lg border border-dashed p-6 text-center sm:p-8">
+              <div>
+                <FileText className="mx-auto mb-3 size-8 text-muted-foreground" />
+                <h3 className="font-medium">No invoices here</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Create a draft to start the pipeline.</p>
+              </div>
             </div>
           )}
-        </section>
-
-        <section className="db-card" id="reminders">
-          <div className="db-panel-header db-panel-header-small">
-            <h2>Reminders</h2>
-          </div>
-          {rows.some(({ invoice }) => isClientActive(invoice.status)) ? (
-            <div className="db-reminder-list">
-              {rows.filter(({ invoice }) => isClientActive(invoice.status)).slice(0, 4).map(({ invoice }) => (
-                <div key={invoice._id} className="db-reminder-item">
-                  <span
-                    className={`db-reminder-status-dot ${statusToneClasses[invoice.status]}`}
-                    aria-hidden="true"
-                  />
-                  <div className="db-reminder-main">
-                    <p className="db-reminder-inv">
-                      {invoice.invoiceNumber} - {invoice.clientName ?? invoice.client}
-                    </p>
-                    <p className="db-reminder-meta">
-                      {statusLabels[invoice.status]} - due {invoice.dueDate}
-                    </p>
-                  </div>
-                  <button type="button" className="db-reminder-btn" onClick={() => handleReminder(invoice)}>
-                    Remind
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="db-empty db-empty-plain db-empty-small">
-              <p>Active sent invoices will show up here.</p>
-            </div>
-          )}
-        </section>
-      </div>
+        </div>
       </section>
+
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="db-field">
-      {label}
-      {children}
-    </label>
-  );
-}
-
-function InvoicePreview({
-  clientName,
-  clientEmail,
-  lineItems,
-  taxMode,
-  dueDate,
-  terms,
-  notes,
-  paymentInstructions,
-  paymentLink,
-  requiresApproval,
-  currency,
-}: {
-  clientName: string;
-  clientEmail: string;
-  lineItems: DraftLineItem[];
-  taxMode: TaxMode;
-  dueDate: string;
-  terms: string;
-  notes: string;
-  paymentInstructions: string;
-  paymentLink: string;
-  requiresApproval: boolean;
-  currency: string;
-}) {
-  const subtotal = lineItems.reduce(
-    (total, item) =>
-      total + Math.max(0, Number(item.quantity) || 0) * Math.max(0, Number(item.unitPrice) || 0),
-    0,
-  );
-  const vatAmount = taxMode === "vat_15" ? subtotal * 0.15 : 0;
-  const total = subtotal + vatAmount;
-
-  return (
-    <aside className="db-preview-panel">
-      <div className="db-preview-top">
-        <p>Invoice preview</p>
-      </div>
-
-      <div className="db-preview-body">
-        <h2>Invoice</h2>
-
-        <div className="db-preview-meta">
-          <div>
-            <span>Bill to</span>
-            <strong>{clientName || "Client"}</strong>
-            <small>{clientEmail || "client@email.com"}</small>
-          </div>
-          <div>
-            <span>Due</span>
-            <strong>{dueDate}</strong>
-          </div>
-        </div>
-
-        <div className="db-preview-lines">
-          <div className="db-preview-lines-head">
-            <span>Item</span>
-            <span>Qty</span>
-            <span>Amount</span>
-          </div>
-          {lineItems.map((item) => {
-            const lineTotal = Math.max(0, Number(item.quantity) || 0) * Math.max(0, Number(item.unitPrice) || 0);
-
-            return (
-              <div key={item.id} className="db-preview-line">
-                <span>{item.description || "Invoice item"}</span>
-                <span>{item.quantity || "1"}</span>
-                <span>{formatMoney(lineTotal, currency)}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="db-preview-total">
-          <div>
-            <span>Subtotal (excl. VAT)</span>
-            <strong>{formatMoney(subtotal, currency)}</strong>
-          </div>
-          <div>
-            <span>{taxMode === "vat_15" ? "VAT (15%)" : taxModeLabel(taxMode)}</span>
-            <strong>{formatMoney(vatAmount, currency)}</strong>
-          </div>
-          <div>
-            <span>Total</span>
-            <strong>{formatMoney(total, currency)}</strong>
-          </div>
-        </div>
-
-        <div className="db-preview-notes">
-          {requiresApproval ? (
-            <p><strong>Approval:</strong> Client approval requested before payment.</p>
-          ) : null}
-          <p><strong>Terms:</strong> {terms}</p>
-          <p><strong>Payment:</strong> {paymentLink ? "Payment button included." : paymentInstructions}</p>
-          <p>{notes}</p>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-function PaymentProofQueue({
-  rows,
+function InvoiceMobileCard({
+  row,
   currency,
   pendingAction,
-  onReview,
+  onSend,
+  onMarkSent,
+  onMarkPaid,
+  onReminder,
+  onOverdue,
+  onVoid,
+  onAcceptProof,
+  onRejectProof,
 }: {
-  rows: PaymentProofRow[];
+  row: InvoiceRow;
   currency: string;
-  pendingAction: string | null;
-  onReview: (proofId: Id<"paymentProofs">, status: "accepted" | "rejected") => void;
+  pendingAction: string;
+  onSend: (invoice: Invoice) => void;
+  onMarkSent: (id: Id<"invoices">) => void;
+  onMarkPaid: (id: Id<"invoices">) => void;
+  onReminder: (id: Id<"invoices">) => void;
+  onOverdue: (id: Id<"invoices">) => void;
+  onVoid: (id: Id<"invoices">) => void;
+  onAcceptProof: (id: Id<"paymentProofs">) => void;
+  onRejectProof: (id: Id<"paymentProofs">) => void;
 }) {
+  const { invoice, paymentProofs } = row;
+  const invoiceCurrency = invoice.currency ?? currency;
+  const pendingProofCount = (paymentProofs ?? []).filter((proof) => proof.status === "submitted").length;
+  const clientName = invoice.clientName ?? invoice.client ?? "Client";
+
   return (
-    <div className="db-card db-proof-card">
-      <div className="db-panel-header db-panel-header-small">
-        <h2>Proofs to review</h2>
+    <article className="rounded-lg border border-border bg-card p-4 shadow-none">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link
+            href={`/dashboard/invoices/${invoice._id}`}
+            className="block truncate text-base font-semibold text-foreground"
+          >
+            {invoice.invoiceNumber}
+          </Link>
+          <p className="mt-1 truncate text-sm text-muted-foreground">{clientName}</p>
+        </div>
+        <InvoiceStatusBadge status={invoice.status} />
       </div>
-      <div className="db-proof-list">
-        {rows.slice(0, 5).map(({ proof, invoice, proofFileUrl }) => (
-          <div key={proof._id} className="db-proof-row">
-            <div>
-              <p className="db-proof-title">
-                {invoice?.invoiceNumber ?? "Invoice"} - {proof.payerName}
-              </p>
-              <p className="db-proof-meta">
-                {formatMoney(proof.amount, proof.currency ?? currency)} paid on {proof.paymentDate}
-                {proof.bankReference ? ` - Ref ${proof.bankReference}` : ""}
-                {proof.fileName ? ` - ${proof.fileName}` : ""}
-              </p>
-            </div>
-            <div className="db-proof-actions">
-              {proofFileUrl ? (
-                <a
-                  href={proofFileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="db-outline-btn"
-                >
-                  Open proof
-                </a>
-              ) : null}
-              <button
-                type="button"
-                className="db-primary-btn"
-                disabled={pendingAction === `proof-${proof._id}-accepted`}
-                onClick={() => onReview(proof._id, "accepted")}
-              >
-                {pendingAction === `proof-${proof._id}-accepted` ? <Loader2 className="size-3 animate-spin" /> : null}
-                Accept
-              </button>
-              <button
-                type="button"
-                className="db-outline-btn"
-                disabled={pendingAction === `proof-${proof._id}-rejected`}
-                onClick={() => onReview(proof._id, "rejected")}
-              >
-                {pendingAction === `proof-${proof._id}-rejected` ? <Loader2 className="size-3 animate-spin" /> : null}
-                Reject
-              </button>
-            </div>
-          </div>
-        ))}
+
+      <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-muted/60 p-3">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">Amount</p>
+          <p className="mt-1 truncate text-sm font-semibold text-foreground">
+            {formatMoney(invoiceTotal(invoice), invoiceCurrency)}
+          </p>
+        </div>
+        <div className="min-w-0 text-right">
+          <p className="text-xs text-muted-foreground">Balance</p>
+          <p className="mt-1 truncate text-sm font-semibold text-foreground">
+            {formatMoney(invoiceBalance(invoice), invoiceCurrency)}
+          </p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">Created</p>
+          <p className="mt-1 truncate text-sm text-foreground">{formatDate(invoice.issueDate, invoice.createdAt)}</p>
+        </div>
+        <div className="min-w-0 text-right">
+          <p className="text-xs text-muted-foreground">Due</p>
+          <p className="mt-1 truncate text-sm text-foreground">{formatDate(invoice.dueDate)}</p>
+        </div>
       </div>
-    </div>
+
+      {pendingProofCount > 0 ? (
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          {pendingProofCount} payment proof pending
+        </p>
+      ) : null}
+
+      <div className="mt-4">
+        <InvoiceActions
+          invoice={invoice}
+          paymentProofs={paymentProofs ?? []}
+          pendingAction={pendingAction}
+          display="mobile"
+          onSend={onSend}
+          onMarkSent={onMarkSent}
+          onMarkPaid={onMarkPaid}
+          onReminder={onReminder}
+          onOverdue={onOverdue}
+          onVoid={onVoid}
+          onAcceptProof={onAcceptProof}
+          onRejectProof={onRejectProof}
+        />
+      </div>
+    </article>
+  );
+}
+
+function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
+  const tone: Record<InvoiceStatus, string> = {
+    draft: "bg-orange-50 text-orange-600 dark:bg-orange-400/15 dark:text-orange-200",
+    ready: "bg-orange-50 text-orange-600 dark:bg-orange-400/15 dark:text-orange-200",
+    sent: "bg-amber-50 text-amber-600 dark:bg-amber-400/15 dark:text-amber-200",
+    viewed: "bg-amber-50 text-amber-600 dark:bg-amber-400/15 dark:text-amber-200",
+    approved: "bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200",
+    awaiting_payment: "bg-amber-50 text-amber-600 dark:bg-amber-400/15 dark:text-amber-200",
+    rejected: "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-200",
+    paid: "bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200",
+    overdue: "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-200",
+    void: "bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300",
+  };
+
+  return (
+    <Badge className={cn("h-6 rounded-full border-0 px-3 text-sm font-semibold", tone[status])}>
+      {statusLabels[status]}
+    </Badge>
   );
 }
 
 function InvoiceActions({
   invoice,
-  row,
+  paymentProofs,
   pendingAction,
   onSend,
-  onEmail,
   onMarkSent,
-  onAmend,
-  onReminder,
   onMarkPaid,
+  onReminder,
   onOverdue,
+  onVoid,
+  onAcceptProof,
+  onRejectProof,
+  display = "icon",
 }: {
   invoice: Invoice;
-  row: InvoiceRow;
-  pendingAction: string | null;
+  paymentProofs: PaymentProof[];
+  pendingAction: string;
+  display?: "icon" | "mobile";
   onSend: (invoice: Invoice) => void;
-  onEmail: (invoice: Invoice) => void;
-  onMarkSent: (invoice: Invoice) => void;
-  onAmend: (row: InvoiceRow) => void | Promise<void>;
-  onReminder: (invoice: Invoice) => void;
-  onMarkPaid: (invoice: Invoice) => void;
-  onOverdue: (invoice: Invoice) => void;
+  onMarkSent: (id: Id<"invoices">) => void;
+  onMarkPaid: (id: Id<"invoices">) => void;
+  onReminder: (id: Id<"invoices">) => void;
+  onOverdue: (id: Id<"invoices">) => void;
+  onVoid: (id: Id<"invoices">) => void;
+  onAcceptProof: (id: Id<"paymentProofs">) => void;
+  onRejectProof: (id: Id<"paymentProofs">) => void;
 }) {
+  const pendingProof = paymentProofs.find((proof) => proof.status === "submitted") ?? null;
   const sending = pendingAction === `send-${invoice._id}`;
-  const markingSent = pendingAction === `mark-sent-${invoice._id}`;
-  const reminding = pendingAction === `reminder-${invoice._id}`;
-  const paying = pendingAction === `paid-${invoice._id}`;
-  const overduing = pendingAction === `overdue-${invoice._id}`;
-  const amending = pendingAction === `amend-${invoice._id}`;
+  const reviewing = pendingProof
+    ? pendingAction === `proof-accept-${pendingProof._id}` || pendingAction === `proof-reject-${pendingProof._id}`
+    : false;
+  const clientHref = invoice.publicToken ? `/invoice/${invoice.publicToken}` : "";
+  const canSend = isDraftInvoice(invoice.status);
+  const canRemind = isActiveInvoice(invoice.status);
+  const canVoid = invoice.status !== "paid" && invoice.status !== "void";
+  const QuickIcon = pendingProof ? CheckCircle2 : canSend ? Send : canRemind ? Bell : Banknote;
+  const quickLabel = pendingProof ? "Confirm payment" : canSend ? "Prepare email" : canRemind ? "Send reminder" : "Mark paid";
+  const quickDisabled = !pendingProof && !canSend && !canRemind && invoice.status === "paid";
+  const mobileQuickLabel = pendingProof ? "Confirm" : canSend ? "Send" : canRemind ? "Remind" : "Mark paid";
 
-  return (
-    <div className="db-action-row">
-      {invoice.status === "draft" || invoice.status === "ready" ? (
+  function runQuickAction() {
+    if (pendingProof) {
+      onAcceptProof(pendingProof._id);
+      return;
+    }
+
+    if (canSend) {
+      onSend(invoice);
+      return;
+    }
+
+    if (canRemind) {
+      onReminder(invoice._id);
+      return;
+    }
+
+    if (invoice.status !== "paid") {
+      onMarkPaid(invoice._id);
+    }
+  }
+
+  function renderMoreMenu(triggerClassName: string) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`More actions for ${invoice.invoiceNumber}`}
+            className={triggerClassName}
+          >
+            <MoreHorizontal className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {pendingProof ? (
+            <>
+              <DropdownMenuItem onSelect={() => onAcceptProof(pendingProof._id)}>
+                <CheckCircle2 className="size-4" />
+                Confirm payment
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onSelect={() => onRejectProof(pendingProof._id)}>
+                <XCircle className="size-4" />
+                Reject proof
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
+          {canSend ? (
+            <DropdownMenuItem onSelect={() => onSend(invoice)}>
+              <Send className="size-4" />
+              Prepare email
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem asChild>
+            <Link href={`/dashboard/invoices/${invoice._id}`}>
+              <FileText className="size-4" />
+              View details
+            </Link>
+          </DropdownMenuItem>
+          {clientHref ? (
+            <DropdownMenuItem asChild>
+              <a href={clientHref} target="_blank" rel="noreferrer">
+                <ExternalLink className="size-4" />
+                Client view
+              </a>
+            </DropdownMenuItem>
+          ) : null}
+          {invoice.publicToken && canSend ? (
+            <DropdownMenuItem onSelect={() => onMarkSent(invoice._id)}>
+              <Send className="size-4" />
+              Mark sent
+            </DropdownMenuItem>
+          ) : null}
+          {canRemind ? (
+            <>
+              <DropdownMenuItem onSelect={() => onReminder(invoice._id)}>
+                <Bell className="size-4" />
+                Remind
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onMarkPaid(invoice._id)}>
+                <Banknote className="size-4" />
+                Mark paid
+              </DropdownMenuItem>
+            </>
+          ) : null}
+          {invoice.status === "sent" || invoice.status === "viewed" ? (
+            <DropdownMenuItem onSelect={() => onOverdue(invoice._id)}>
+              <Clock className="size-4" />
+              Mark overdue
+            </DropdownMenuItem>
+          ) : null}
+          {canVoid ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={() => onVoid(invoice._id)}>
+                <Trash2 className="size-4" />
+                Void invoice
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  if (display === "mobile") {
+    return (
+      <div className="grid grid-cols-[minmax(0,1fr)_44px_44px] gap-2">
         <Button
-          size="sm"
-          className="db-action-primary"
-          onClick={() => onSend(invoice)}
-          disabled={sending}
+          type="button"
+          variant="ghost"
+          aria-label={`${quickLabel} for ${invoice.invoiceNumber}`}
+          className={cn(
+            "h-11 min-w-0 justify-center rounded-lg px-3 text-sm font-semibold",
+            pendingProof
+              ? "bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-400/15 dark:text-amber-200 dark:hover:bg-amber-400/25"
+              : "bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-500/15 dark:text-teal-200 dark:hover:bg-teal-500/25",
+          )}
+          disabled={quickDisabled || sending || reviewing}
+          onClick={runQuickAction}
         >
-          {sending ? <Loader2 className="size-3 animate-spin" /> : null}
-          Prepare email
+          {sending || reviewing ? <Loader2 className="size-4 animate-spin" /> : <QuickIcon className="size-4" />}
+          <span className="truncate">{mobileQuickLabel}</span>
         </Button>
-      ) : null}
-      {invoice.status === "rejected" ? (
-        <Button
-          size="sm"
-          className="db-action-primary"
-          onClick={() => onAmend(row)}
-          disabled={amending}
-        >
-          {amending ? <Loader2 className="size-3 animate-spin" /> : null}
-          Amend
-        </Button>
-      ) : null}
-      {invoice.publicToken ? (
+
         <Button
           asChild
-          size="sm"
-          variant="outline"
-          className="db-action-secondary"
+          variant="ghost"
+          size="icon"
+          aria-label={`Open invoice details for ${invoice.invoiceNumber}`}
+          className="size-11 rounded-lg bg-neutral-100 text-neutral-950 hover:bg-neutral-200 hover:text-neutral-950 dark:bg-white/10 dark:text-neutral-200 dark:hover:bg-white/15 dark:hover:text-white"
         >
-          <a href={`/invoice/${invoice.publicToken}`} target="_blank" rel="noreferrer">
-            Client
-          </a>
+          <Link href={`/dashboard/invoices/${invoice._id}`}>
+            <Eye className="size-4" />
+          </Link>
         </Button>
-      ) : null}
-      {invoice.publicToken && invoice.status !== "paid" ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className="db-action-secondary"
-          onClick={() => onEmail(invoice)}
-        >
-          Email
-        </Button>
-      ) : null}
-      {invoice.publicToken &&
-      (invoice.status === "ready" || invoice.status === "draft") ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className="db-action-secondary"
-          onClick={() => onMarkSent(invoice)}
-          disabled={markingSent}
-        >
-          {markingSent ? <Loader2 className="size-3 animate-spin" /> : null}
-          Mark sent
-        </Button>
-      ) : null}
-      {isClientActive(invoice.status) ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className="db-action-secondary"
-          onClick={() => onReminder(invoice)}
-          disabled={reminding}
-        >
-          {reminding ? <Loader2 className="size-3 animate-spin" /> : null}
-          Remind
-        </Button>
-      ) : null}
-      {isClientActive(invoice.status) ? (
-        <Button
-          size="sm"
-          className="db-action-primary"
-          onClick={() => onMarkPaid(invoice)}
-          disabled={paying}
-        >
-          {paying ? <Loader2 className="size-3 animate-spin" /> : null}
-          Mark paid
-        </Button>
-      ) : null}
-      {(invoice.status === "sent" || invoice.status === "viewed") ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className="db-action-danger"
-          onClick={() => onOverdue(invoice)}
-          disabled={overduing}
-        >
-          {overduing ? <Loader2 className="size-3 animate-spin" /> : null}
-          Overdue
-        </Button>
-      ) : null}
+
+        {renderMoreMenu("size-11 rounded-lg bg-muted text-foreground hover:bg-neutral-200 hover:text-foreground dark:hover:bg-white/10")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={`${quickLabel} for ${invoice.invoiceNumber}`}
+        className={cn(
+          "size-9 rounded-full text-teal-600 hover:bg-teal-100 hover:text-teal-700 dark:hover:bg-teal-500/25",
+          pendingProof
+            ? "bg-amber-50 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200 dark:hover:bg-amber-400/25"
+            : "bg-teal-50 dark:bg-teal-500/15 dark:text-teal-200",
+        )}
+        disabled={quickDisabled || sending || reviewing}
+        onClick={runQuickAction}
+      >
+        {sending || reviewing ? <Loader2 className="size-4 animate-spin" /> : <QuickIcon className="size-4" />}
+      </Button>
+
+      <Button
+        asChild
+        variant="ghost"
+        size="icon"
+        aria-label={`Open invoice details for ${invoice.invoiceNumber}`}
+        className="size-9 rounded-full bg-neutral-100 text-neutral-950 hover:bg-neutral-200 hover:text-neutral-950 dark:bg-white/10 dark:text-neutral-200 dark:hover:bg-white/15 dark:hover:text-white"
+      >
+        <Link href={`/dashboard/invoices/${invoice._id}`}>
+          <Eye className="size-4" />
+        </Link>
+      </Button>
+
+      {renderMoreMenu("size-9 rounded-full bg-muted text-foreground hover:bg-neutral-200 hover:text-foreground dark:hover:bg-white/10")}
     </div>
   );
 }

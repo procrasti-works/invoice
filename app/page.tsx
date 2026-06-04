@@ -11,7 +11,7 @@ import {
   FileText,
   ReceiptText,
   Users,
-} from "lucide-react";
+} from "@/app/_components/IconPack";
 
 type PlatformFeature = {
   body: string;
@@ -160,8 +160,8 @@ const faqs = [
     "Freelancers, SMEs, and finance teams that need clean invoices, client records, and VAT-ready totals.",
   ],
   [
-    "Does Payvio submit to NamRA/ITAS?",
-    "Not in this version. Payvio keeps VAT-ready records first and can add direct submission after official specifications are available.",
+    "Can Payvio export VAT records?",
+    "Yes. Payvio keeps VAT-ready records and CSV exports for review.",
   ],
 ];
 
@@ -259,17 +259,17 @@ function OrbitScaleSection() {
 function PlatformFeature({ feature }: { feature: PlatformFeature }) {
   return (
     <article
-      className="grid gap-8 border-t border-[#d9dfd6] py-10 lg:grid-cols-[0.72fr_1fr] lg:items-center"
+      className="grid gap-8 border-t border-border py-10 lg:grid-cols-[0.72fr_1fr] lg:items-center"
       id={feature.id}
     >
       <div>
-        <p className="text-xs font-black uppercase text-[#0978e1]">
+        <p className="text-xs font-semibold uppercase text-primary">
           {feature.kicker}
         </p>
-        <h3 className="mt-4 max-w-2xl text-3xl font-black leading-[1.02] text-[#0d141c] sm:text-5xl">
+        <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-[1.02] text-foreground sm:text-5xl">
           {feature.title}
         </h3>
-        <p className="mt-5 max-w-xl text-lg leading-8 text-[#4e5961]">
+        <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">
           {feature.body}
         </p>
       </div>
@@ -326,7 +326,7 @@ function PlatformFeature({ feature }: { feature: PlatformFeature }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-black uppercase text-[#0978e1]">{children}</p>
+    <p className="text-xs font-semibold uppercase text-primary">{children}</p>
   );
 }
 
@@ -339,21 +339,21 @@ function SecuritySection() {
   ];
 
   return (
-    <section className="bg-[#0d141c] py-20 text-white sm:py-28">
+    <section className="bg-primary py-20 text-primary-foreground sm:py-28">
       <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 lg:grid-cols-[0.8fr_1fr] lg:items-center">
         <div>
-          <p className="text-xs font-black uppercase text-[#8dd8ff]">
+          <p className="text-xs font-semibold uppercase text-primary">
             Safety and clarity
           </p>
-          <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-7xl">
+          <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-7xl">
             Built for real invoice work.
           </h2>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {items.map(([title, body]) => (
-            <article className="rounded-[8px] bg-white/10 p-5" key={title}>
-              <h3 className="text-xl font-black">{title}</h3>
-              <p className="mt-3 text-sm leading-6 text-white/65">{body}</p>
+            <article className="rounded-[8px] bg-primary-foreground/10 p-5" key={title}>
+              <h3 className="text-xl font-semibold">{title}</h3>
+              <p className="mt-3 text-sm leading-6 text-primary-foreground/65">{body}</p>
             </article>
           ))}
         </div>
@@ -364,29 +364,29 @@ function SecuritySection() {
 
 export default function Home() {
   return (
-    <div className="il-page min-h-screen bg-white text-[#0d141c]">
+    <div className="il-page min-h-screen bg-background text-foreground">
       <MarketingHeader />
 
       <main>
-        <section className="il-hero bg-white">
+        <section className="il-hero bg-background">
         <div className="il-hero-shell mx-auto max-w-[1180px] px-5 text-center sm:px-8">
           <a
-            className="il-hero-eyebrow inline-flex items-center rounded-full bg-[#c9ecff] px-5 py-2 text-sm font-extrabold text-[#04120f]"
+            className="il-hero-eyebrow inline-flex items-center rounded-full bg-secondary px-5 py-2 text-sm font-semibold text-foreground"
             href="#platform"
           >
             Payvio for invoices, clients, VAT, and ledgers
           </a>
-          <h1 className="il-hero-title mx-auto mt-9 max-w-6xl text-[#0d141c]">
+          <h1 className="il-hero-title mx-auto mt-9 max-w-6xl text-foreground">
             The invoice platform Namibia can grow with.
           </h1>
-          <p className="il-hero-copy mx-auto mt-7 max-w-3xl text-[#0d141c]">
+          <p className="il-hero-copy mx-auto mt-7 max-w-3xl text-foreground">
             Create invoices, send secure client links, scan supplier invoices,
             track payments, and keep VAT-ready records in one simple workspace.
           </p>
           <div className="il-hero-form mx-auto mt-9">
             <HeroLeadForm source="Homepage hero" />
           </div>
-          <p className="il-hero-note mx-auto mt-7 max-w-2xl text-xs leading-5 text-[#33413c]">
+          <p className="il-hero-note mx-auto mt-7 max-w-2xl text-xs leading-5 text-muted-foreground">
             Payvio keeps invoice records organized. Payments stay with your
             bank or payment provider.
           </p>
@@ -400,16 +400,16 @@ export default function Home() {
 
       <OrbitScaleSection />
 
-      <section className="bg-white py-20 sm:py-28" id="platform">
+      <section className="bg-background py-20 sm:py-28" id="platform">
         <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.85fr_1fr] lg:items-end">
             <div>
               <SectionLabel>One workspace for invoice operations</SectionLabel>
-              <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] text-[#0d141c] sm:text-7xl">
+              <h2 className="mt-5 max-w-4xl text-4xl font-semibold leading-[1.02] text-foreground sm:text-7xl">
                 Invoices, scans, clients, purchases, and VAT in one place.
               </h2>
             </div>
-            <p className="max-w-xl text-lg leading-8 text-[#4e5961] lg:justify-self-end">
+            <p className="max-w-xl text-lg leading-8 text-muted-foreground lg:justify-self-end">
               The structure is simple: create the invoice, send the link, scan
               supplier files, collect proof, and keep the ledger ready for reporting.
             </p>
@@ -423,14 +423,14 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="vat" className="bg-[#f5f7f2] py-20 sm:py-28">
+      <section id="vat" className="bg-muted py-20 sm:py-28">
         <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 lg:grid-cols-[0.85fr_1fr] lg:items-center">
           <div>
             <SectionLabel>VAT-ready records</SectionLabel>
-            <h2 className="mt-5 text-4xl font-black leading-[1.02] text-[#0d141c] sm:text-7xl">
+            <h2 className="mt-5 text-4xl font-semibold leading-[1.02] text-foreground sm:text-7xl">
               Keep the numbers clean before month end.
             </h2>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-[#4e5961]">
+            <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
               Payvio separates subtotal, VAT, and total values so the record is
               easier to review when reporting time arrives.
             </p>
@@ -462,28 +462,28 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-white py-20 sm:py-28" id="pricing">
+      <section className="bg-background py-20 sm:py-28" id="pricing">
         <div className="mx-auto grid max-w-[1180px] gap-4 px-5 sm:px-8 lg:grid-cols-2">
-          <article className="rounded-[8px] bg-[#0d141c] p-8 text-white sm:p-10">
-            <p className="text-xs font-black uppercase text-[#8dd8ff]">
+          <article className="rounded-[8px] bg-primary p-8 text-primary-foreground sm:p-10">
+            <p className="text-xs font-semibold uppercase text-primary">
               Up and running fast
             </p>
-            <h2 className="mt-5 text-3xl font-black leading-[1.02] sm:text-6xl">
+            <h2 className="mt-5 text-3xl font-semibold leading-[1.02] sm:text-6xl">
               Start with the first invoice.
             </h2>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/65">
+            <p className="mt-6 max-w-xl text-lg leading-8 text-primary-foreground/65">
               Create the workspace, add a client, and send a secure invoice
               link without changing how you get paid.
             </p>
           </article>
-          <article className="rounded-[8px] bg-[#e8f4dc] p-8 text-[#0d141c] sm:p-10">
-            <p className="text-xs font-black uppercase text-[#0978e1]">
+          <article className="rounded-[8px] bg-secondary p-8 text-foreground sm:p-10">
+            <p className="text-xs font-semibold uppercase text-primary">
               Clear plans
             </p>
-            <h2 className="mt-5 text-3xl font-black leading-[1.02] sm:text-6xl">
+            <h2 className="mt-5 text-3xl font-semibold leading-[1.02] sm:text-6xl">
               Simple pricing for growing teams.
             </h2>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-[#4e5961]">
+            <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
               Pick the plan that fits your invoice volume, client list, and
               reporting needs.
             </p>
@@ -493,11 +493,11 @@ export default function Home() {
 
       <SecuritySection />
 
-      <section id="contact" className="bg-white py-20 sm:py-28">
+      <section id="contact" className="bg-background py-20 sm:py-28">
         <div className="mx-auto grid max-w-[1180px] gap-12 px-5 sm:px-8 lg:grid-cols-[0.75fr_1fr]">
           <div>
             <SectionLabel>Contact</SectionLabel>
-            <h2 className="mt-5 text-4xl font-black leading-[1.02] text-[#0d141c] sm:text-6xl">
+            <h2 className="mt-5 text-4xl font-semibold leading-[1.02] text-foreground sm:text-6xl">
               Simple answers. Clear next steps.
             </h2>
             <div className="mt-8">
@@ -509,42 +509,42 @@ export default function Home() {
           </div>
           <div className="grid gap-3">
             {faqs.map(([question, answer]) => (
-              <article className="rounded-[8px] bg-[#f5f7f2] p-6" key={question}>
-                <h3 className="text-2xl font-black text-[#0d141c]">
+              <article className="rounded-[8px] bg-muted p-6" key={question}>
+                <h3 className="text-2xl font-semibold text-foreground">
                   {question}
                 </h3>
-                <p className="mt-4 text-lg leading-8 text-[#4e5961]">{answer}</p>
+                <p className="mt-4 text-lg leading-8 text-muted-foreground">{answer}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-[#0978e1] py-20 sm:py-28">
+      <section className="bg-primary py-20 sm:py-28">
         <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 lg:grid-cols-[1fr_0.85fr] lg:items-center">
           <div>
-            <p className="text-xs font-black uppercase text-white/80">
+            <p className="text-xs font-semibold uppercase text-primary-foreground/80">
               Ready when you are
             </p>
-            <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] text-white sm:text-7xl">
+            <h2 className="mt-5 max-w-4xl text-4xl font-semibold leading-[1.02] text-primary-foreground sm:text-7xl">
               Start your invoice workspace today.
             </h2>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link
-                className="inline-flex min-h-12 items-center justify-center rounded-full bg-white px-6 text-base font-black text-[#0d141c] transition hover:bg-[#f5f7f2]"
+                className="inline-flex min-h-12 items-center justify-center rounded-full bg-background px-6 text-base font-semibold text-foreground transition hover:bg-muted"
                 href="/signup"
               >
                 Open workspace
               </Link>
               <Link
-                className="il-final-login inline-flex min-h-12 items-center justify-center rounded-full bg-[#0d141c] px-6 text-base font-black transition hover:bg-[#092054]"
+                className="il-final-login inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-6 text-base font-semibold transition hover:bg-primary/90"
                 href="/login"
               >
                 Login
               </Link>
             </div>
           </div>
-          <div className="rounded-[8px] bg-white p-5">
+          <div className="rounded-[8px] bg-background p-5">
             <HeroLeadForm source="Homepage final CTA" />
           </div>
         </div>

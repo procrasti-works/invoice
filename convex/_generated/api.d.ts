@@ -14,6 +14,7 @@ import type * as dashboard from "../dashboard.js";
 import type * as http from "../http.js";
 import type * as invoices from "../invoices.js";
 import type * as organizationContext from "../organizationContext.js";
+import type * as organizationImages from "../organizationImages.js";
 import type * as organizationPermissions from "../organizationPermissions.js";
 import type * as organizations from "../organizations.js";
 import type * as purchaseScanExtraction from "../purchaseScanExtraction.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   invoices: typeof invoices;
   organizationContext: typeof organizationContext;
+  organizationImages: typeof organizationImages;
   organizationPermissions: typeof organizationPermissions;
   organizations: typeof organizations;
   purchaseScanExtraction: typeof purchaseScanExtraction;

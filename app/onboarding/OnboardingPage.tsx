@@ -6,19 +6,27 @@ import {
   ArrowLeft,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Loader2,
   LogOut,
   Users,
-} from "lucide-react";
+} from "@/app/_components/IconPack";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -236,7 +244,7 @@ export function OnboardingPage({
                 onClick={() =>
                   router.replace(`/login?next=${encodeURIComponent(loginNext)}`)
                 }
-                className="h-12 w-full rounded-full bg-[#6570d9] text-white hover:bg-[#7580ef]"
+                className="h-11 w-full"
               >
                 Log in
               </Button>
@@ -263,14 +271,14 @@ export function OnboardingPage({
         <OnboardingBrand />
 
         <div className="grid justify-items-center gap-1.5 text-center">
-          <h1 className="text-[1.45rem] font-semibold leading-tight text-[#202124]">
+          <h1 className="text-[1.45rem] font-semibold leading-tight text-foreground">
             {showInvitationChoice
               ? "Join workspace"
               : createMode
                 ? "New organization"
               : "Set up Payvio"}
           </h1>
-          <p className="max-w-[250px] text-sm leading-6 text-[#6f737d]">
+          <p className="max-w-[250px] text-sm leading-6 text-muted-foreground">
             {showInvitationChoice
               ? "Accept the invite or create a separate workspace."
               : createMode
@@ -312,17 +320,19 @@ export function OnboardingPage({
           />
         ) : null}
 
-        <footer className="mt-1 flex w-full items-center justify-center gap-3 text-center text-xs text-[#7d8088]">
+        <footer className="mt-1 flex w-full items-center justify-center gap-2 text-center text-xs text-muted-foreground">
           <span className="min-w-0 truncate">{userEmail}</span>
           <span aria-hidden="true">/</span>
-          <button
+          <Button
             type="button"
             onClick={handleSignOut}
-            className="inline-flex shrink-0 items-center gap-1 font-semibold text-[#4f5cc9] hover:text-[#3946ad]"
+            variant="ghost"
+            size="sm"
+            className="h-8 shrink-0 px-2"
           >
             <LogOut className="size-3.5" />
             Sign out
-          </button>
+          </Button>
         </footer>
       </CenteredPanel>
     </OnboardingShell>
@@ -345,51 +355,56 @@ function InvitationPopup({
   onCreate: () => void;
 }) {
   return (
-    <div className="grid w-full gap-4 rounded-[8px] border border-[#e0e2ea] bg-white/95 p-4 shadow-[0_22px_70px_rgb(18_20_28_/_12%)] backdrop-blur">
-      <div className="grid gap-3">
+    <Card className="w-full shadow-sm">
+      <CardContent className="grid gap-4 p-4">
+        <div className="grid gap-3">
         {invitations.map((invitation) => (
-          <div
+          <Card
             key={invitation._id}
-            className="grid gap-3 rounded-[8px] border border-[#e5e7ef] bg-[#fbfbfc] p-3"
+            className="bg-muted/30 shadow-none"
           >
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-[8px] bg-[#eef0ff] text-[#6570d9]">
-                <Users className="size-4" />
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#202124]">
-                  {invitation.organizationName}
-                </p>
-                <p className="mt-0.5 text-xs text-[#71747c]">
-                  Invited as {roleLabel(invitation.role)}
-                </p>
+            <CardContent className="grid gap-3 p-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="grid size-9 shrink-0 place-items-center rounded-md border bg-background text-muted-foreground">
+                  <Users className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {invitation.organizationName}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Invited as {roleLabel(invitation.role)}
+                  </p>
+                </div>
               </div>
-            </div>
-            <Button
-              type="button"
-              disabled={joiningId === invitation._id}
-              onClick={() => onJoin(invitation._id)}
-              className="h-11 rounded-full bg-[#6570d9] text-white hover:bg-[#7580ef]"
-            >
-              {joiningId === invitation._id ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <CheckCircle2 />
-              )}
-              Join workspace
-            </Button>
-          </div>
+              <Button
+                type="button"
+                disabled={joiningId === invitation._id}
+                onClick={() => onJoin(invitation._id)}
+                className="h-11"
+              >
+                {joiningId === invitation._id ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <CheckCircle2 />
+                )}
+                Join workspace
+              </Button>
+            </CardContent>
+          </Card>
         ))}
-      </div>
+        </div>
 
-      <button
-        type="button"
-        onClick={onCreate}
-        className="justify-self-center text-sm font-semibold text-[#4f5cc9] hover:text-[#3946ad]"
-      >
-        Create a separate workspace
-      </button>
-    </div>
+        <Button
+          type="button"
+          onClick={onCreate}
+          variant="link"
+          className="justify-self-center"
+        >
+          Create a separate workspace
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -431,30 +446,31 @@ function WorkspacePopup({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid w-full gap-5 rounded-[8px] border border-[#e0e2ea] bg-white/95 p-5 shadow-[0_22px_70px_rgb(18_20_28_/_12%)] backdrop-blur"
+      className="grid w-full gap-5 rounded-lg border bg-card p-5 text-card-foreground shadow-sm"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="grid gap-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6570d9]">
+          <p className="text-xs font-medium uppercase text-muted-foreground">
             {currentStep.label}
           </p>
-          <h2 className="text-lg font-semibold leading-tight text-[#202124]">
+          <h2 className="text-lg font-semibold leading-tight text-foreground">
             {currentStep.title}
           </h2>
-          <p className="text-sm leading-6 text-[#71747c]">
+          <p className="text-sm leading-6 text-muted-foreground">
             {currentStep.description}
           </p>
         </div>
 
         {hasActiveInvitations ? (
-          <button
+          <Button
             type="button"
             onClick={onBackToInvitation}
-            className="rounded-full p-2 text-[#7a7e89] hover:bg-[#ececef] hover:text-[#202124]"
+            variant="ghost"
+            size="icon"
             aria-label="Back to invitation"
           >
             <ArrowLeft className="size-4" />
-          </button>
+          </Button>
         ) : null}
       </div>
 
@@ -481,7 +497,7 @@ function WorkspacePopup({
           <Button
             type="submit"
             disabled={pending}
-            className="h-12 rounded-full bg-[#6570d9] text-white hover:bg-[#7580ef]"
+            className="h-11"
           >
             {pending ? <Loader2 className="animate-spin" /> : <Check />}
             Create workspace
@@ -489,7 +505,7 @@ function WorkspacePopup({
         ) : (
           <Button
             type="submit"
-            className="h-12 rounded-full bg-[#6570d9] text-white hover:bg-[#7580ef]"
+            className="h-11"
           >
             Continue
             <ChevronRight />
@@ -497,14 +513,16 @@ function WorkspacePopup({
         )}
 
         {activeIndex > 0 ? (
-          <button
+          <Button
             type="button"
             onClick={onPrevious}
             disabled={pending}
-            className="justify-self-center text-sm font-semibold text-[#4a4d55] hover:text-[#4f5cc9] disabled:opacity-60"
+            variant="ghost"
+            size="sm"
+            className="justify-self-center"
           >
             Back
-          </button>
+          </Button>
         ) : null}
       </div>
     </form>
@@ -527,31 +545,34 @@ function BusinessFields({
           onChange={(event) =>
             onChange((current) => ({ ...current, name: event.target.value }))
           }
-          className="h-11 rounded-[10px] border-[#dfe1e8] bg-white text-[#17181c] focus-visible:border-[#6570d9] focus-visible:ring-[#6570d9]/15"
+          className="h-11"
           placeholder="Acme Trading"
           required
         />
       </OnboardingField>
 
       <OnboardingField label="Entity type" htmlFor="entity-type">
-        <select
-          id="entity-type"
+        <Select
           value={form.entityType}
-          onChange={(event) =>
+          onValueChange={(value) =>
             onChange((current) => ({
               ...current,
-              entityType: event.target.value as EntityType,
+              entityType: value as EntityType,
             }))
           }
-          className="h-11 rounded-[10px] border border-[#dfe1e8] bg-white px-3 text-sm text-[#17181c] outline-none transition-colors focus:border-[#6570d9] focus:ring-3 focus:ring-[#6570d9]/15"
         >
-          <option value="sole_proprietor">Sole proprietor</option>
-          <option value="close_corporation">Close corporation</option>
-          <option value="private_company">Private company</option>
-          <option value="partnership">Partnership</option>
-          <option value="ngo">NGO</option>
-          <option value="other">Other</option>
-        </select>
+          <SelectTrigger id="entity-type" className="h-11">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="sole_proprietor">Sole proprietor</SelectItem>
+            <SelectItem value="close_corporation">Close corporation</SelectItem>
+            <SelectItem value="private_company">Private company</SelectItem>
+            <SelectItem value="partnership">Partnership</SelectItem>
+            <SelectItem value="ngo">NGO</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
       </OnboardingField>
     </div>
   );
@@ -576,7 +597,7 @@ function LegalFields({
               legalName: event.target.value,
             }))
           }
-          className="h-11 rounded-[10px] border-[#dfe1e8] bg-white text-[#17181c] focus-visible:border-[#6570d9] focus-visible:ring-[#6570d9]/15"
+          className="h-11"
           placeholder="Registered name"
         />
       </OnboardingField>
@@ -591,7 +612,7 @@ function LegalFields({
               tradingName: event.target.value,
             }))
           }
-          className="h-11 rounded-[10px] border-[#dfe1e8] bg-white text-[#17181c] focus-visible:border-[#6570d9] focus-visible:ring-[#6570d9]/15"
+          className="h-11"
           placeholder="Public name"
         />
       </OnboardingField>
@@ -644,100 +665,31 @@ function WheelPicker({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const selectedOption =
     options.find((option) => option.value === value) ?? options[0];
 
   return (
     <div className="grid gap-2">
-      <Label htmlFor={id} className="text-xs font-semibold text-[#3b3d43]">
-        {label}
-      </Label>
-      <button
-        id={id}
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((current) => !current)}
-        className="flex h-11 w-full items-center justify-between gap-3 rounded-[10px] border border-[#dfe1e8] bg-white px-3 text-left text-sm text-[#17181c] outline-none transition-colors hover:border-[#c9cce0] focus:border-[#6570d9] focus:ring-3 focus:ring-[#6570d9]/15"
-      >
-        <span className="min-w-0">
-          <span className="block truncate text-base">{selectedOption.label}</span>
-          {selectedOption.note ? (
-            <span className="block truncate text-xs text-[#7a7e89]">
-              {selectedOption.note}
-            </span>
-          ) : null}
-        </span>
-        <ChevronDown
-          className={[
-            "size-4 shrink-0 text-[#7a7e89] transition-transform",
-            open ? "rotate-180" : "",
-          ].join(" ")}
-        />
-      </button>
-
-      {open ? (
-        <div className="relative overflow-hidden rounded-[12px] border border-[#dfe1e8] bg-[#fbfbfc] p-2 shadow-[inset_0_1px_0_rgb(255_255_255),0_12px_35px_rgb(18_20_28_/_8%)]">
-          <div className="pointer-events-none absolute inset-x-2 top-1/2 h-11 -translate-y-1/2 rounded-[10px] border border-[#d7daf7] bg-white/80 shadow-[0_6px_18px_rgb(101_112_217_/_10%)]" />
-          <div
-            role="listbox"
-            aria-label={label}
-            aria-activedescendant={`${id}-${selectedOption.value}`}
-            className="relative grid max-h-[168px] snap-y snap-mandatory gap-1 overflow-y-auto pr-1 [scrollbar-color:#b8bdf0_transparent] [scrollbar-width:thin]"
-          >
-            {options.map((option) => {
-              const selected = option.value === selectedOption.value;
-
-              return (
-                <button
-                  key={option.value}
-                  id={`${id}-${option.value}`}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  aria-disabled={!option.available}
-                  disabled={!option.available}
-                  onClick={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                  className={[
-                    "grid min-h-11 snap-center grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] px-3 py-2 text-left transition-colors",
-                    selected
-                      ? "bg-[#eef0ff] text-[#202124]"
-                      : "text-[#4a4d55] hover:bg-white",
-                    option.available
-                      ? "cursor-pointer"
-                      : "cursor-not-allowed opacity-45",
-                  ].join(" ")}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">
-                      {option.label}
-                    </span>
-                    {option.note ? (
-                      <span className="block truncate text-xs text-[#7a7e89]">
-                        {option.note}
-                      </span>
-                    ) : null}
-                  </span>
-                  {option.available ? (
-                    selected ? (
-                      <Check className="size-4 text-[#6570d9]" />
-                    ) : null
-                  ) : (
-                    <span className="rounded-full bg-[#ececef] px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#7a7e89]">
-                      Not available yet
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      <Label htmlFor={id}>{label}</Label>
+      <Select value={selectedOption.value} onValueChange={onChange}>
+        <SelectTrigger id={id} className="h-11">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              disabled={!option.available}
+            >
+              {option.note ? `${option.label} - ${option.note}` : option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {!selectedOption.available ? (
+        <p className="text-xs text-muted-foreground">Not available yet.</p>
       ) : null}
-
       <input type="hidden" name={id} value={selectedOption.value} />
     </div>
   );
@@ -752,23 +704,26 @@ function TaxFields({
 }) {
   return (
     <div className="grid gap-4">
-      <label className="flex items-start gap-3 rounded-[10px] border border-[#dfe1e8] bg-[#fbfbfc] p-3">
-        <input
-          type="checkbox"
+      <label
+        className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3"
+        htmlFor="vat-registered"
+      >
+        <Checkbox
+          id="vat-registered"
           checked={form.vatRegistered}
-          onChange={(event) =>
+          onCheckedChange={(checked) =>
             onChange((current) => ({
               ...current,
-              vatRegistered: event.target.checked,
+              vatRegistered: checked === true,
             }))
           }
-          className="mt-1 size-4 accent-[#6570d9]"
+          className="mt-1"
         />
         <span className="grid gap-1">
-          <span className="text-sm font-semibold text-[#202124]">
+          <span className="text-sm font-medium text-foreground">
             VAT registered
           </span>
-          <span className="text-sm leading-5 text-[#71747c]">
+          <span className="text-sm leading-5 text-muted-foreground">
             Show VAT details on invoices.
           </span>
         </span>
@@ -785,7 +740,7 @@ function TaxFields({
                 vatNumber: event.target.value,
               }))
             }
-            className="h-11 rounded-[10px] border-[#dfe1e8] bg-white text-[#17181c] focus-visible:border-[#6570d9] focus-visible:ring-[#6570d9]/15"
+            className="h-11"
           />
         </OnboardingField>
       ) : null}
@@ -802,10 +757,10 @@ function StepDots({ activeIndex }: { activeIndex: number }) {
           className={[
             "h-1.5 rounded-full transition-all",
             index === activeIndex
-              ? "w-8 bg-[#6570d9]"
+              ? "w-8 bg-primary"
               : index < activeIndex
-                ? "w-3 bg-[#a7adeb]"
-                : "w-3 bg-[#e2e3e9]",
+                ? "w-3 bg-primary/40"
+                : "w-3 bg-muted",
           ].join(" ")}
         />
       ))}
@@ -815,7 +770,7 @@ function StepDots({ activeIndex }: { activeIndex: number }) {
 
 function OnboardingShell({ children }: { children: ReactNode }) {
   return (
-    <main className="grid min-h-dvh place-items-center overflow-hidden bg-[#fbfbfc] px-5 py-8 text-[#15161a]">
+    <main className="grid min-h-dvh place-items-center overflow-hidden bg-background px-5 py-8 text-foreground">
       {children}
     </main>
   );
@@ -831,7 +786,7 @@ function CenteredPanel({ children }: { children: ReactNode }) {
 
 function OnboardingBrand() {
   return (
-    <div className="grid size-[54px] place-items-center text-[#111216]">
+    <div className="grid size-[54px] place-items-center text-foreground">
       <Image
         src="/payvio-logo.svg"
         alt="Payvio"
@@ -849,7 +804,7 @@ function OnboardingLoading() {
     <OnboardingShell>
       <CenteredPanel>
         <OnboardingBrand />
-        <p className="text-sm text-[#6f737d]">Loading setup...</p>
+        <p className="text-sm text-muted-foreground">Loading setup...</p>
       </CenteredPanel>
     </OnboardingShell>
   );
@@ -866,9 +821,7 @@ function OnboardingField({
 }) {
   return (
     <div className="grid gap-2">
-      <Label htmlFor={htmlFor} className="text-xs font-semibold text-[#3b3d43]">
-        {label}
-      </Label>
+      <Label htmlFor={htmlFor}>{label}</Label>
       {children}
     </div>
   );
@@ -886,16 +839,16 @@ function SetupPanel({
   return (
     <>
       <div className="grid justify-items-center gap-2 text-center">
-        <h1 className="text-[1.38rem] font-semibold leading-tight text-[#202124]">
+        <h1 className="text-[1.38rem] font-semibold leading-tight text-foreground">
           {title}
         </h1>
-        <p className="max-w-[260px] text-sm leading-6 text-[#6f737d]">
+        <p className="max-w-[260px] text-sm leading-6 text-muted-foreground">
           {description}
         </p>
       </div>
-      <div className="grid w-full gap-4 rounded-[8px] border border-[#e0e2ea] bg-white/95 p-5 shadow-[0_22px_70px_rgb(18_20_28_/_12%)] backdrop-blur">
-        {action}
-      </div>
+      <Card className="w-full shadow-sm">
+        <CardContent className="grid gap-4 p-5">{action}</CardContent>
+      </Card>
     </>
   );
 }
@@ -903,7 +856,7 @@ function SetupPanel({
 function ErrorNotice({ children }: { children: ReactNode }) {
   return (
     <p
-      className="w-full rounded-[8px] border border-[#f1b8b8] bg-[#fff4f4] px-3 py-2 text-sm leading-5 text-[#a62b2b]"
+      className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm leading-5 text-destructive"
       aria-live="polite"
     >
       {children}

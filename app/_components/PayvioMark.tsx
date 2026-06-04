@@ -9,11 +9,11 @@ export function PayvioMark(props: SVGProps<SVGSVGElement>) {
           maskUnits="userSpaceOnUse"
           maskContentUnits="userSpaceOnUse"
         >
-          <rect width="32" height="32" fill="black" />
-          <circle cx="16" cy="16" r="12.8" fill="white" />
+          <rect width="32" height="32" fill="var(--mask-hide)" />
+          <circle cx="16" cy="16" r="12.8" fill="var(--mask-show)" />
           <g
             transform="rotate(-45 16 16)"
-            stroke="black"
+            stroke="var(--mask-hide)"
             strokeLinecap="butt"
             strokeWidth="3.15"
           >

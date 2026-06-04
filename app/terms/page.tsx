@@ -51,7 +51,7 @@ const sections: LegalSection[] = [
     title: "No professional advice",
     body: [
       "All content, calculations, templates, dashboards, exports, reports, reminders, and product guidance are provided for general software and workflow purposes only. They do not constitute legal, tax, accounting, audit, financial, banking, payment, procurement, compliance, or business advice.",
-      "You must obtain advice from qualified professionals before relying on Payvio for tax filings, VAT treatment, NamRA or ITAS submissions, financial statements, audits, legal proceedings, debt recovery, payment disputes, or regulated activities. Reliance on Payvio is at your own risk.",
+      "You must obtain advice from qualified professionals before relying on Payvio for tax filings, VAT treatment, regulatory submissions, financial statements, audits, legal proceedings, debt recovery, payment disputes, or regulated activities. Reliance on Payvio is at your own risk.",
     ],
   },
   {

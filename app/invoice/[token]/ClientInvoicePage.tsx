@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
+import { useMutation, usePreloadedQuery, type Preloaded } from "convex/react";
 import {
   CheckCircle2,
   Download,
@@ -11,12 +11,16 @@ import {
   ReceiptText,
   Upload,
   XCircle,
-} from "lucide-react";
+} from "@/app/_components/IconPack";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { cn } from "@/lib/utils";
 
 function formatMoney(amount: number, currency = "NAD") {
   try {
@@ -30,16 +34,67 @@ function formatMoney(amount: number, currency = "NAD") {
   }
 }
 
+function formatDate(value?: string) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 function statusLabel(status: string) {
   if (status === "awaiting_payment") {
     return "Awaiting payment";
   }
 
-  return status.replace("_", " ").replace(/^\w/, (letter) => letter.toUpperCase());
+  return status.replace(/_/g, " ").replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
-export function ClientInvoicePage({ token }: { token: string }) {
-  const data = useQuery(api.invoices.getByToken, { token });
+function statusTone(status: string) {
+  if (status === "paid" || status === "approved" || status === "awaiting_payment") {
+    return "bg-teal-50 text-teal-700";
+  }
+
+  if (status === "overdue" || status === "rejected") {
+    return "bg-red-50 text-red-600";
+  }
+
+  if (status === "void") {
+    return "bg-neutral-100 text-neutral-600";
+  }
+
+  return "bg-orange-50 text-orange-600";
+}
+
+function taxModeLabel(value?: string) {
+  const labels: Record<string, string> = {
+    no_vat: "No VAT",
+    vat_15: "VAT 15%",
+    zero_rated: "Zero-rated",
+    exempt: "Exempt",
+  };
+
+  return value ? labels[value] ?? value : "VAT";
+}
+
+export function ClientInvoicePage({
+  token,
+  preloadedInvoice,
+}: {
+  token: string;
+  preloadedInvoice: Preloaded<typeof api.invoices.getByToken>;
+}) {
+  const data = usePreloadedQuery(preloadedInvoice);
   const markViewed = useMutation(api.invoices.markViewedByToken);
   const approve = useMutation(api.invoices.approveByToken);
   const reject = useMutation(api.invoices.rejectByToken);
@@ -74,15 +129,13 @@ export function ClientInvoicePage({ token }: { token: string }) {
   const supplierSnapshot = snapshot?.supplierSnapshot ?? invoice?.supplierSnapshot ?? null;
   const clientSnapshot = snapshot?.clientSnapshot ?? invoice?.clientSnapshot ?? null;
   const invoiceNumber = snapshot?.invoiceNumber ?? invoice?.invoiceNumber ?? "Invoice";
-  const clientName =
-    snapshot?.clientName ?? invoice?.clientName ?? invoice?.client ?? "Client";
+  const clientName = snapshot?.clientName ?? invoice?.clientName ?? invoice?.client ?? "Client";
   const clientEmail = snapshot?.clientEmail ?? invoice?.clientEmail ?? "";
   const currency = snapshot?.currency ?? invoice?.currency ?? "NAD";
   const subtotal = snapshot?.subtotal ?? invoice?.subtotal ?? snapshot?.amountTotal ?? invoice?.amountTotal ?? invoice?.amount ?? 0;
   const vatAmount = snapshot?.vatAmount ?? invoice?.vatAmount ?? 0;
   const total = snapshot?.total ?? snapshot?.amountTotal ?? invoice?.total ?? invoice?.amountTotal ?? invoice?.amount ?? 0;
   const taxMode = snapshot?.taxMode ?? invoice?.taxMode ?? "no_vat";
-  const isTaxInvoice = Boolean(supplierSnapshot?.vatRegistered && taxMode !== "no_vat");
   const balanceDue = snapshot?.balanceDue ?? invoice?.balanceDue ?? (invoice?.status === "paid" ? 0 : total);
   const bankDetails = snapshot?.bankDetails ?? invoice?.bankDetails ?? null;
   const requiresApproval = snapshot?.requiresApproval ?? invoice?.requiresApproval ?? false;
@@ -98,8 +151,8 @@ export function ClientInvoicePage({ token }: { token: string }) {
       const paymentLink = await approve({ token });
       setNotice(
         paymentLink
-          ? "Approved. Payment is separate, use the payment link when you are ready to pay."
-          : "Approved. Payment is separate. Use the EFT details below when you are ready to pay.",
+          ? "Approved. Use the payment link when you are ready."
+          : "Approved. Use the EFT details when you are ready.",
       );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to approve invoice.");
@@ -144,7 +197,7 @@ export function ClientInvoicePage({ token }: { token: string }) {
       setProofFile(null);
       setBankReference("");
       setSubmittedToken(token);
-      setNotice("Payment details submitted. The business will review them and confirm payment.");
+      setNotice("Payment details submitted.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to submit payment proof.");
     } finally {
@@ -161,7 +214,7 @@ export function ClientInvoicePage({ token }: { token: string }) {
         token,
         reason: rejectionReason,
       });
-      setNotice("Rejected. The sender will amend the invoice and send it back.");
+      setNotice("Request sent.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to reject invoice.");
     } finally {
@@ -169,33 +222,22 @@ export function ClientInvoicePage({ token }: { token: string }) {
     }
   }
 
-  if (data === undefined) {
-    return (
-      <main className="grid min-h-dvh place-items-center bg-[#f5f5f7] p-6">
-        <div className="flex items-center gap-3 rounded-md border border-[#e5e5ea] bg-white px-4 py-3 text-sm text-[#424245]">
-          <Loader2 className="size-4 animate-spin" />
-          Loading invoice
-        </div>
-      </main>
-    );
-  }
-
   if (data === null || !invoice) {
     return (
-      <main className="grid min-h-dvh place-items-center bg-[#f5f5f7] p-6">
-        <section className="w-full max-w-md rounded-lg border border-[#e5e5ea] bg-white p-6 text-center">
-          <ReceiptText className="mx-auto size-10 text-[#8a8a8e]" />
-          <h1 className="mt-4 text-2xl font-medium text-[#1d1d1f]">
-            Invoice link not found
-          </h1>
-          <p className="mt-2 text-sm text-[#6e6e73]">
-            Ask the sender for a fresh invoice link.
-          </p>
+      <main className="grid min-h-dvh place-items-center bg-background p-6">
+        <section className="w-full max-w-md rounded-lg border border-border bg-card p-6 text-center">
+          <ReceiptText className="mx-auto size-10 text-muted-foreground" />
+          <h1 className="mt-4 text-2xl font-semibold text-foreground">Invoice link not found</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Ask the sender for a fresh invoice link.</p>
         </section>
       </main>
     );
   }
 
+  const issueDate = snapshot?.issueDate ?? invoice.issueDate;
+  const dueDate = snapshot?.dueDate ?? invoice.dueDate;
+  const supplierName = supplierSnapshot?.name ?? organization?.name ?? "Supplier";
+  const isTaxInvoice = Boolean(supplierSnapshot?.vatRegistered && taxMode !== "no_vat");
   const approvalComplete =
     invoice.status === "approved" ||
     invoice.status === "awaiting_payment" ||
@@ -212,365 +254,449 @@ export function ClientInvoicePage({ token }: { token: string }) {
     invoice.status !== "paid" &&
     invoice.status !== "rejected";
   const paymentLink = snapshot?.paymentLink ?? invoice.paymentLink;
+  const paymentSubmitted = hasSubmittedPaymentDetails || invoice.status === "paid";
+  const paymentInstructions =
+    snapshot?.paymentInstructions ??
+    invoice.paymentInstructions ??
+    "Pay by EFT or bank transfer using the invoice number as reference.";
+  const paymentReference = snapshot?.paymentReference ?? invoice.paymentReference ?? invoiceNumber;
+  const notes = snapshot?.notes ?? invoice.notes;
 
   return (
-    <main className="public-invoice-page min-h-dvh bg-[#f6f7f9] p-4 text-[#17181c] sm:p-6">
-      <section className="public-invoice-layout mx-auto grid w-full max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <article className="public-invoice-document overflow-hidden rounded-2xl border border-[#e3e6eb] bg-white">
-          <div className="flex flex-col gap-4 border-b border-[#edf0f3] p-6 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-[#697180]">
-                {organization?.name ?? "Invoice Ledger"}
-              </p>
-              <h1 className="mt-3 text-4xl font-semibold tracking-normal text-[#111318]">
-                {isTaxInvoice ? "Tax Invoice" : "Invoice"}
-              </h1>
-              <p className="mt-2 text-sm text-[#697180]">
-                {invoiceNumber} sent to {clientName}
-              </p>
-            </div>
-            <Badge variant="outline" className="w-max rounded-full border-[#e3e6eb] bg-[#f8f9fb] px-3 py-1 text-[#4e5663]">
-              {statusLabel(invoice.status)}
-            </Badge>
+    <main className="client-invoice-page min-h-dvh bg-muted/40 p-4 text-foreground sm:p-6 lg:p-8">
+      <div className="mx-auto w-full max-w-[1180px] space-y-4">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">{supplierName}</p>
+            <p className="text-xs text-muted-foreground">{invoiceNumber}</p>
           </div>
-
-          <div className="grid gap-4 border-b border-[#edf0f3] p-6 sm:grid-cols-2">
-            <Fact
-              label="Supplier"
-              value={supplierSnapshot?.name ?? organization?.name ?? "Supplier"}
-              detail={[
-                supplierSnapshot?.address,
-                supplierSnapshot?.vatNumber ? `VAT ${supplierSnapshot.vatNumber}` : "",
-              ].filter(Boolean).join(" | ")}
-            />
-            <Fact
-              label="Customer"
-              value={clientName}
-              detail={[
-                clientEmail,
-                clientSnapshot?.address,
-                clientSnapshot?.vatNumber ? `VAT ${clientSnapshot.vatNumber}` : "",
-              ].filter(Boolean).join(" | ")}
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={invoice.status} />
+            <SmallButton type="button" onClick={() => window.print()}>
+              <Download className="size-3.5" />
+              Print
+            </SmallButton>
+            <SmallButton asChild>
+              <a href={`mailto:?subject=${encodeURIComponent(`${invoiceNumber} question`)}`}>
+                <Mail className="size-3.5" />
+                Email
+              </a>
+            </SmallButton>
           </div>
+        </header>
 
-          <div className="grid gap-4 border-b border-[#edf0f3] p-6 sm:grid-cols-3">
-            <Fact label="Invoice number" value={invoiceNumber} />
-            <Fact label="Issued" value={snapshot?.issueDate ?? invoice.issueDate ?? "-"} />
-            <Fact label="Due" value={snapshot?.dueDate ?? invoice.dueDate} />
+        {notice ? (
+          <div className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-muted-foreground">
+            {notice}
           </div>
+        ) : null}
 
-          <div className="p-6">
-            <div className="public-invoice-lines overflow-x-auto rounded-xl border border-[#e3e6eb]">
-              <div className="public-invoice-lines-table min-w-[680px]">
-                <div className="public-invoice-lines-head grid grid-cols-[minmax(0,1fr)_70px_120px_110px_120px] border-b border-[#edf0f3] bg-[#f8f9fb] px-4 py-3 text-xs font-medium text-[#5f6876]">
-                  <span>Description</span>
-                  <span>Qty</span>
-                  <span className="text-right">Unit price</span>
-                  <span className="text-right">VAT</span>
-                  <span className="text-right">Line total</span>
-                </div>
-                {lineItems.map((item) => (
-                  <div
-                    key={item._id}
-                    className="public-invoice-line-row grid grid-cols-[minmax(0,1fr)_70px_120px_110px_120px] border-b border-[#f2f4f7] px-4 py-4 text-sm last:border-b-0"
-                  >
-                    <span className="min-w-0 truncate">{item.description}</span>
-                    <span>{item.quantity}</span>
-                    <span className="text-right">{formatMoney(item.unitPrice, currency)}</span>
-                    <span className="text-right">{formatMoney(item.vatAmount ?? 0, currency)}</span>
-                    <span className="text-right font-medium">
-                      {formatMoney(item.lineTotal, currency)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 flex justify-end">
-              <div className="w-full max-w-[280px] rounded-xl border border-[#edf0f3] bg-[#fbfcfd] p-4">
-                <div className="flex justify-between text-sm text-[#697180]">
-                  <span>Subtotal</span>
-                  <span>{formatMoney(subtotal, currency)}</span>
-                </div>
-                <div className="mt-2 flex justify-between text-sm text-[#697180]">
-                  <span>VAT</span>
-                  <span>{formatMoney(vatAmount, currency)}</span>
-                </div>
-                <div className="mt-3 flex justify-between border-t border-[#e3e6eb] pt-3 text-xl font-semibold text-[#111318]">
-                  <span>Total</span>
-                  <span>{formatMoney(total, currency)}</span>
-                </div>
-                <div className="mt-2 flex justify-between text-sm font-medium text-[#0b6b4f]">
-                  <span>Balance due</span>
-                  <span>{formatMoney(balanceDue, currency)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 rounded-xl border border-[#e3e6eb] bg-[#fbfcfd] p-4 text-sm text-[#4e5663]">
-              <p>
-                <span className="font-medium text-[#111318]">Terms:</span>{" "}
-                {snapshot?.terms ?? invoice.terms ?? "Due on receipt."}
-              </p>
-              <p>
-                <span className="font-medium text-[#111318]">Payment:</span>{" "}
-                {snapshot?.paymentInstructions ??
-                  invoice.paymentInstructions ??
-                  "Pay by EFT or bank transfer using the invoice number as reference."}
-              </p>
-              {bankDetails ? (
-                <div className="grid gap-1 rounded-lg border border-[#e3e6eb] bg-white p-3">
-                  <p className="font-medium text-[#111318]">EFT details</p>
-                  {bankDetails.bankName ? <p>Bank: {bankDetails.bankName}</p> : null}
-                  {bankDetails.accountName ? <p>Account name: {bankDetails.accountName}</p> : null}
-                  {bankDetails.accountNumber ? <p>Account number: {bankDetails.accountNumber}</p> : null}
-                  {bankDetails.branchCode ? <p>Branch code: {bankDetails.branchCode}</p> : null}
-                  {bankDetails.swiftCode ? <p>SWIFT: {bankDetails.swiftCode}</p> : null}
-                  <p>Reference: {snapshot?.paymentReference ?? invoice.paymentReference ?? invoiceNumber}</p>
-                </div>
-              ) : null}
-              {(snapshot?.notes ?? invoice.notes) ? (
-                <p>{snapshot?.notes ?? invoice.notes}</p>
-              ) : null}
-            </div>
-          </div>
-        </article>
-
-        <aside className="public-invoice-actions h-max overflow-hidden rounded-2xl border border-[#e3e6eb] bg-white lg:sticky lg:top-6">
-          {requiresApproval ? (
-            <section className="grid gap-3 border-b border-[#edf0f3] p-5">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+          <article className="rounded-lg border border-border bg-card p-5 shadow-none sm:p-8">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-[#111318]">Approval</p>
-                <p className="mt-1 text-sm text-[#697180]">
-                  {approvalComplete
-                    ? "Approved. Payment can be sent now."
-                    : invoice.status === "rejected"
-                      ? "Changes were requested on this invoice."
-                      : "Approve this invoice before payment."}
-                </p>
+                <span className="grid size-10 place-items-center rounded-lg bg-red-50 text-red-600">
+                  <ReceiptText className="size-5" />
+                </span>
+                <h1 className="mt-5 text-[34px] font-semibold leading-none tracking-normal text-foreground">
+                  {isTaxInvoice ? "Tax Invoice" : "Invoice"}
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground">{invoiceNumber}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-background px-4 py-3 sm:min-w-[220px] sm:text-right">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Amount due</p>
+                <p className="mt-1 text-2xl font-semibold text-foreground">{formatMoney(balanceDue, currency)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Due {formatDate(dueDate)}</p>
+              </div>
+            </div>
+
+            <Separator className="my-8" />
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <PartyBlock
+                title="From"
+                name={supplierName}
+                lines={[
+                  supplierSnapshot?.legalName,
+                  supplierSnapshot?.address,
+                  supplierSnapshot?.vatNumber ? `VAT ${supplierSnapshot.vatNumber}` : undefined,
+                  supplierSnapshot?.phone,
+                ]}
+              />
+              <PartyBlock
+                title="Bill to"
+                name={clientName}
+                lines={[
+                  clientEmail,
+                  clientSnapshot?.businessName,
+                  clientSnapshot?.address,
+                  clientSnapshot?.vatNumber ? `VAT ${clientSnapshot.vatNumber}` : undefined,
+                  clientSnapshot?.phone,
+                ]}
+              />
+            </div>
+
+            <div className="mt-7 grid gap-3 border-y border-border py-4 sm:grid-cols-3">
+              <InvoiceMeta label="Issued" value={formatDate(issueDate)} />
+              <InvoiceMeta label="Due" value={formatDate(dueDate)} />
+              <InvoiceMeta label="Currency" value={currency} />
+            </div>
+
+            <section className="mt-7">
+              <div className="hidden grid-cols-[minmax(0,1fr)_72px_120px_120px] gap-4 border-b border-border pb-3 text-xs font-semibold uppercase text-muted-foreground md:grid">
+                <span>Description</span>
+                <span>Qty</span>
+                <span className="text-right">Unit price</span>
+                <span className="text-right">Total</span>
+              </div>
+              <div className="divide-y divide-border">
+                {lineItems.length > 0 ? (
+                  lineItems.map((item) => (
+                    <div key={item._id} className="grid gap-2 py-4 text-sm md:grid-cols-[minmax(0,1fr)_72px_120px_120px] md:gap-4">
+                      <div className="min-w-0">
+                        <p className="break-words font-medium text-foreground">{item.description}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{taxModeLabel(item.taxMode ?? taxMode)}</p>
+                      </div>
+                      <div className="flex justify-between gap-3 md:block">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground md:hidden">Qty</span>
+                        <span className="text-foreground">{item.quantity}</span>
+                      </div>
+                      <div className="flex justify-between gap-3 md:block md:text-right">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground md:hidden">Unit</span>
+                        <span className="text-foreground">{formatMoney(item.unitPrice, currency)}</span>
+                      </div>
+                      <div className="flex justify-between gap-3 font-medium md:block md:text-right">
+                        <span className="text-xs font-semibold uppercase text-muted-foreground md:hidden">Total</span>
+                        <span>{formatMoney(item.lineTotal, currency)}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="py-5 text-sm text-muted-foreground">No line items saved.</p>
+                )}
+              </div>
+            </section>
+
+            <div className="mt-7 flex justify-end">
+              <div className="w-full max-w-[360px] space-y-2">
+                <SummaryRow label="Subtotal" value={formatMoney(subtotal, currency)} />
+                <SummaryRow label={taxModeLabel(taxMode)} value={formatMoney(vatAmount, currency)} />
+                <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
+                  <span className="font-semibold text-foreground">Total</span>
+                  <strong className="text-xl text-foreground">{formatMoney(total, currency)}</strong>
+                </div>
+                <SummaryRow label="Balance due" value={formatMoney(balanceDue, currency)} strong />
+              </div>
+            </div>
+
+            <Separator className="my-8" />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <InfoPanel
+                title="Payment"
+                rows={[
+                  ["Instructions", paymentInstructions],
+                  ["Reference", paymentReference],
+                  ["Bank", bankDetails?.bankName],
+                  ["Account name", bankDetails?.accountName],
+                  ["Account number", bankDetails?.accountNumber],
+                  ["Branch code", bankDetails?.branchCode],
+                  ["SWIFT", bankDetails?.swiftCode],
+                ]}
+              />
+              <InfoPanel
+                title="Notes"
+                rows={[
+                  ["Terms", snapshot?.terms ?? invoice.terms ?? "Due on receipt."],
+                  ["Note", notes],
+                  ["Approval", requiresApproval ? "Required" : "Not required"],
+                  ["Request", invoice.rejectionReason],
+                ]}
+              />
+            </div>
+          </article>
+
+          <aside className="space-y-3 lg:sticky lg:top-6">
+            <section className="rounded-lg border border-border bg-card p-4 shadow-none">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">Actions</p>
+                <span className="text-xs text-muted-foreground">{statusLabel(invoice.status)}</span>
               </div>
 
-              {approvalOpen ? (
-                <Button
-                  type="button"
-                  disabled={pending || rejecting}
-                  className="h-11 rounded-xl bg-[#111318] text-white hover:bg-[#2b2f36] hover:text-white"
-                  onClick={handleApprove}
-                >
-                  {pending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-                  Approve invoice
-                </Button>
-              ) : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <ClientFlowStep label="Received" state="done" />
+                <ClientFlowStep
+                  label="Review"
+                  state={approvalComplete || !requiresApproval ? "done" : approvalOpen ? "active" : "waiting"}
+                />
+                <ClientFlowStep label="Payment" state={paymentSubmitted ? "done" : paymentReady ? "active" : "waiting"} />
+              </div>
 
-              {approvalComplete ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-                  Invoice approved.
-                </div>
-              ) : null}
+              {requiresApproval ? (
+                <div className="mt-4 space-y-2">
+                  {approvalOpen ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        <SmallButton
+                          type="button"
+                          className="bg-neutral-950 !text-white hover:bg-neutral-800 hover:!text-white"
+                          disabled={pending || rejecting}
+                          onClick={handleApprove}
+                        >
+                          {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+                          Approve
+                        </SmallButton>
+                        <SmallButton
+                          type="button"
+                          className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          disabled={pending || rejecting}
+                          onClick={handleReject}
+                        >
+                          {rejecting ? <Loader2 className="size-3.5 animate-spin" /> : <XCircle className="size-3.5" />}
+                          Request
+                        </SmallButton>
+                      </div>
+                      <Textarea
+                        id="rejection-reason"
+                        value={rejectionReason}
+                        onChange={(event) => setRejectionReason(event.target.value)}
+                        placeholder="Reason for changes"
+                        className="min-h-20 resize-none rounded-lg border-border bg-background text-sm"
+                      />
+                    </>
+                  ) : null}
 
-              {invoice.status === "rejected" ? (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                  {invoice.rejectionReason ??
-                    "You rejected this invoice. The sender will amend it and send it back."}
-                </div>
-              ) : null}
+                  {approvalComplete ? (
+                    <p className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-700">
+                      Approved.
+                    </p>
+                  ) : null}
 
-              {approvalOpen ? (
-                <div className="grid gap-2">
-                  <label
-                    htmlFor="rejection-reason"
-                    className="text-xs font-medium text-[#4e5663]"
-                  >
-                    Request changes
-                  </label>
-                  <textarea
-                    id="rejection-reason"
-                    value={rejectionReason}
-                    onChange={(event) => setRejectionReason(event.target.value)}
-                    placeholder="Tell the sender what needs to change."
-                    className="min-h-24 resize-none rounded-xl border border-[#e3e6eb] bg-[#fbfcfd] p-3 text-sm outline-none focus:border-[#5e6ad2] focus:ring-2 focus:ring-[#5e6ad2]/20"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={pending || rejecting}
-                    className="h-10 rounded-xl border-rose-200 bg-white text-rose-700 hover:bg-rose-50"
-                    onClick={handleReject}
-                  >
-                    {rejecting ? <Loader2 className="animate-spin" /> : <XCircle />}
-                    Send request
-                  </Button>
+                  {invoice.status === "rejected" ? (
+                    <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                      {invoice.rejectionReason ?? "Changes requested."}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </section>
-          ) : null}
 
-          <section className="grid gap-4 p-5">
-            <div>
-              <p className="text-sm font-semibold text-[#111318]">Payment</p>
-              <p className="mt-1 text-sm text-[#697180]">
-                {hasSubmittedPaymentDetails
-                  ? "Payment details have been sent. The invoice remains available to view."
-                  : paymentReady
-                    ? "Use the payment details, then submit proof."
-                    : "Payment unlocks after approval."}
-              </p>
-            </div>
+            <section className="rounded-lg border border-border bg-card p-4 shadow-none">
+              <p className="text-sm font-semibold text-foreground">Payment proof</p>
 
-            {notice ? (
-              <p className="rounded-xl border border-[#bed8ff] bg-[#f3f8ff] p-3 text-sm text-[#0c4d9a]">
-                {notice}
-              </p>
-            ) : null}
+              {paymentLink && paymentReady && !hasSubmittedPaymentDetails ? (
+                <SmallButton asChild className="mt-3">
+                  <a href={paymentLink} target="_blank" rel="noreferrer">
+                    <ExternalLink className="size-3.5" />
+                    Pay
+                  </a>
+                </SmallButton>
+              ) : null}
 
-            {paymentLink && paymentReady && !hasSubmittedPaymentDetails ? (
-              <Button
-                asChild
-                variant="outline"
-                className="h-11 rounded-xl border-[#e3e6eb] bg-white"
-              >
-                <a href={paymentLink} target="_blank" rel="noreferrer">
-                  <ExternalLink />
-                  Open payment link
-                </a>
-              </Button>
-            ) : null}
-
-            {hasSubmittedPaymentDetails ? (
-              <div className="rounded-xl border border-[#d9eadf] bg-[#f4fbf6] p-4 text-sm text-[#28533b]">
-                <p className="font-semibold text-[#173d2a]">Payment details submitted</p>
-                <p className="mt-1">
-                  The business has received the payment details. This invoice is now view-only.
-                </p>
-                {latestPaymentProof ? (
-                  <dl className="mt-4 grid gap-2 text-[#344054]">
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-[#667085]">Amount</dt>
-                      <dd className="font-medium">
-                        {formatMoney(latestPaymentProof.amount, latestPaymentProof.currency ?? currency)}
-                      </dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-[#667085]">Date</dt>
-                      <dd className="font-medium">{latestPaymentProof.paymentDate}</dd>
-                    </div>
-                    {latestPaymentProof.bankReference ? (
-                      <div className="flex items-center justify-between gap-3">
-                        <dt className="text-[#667085]">Reference</dt>
-                        <dd className="truncate font-medium">{latestPaymentProof.bankReference}</dd>
-                      </div>
-                    ) : null}
-                  </dl>
-                ) : null}
-              </div>
-            ) : (
-              <form onSubmit={handleSubmitProof} className="grid gap-3">
-                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
-                  Payer name
-                  <input
-                    value={payerName}
-                    onChange={(event) => setPayerName(event.target.value)}
-                    placeholder={clientName}
-                    disabled={!canSubmitProof}
-                    className="h-11 rounded-xl border border-[#e3e6eb] bg-white px-3 text-sm outline-none disabled:opacity-50"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
-                  Amount
-                  <input
-                    inputMode="decimal"
-                    value={paymentAmount}
-                    onChange={(event) => setPaymentAmount(event.target.value)}
-                    placeholder={String(balanceDue || total)}
-                    disabled={!canSubmitProof}
-                    className="h-11 rounded-xl border border-[#e3e6eb] bg-white px-3 text-sm outline-none disabled:opacity-50"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
-                  Payment date
-                  <input
-                    type="date"
-                    value={paymentDate}
-                    onChange={(event) => setPaymentDate(event.target.value)}
-                    disabled={!canSubmitProof}
-                    className="h-11 rounded-xl border border-[#e3e6eb] bg-white px-3 text-sm outline-none disabled:opacity-50"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
-                  Bank reference
-                  <input
-                    value={bankReference}
-                    onChange={(event) => setBankReference(event.target.value)}
-                    disabled={!canSubmitProof}
-                    className="h-11 rounded-xl border border-[#e3e6eb] bg-white px-3 text-sm outline-none disabled:opacity-50"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm font-medium text-[#344054]">
-                  Proof file
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    disabled={!canSubmitProof}
-                    onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
-                    className="w-full rounded-xl border border-[#e3e6eb] bg-white px-3 py-2 text-sm disabled:opacity-50"
-                  />
-                </label>
-                <Button
-                  type="submit"
-                  disabled={submittingProof || !canSubmitProof}
-                  className="h-12 rounded-xl bg-[#0b6b4f] text-base text-white hover:bg-[#075b42] hover:text-white"
-                >
-                  {submittingProof ? <Loader2 className="animate-spin" /> : <Upload />}
-                  Submit proof
-                </Button>
-              </form>
-            )}
-          </section>
-
-          <section className="grid gap-3 border-t border-[#edf0f3] bg-[#fbfcfd] p-5">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 rounded-xl border-[#e3e6eb] bg-white"
-              onClick={() => window.print()}
-            >
-              <Download />
-              Download / print
-            </Button>
-
-            <a
-              href={`mailto:?subject=${encodeURIComponent(`${invoiceNumber} question`)}`}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#e3e6eb] bg-white px-4 text-sm font-medium transition-colors hover:bg-[#f6f7f9]"
-            >
-              <Mail className="size-4" />
-              Contact sender
-            </a>
-
-            <p className="rounded-xl bg-white p-3 text-xs text-[#697180]">
-              Secure invoice link. Payment is confirmed by the sender.
-            </p>
-          </section>
-        </aside>
-      </section>
+              {hasSubmittedPaymentDetails ? (
+                <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50 p-3 text-xs text-teal-700">
+                  <p className="font-semibold">Submitted</p>
+                  {latestPaymentProof ? (
+                    <dl className="mt-2 grid gap-1">
+                      <ProofRow label="Amount" value={formatMoney(latestPaymentProof.amount, latestPaymentProof.currency ?? currency)} />
+                      <ProofRow label="Date" value={latestPaymentProof.paymentDate} />
+                      {latestPaymentProof.bankReference ? <ProofRow label="Ref" value={latestPaymentProof.bankReference} /> : null}
+                    </dl>
+                  ) : null}
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitProof} className="mt-3 grid gap-2">
+                  <Field label="Name">
+                    <Input
+                      value={payerName}
+                      onChange={(event) => setPayerName(event.target.value)}
+                      placeholder={clientName}
+                      disabled={!canSubmitProof}
+                      className="h-9 rounded-lg border-border bg-background text-sm disabled:opacity-50"
+                    />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Amount">
+                      <Input
+                        inputMode="decimal"
+                        value={paymentAmount}
+                        onChange={(event) => setPaymentAmount(event.target.value)}
+                        placeholder={String(balanceDue || total)}
+                        disabled={!canSubmitProof}
+                        className="h-9 rounded-lg border-border bg-background text-sm disabled:opacity-50"
+                      />
+                    </Field>
+                    <Field label="Date">
+                      <Input
+                        type="date"
+                        value={paymentDate}
+                        onChange={(event) => setPaymentDate(event.target.value)}
+                        disabled={!canSubmitProof}
+                        className="h-9 rounded-lg border-border bg-background text-sm disabled:opacity-50"
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Reference">
+                    <Input
+                      value={bankReference}
+                      onChange={(event) => setBankReference(event.target.value)}
+                      disabled={!canSubmitProof}
+                      className="h-9 rounded-lg border-border bg-background text-sm disabled:opacity-50"
+                    />
+                  </Field>
+                  <Field label="File">
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={!canSubmitProof}
+                      onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
+                      className="w-full rounded-lg border-border bg-background px-3 py-2 text-sm disabled:opacity-50"
+                    />
+                  </Field>
+                  <SmallButton
+                    type="submit"
+                    className="bg-neutral-950 !text-white hover:bg-neutral-800 hover:!text-white"
+                    disabled={submittingProof || !canSubmitProof}
+                  >
+                    {submittingProof ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+                    Submit
+                  </SmallButton>
+                </form>
+              )}
+            </section>
+          </aside>
+        </section>
+      </div>
     </main>
   );
 }
 
-function Fact({
-  label,
-  value,
-  detail,
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <Badge className={cn("h-6 rounded-full border-0 px-3 text-sm font-semibold", statusTone(status))}>
+      {statusLabel(status)}
+    </Badge>
+  );
+}
+
+function SmallButton({ className, variant = "outline", ...props }: ComponentProps<typeof Button>) {
+  return (
+    <Button
+      variant={variant}
+      className={cn("h-8 rounded-lg border-border bg-background px-3 text-xs font-medium shadow-none", className)}
+      {...props}
+    />
+  );
+}
+
+function PartyBlock({
+  title,
+  name,
+  lines,
 }: {
-  label: string;
-  value: string;
-  detail?: string;
+  title: string;
+  name: string;
+  lines: Array<string | undefined | null>;
 }) {
+  const visibleLines = lines.filter((line): line is string => Boolean(line && line.trim()));
+
+  return (
+    <section>
+      <p className="text-xs font-semibold uppercase text-muted-foreground">{title}</p>
+      <p className="mt-2 text-base font-semibold text-foreground">{name}</p>
+      {visibleLines.length > 0 ? (
+        <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+          {visibleLines.map((line) => (
+            <p key={line} className="break-words">
+              {line}
+            </p>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function InvoiceMeta({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-medium text-[#697180]">{label}</p>
-      <p className="mt-1 font-semibold text-[#111318]">{value}</p>
-      {detail ? <p className="text-xs text-[#697180]">{detail}</p> : null}
+      <p className="text-xs font-semibold uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={cn("flex items-center justify-between gap-4 py-1 text-sm", strong ? "font-semibold text-foreground" : "text-muted-foreground")}>
+      <span>{label}</span>
+      <span>{value}</span>
+    </div>
+  );
+}
+
+function InfoPanel({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<[string, string | undefined | null | boolean]>;
+}) {
+  const visibleRows = rows.filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "");
+
+  return (
+    <section>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <dl className="mt-3 grid gap-2">
+        {visibleRows.length > 0 ? (
+          visibleRows.map(([label, value]) => (
+            <div key={label} className="grid gap-0.5">
+              <dt className="text-xs font-semibold uppercase text-muted-foreground">{label}</dt>
+              <dd className="break-words text-sm text-foreground">{String(value)}</dd>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">No details saved.</p>
+        )}
+      </dl>
+    </section>
+  );
+}
+
+function ClientFlowStep({
+  label,
+  state,
+}: {
+  label: string;
+  state: "done" | "active" | "waiting";
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-7 items-center rounded-full border border-border bg-background px-2.5 text-xs text-muted-foreground",
+        state === "active" && "border-neutral-950 text-foreground",
+        state === "done" && "border-teal-100 bg-teal-50 text-teal-700",
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="grid gap-1.5 text-sm font-medium text-muted-foreground">
+      {label}
+      {children}
+    </label>
+  );
+}
+
+function ProofRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <dt className="text-teal-700/70">{label}</dt>
+      <dd className="truncate font-medium text-teal-800">{value}</dd>
     </div>
   );
 }

@@ -30,12 +30,6 @@ const vatFilingFrequencyValidator = v.union(
   v.literal("bi_monthly"),
 );
 
-const vedTransmissionModeValidator = v.union(
-  v.literal("manual_export"),
-  v.literal("near_real_time"),
-  v.literal("real_time"),
-);
-
 type TaxMode = NonNullable<Doc<"organizations">["vatDefaultTaxMode"]>;
 type VatSettings = ReturnType<typeof vatSettingsForOrganization>;
 
@@ -136,8 +130,6 @@ function vatSettingsForOrganization(organization: Doc<"organizations">) {
     defaultRetentionYears,
     10,
   );
-  const transmissionMode = organization.vedTransmissionMode ?? "manual_export";
-
   return {
     vatRegistered,
     vatNumber: organization.vatNumber ?? "",
@@ -149,8 +141,6 @@ function vatSettingsForOrganization(organization: Doc<"organizations">) {
     recordRetentionYears: retentionYears,
     defaultTaxMode,
     vedEnabled: vatRegistered && (organization.vedEnabled ?? true),
-    transmissionMode,
-    itasRegistered: organization.itasRegistered ?? false,
   };
 }
 
@@ -372,8 +362,6 @@ export const updateSettings = mutation({
     vatRecordRetentionYears: v.optional(v.number()),
     vatDefaultTaxMode: v.optional(taxModeValidator),
     vedEnabled: v.optional(v.boolean()),
-    vedTransmissionMode: v.optional(vedTransmissionModeValidator),
-    itasRegistered: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -415,8 +403,6 @@ export const updateSettings = mutation({
       ),
       vatDefaultTaxMode,
       vedEnabled: vatRegistered && (args.vedEnabled ?? true),
-      vedTransmissionMode: args.vedTransmissionMode ?? "manual_export",
-      itasRegistered: args.itasRegistered ?? false,
       updatedAt: Date.now(),
     });
 
@@ -586,16 +572,6 @@ export const returnSummary = query({
         key: "filing-deadline",
         label: `Return deadline set to day ${settings.returnDueDay}`,
         done: settings.returnDueDay === defaultReturnDueDay,
-      },
-      {
-        key: "itas-export",
-        label: "ITAS-compatible export available",
-        done: true,
-      },
-      {
-        key: "namra-transmission",
-        label: "Direct NamRA transmission",
-        done: settings.transmissionMode !== "manual_export",
       },
     ];
 

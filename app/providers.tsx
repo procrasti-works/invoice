@@ -3,6 +3,7 @@
 import { ConvexAuthNextjsProvider } from "@convex-dev/auth/nextjs";
 import { ConvexReactClient } from "convex/react";
 import type { ReactNode } from "react";
+import { ThemeProvider } from "./_components/ThemeProvider";
 
 let convex: ConvexReactClient | null = null;
 
@@ -21,8 +22,10 @@ function getConvexClient() {
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   return (
-    <ConvexAuthNextjsProvider client={getConvexClient()}>
-      {children}
-    </ConvexAuthNextjsProvider>
+    <ThemeProvider>
+      <ConvexAuthNextjsProvider client={getConvexClient()}>
+        {children}
+      </ConvexAuthNextjsProvider>
+    </ThemeProvider>
   );
 }

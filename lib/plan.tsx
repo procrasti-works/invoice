@@ -4,10 +4,11 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 export type PlanLevel = "trial" | "starter" | "business" | "professional" | "enterprise" | "admin";
 
-export type Feature = "invoices" | "clients" | "reminders" | "reports" | "ledger" | "vat" | "settings" | "scan" | "receipts";
+export type Feature = "invoices" | "clients" | "reminders" | "reports" | "vat" | "settings" | "scan";
 
 const TRIAL_DAYS = 14;
 export const TRIAL_SCAN_LIMIT = 0;
@@ -18,10 +19,8 @@ const FEATURE_REQUIREMENTS: Record<Feature, PlanLevel[]> = {
   reminders: ["trial", "starter", "business", "professional", "enterprise", "admin"],
   settings: ["trial", "starter", "business", "professional", "enterprise", "admin"],
   reports: ["trial", "starter", "business", "professional", "enterprise", "admin"],
-  ledger: ["trial", "starter", "business", "professional", "enterprise", "admin"],
   vat: ["trial", "starter", "business", "professional", "enterprise", "admin"],
   scan: ["trial", "starter", "business", "professional", "enterprise", "admin"],
-  receipts: ["business", "professional", "enterprise", "admin"],
 };
 
 export const PLAN_LABELS: Record<PlanLevel, string> = {
@@ -34,12 +33,12 @@ export const PLAN_LABELS: Record<PlanLevel, string> = {
 };
 
 export const PLAN_COLORS: Record<PlanLevel, string> = {
-  trial: "#6b7280",
-  starter: "#1a6fc4",
-  business: "#009b68",
-  professional: "#7c3aed",
-  enterprise: "#b45309",
-  admin: "#dc2626",
+  trial: "var(--muted-foreground)",
+  starter: "var(--primary)",
+  business: "var(--success)",
+  professional: "var(--primary)",
+  enterprise: "var(--warning)",
+  admin: "var(--destructive)",
 };
 
 type PlanContextType = {
@@ -63,11 +62,22 @@ function daysLeft(currentPeriodEnd: number | undefined) {
   return Math.max(0, Math.ceil((currentPeriodEnd - Date.now()) / 86400000));
 }
 
-export function PlanProvider({ children }: { children: ReactNode }) {
-  const subscription = useQuery(api.subscriptions.current);
-  const plan = (subscription?.plan ?? "trial") as PlanLevel;
+export function PlanProvider({
+  children,
+  subscription,
+}: {
+  children: ReactNode;
+  subscription?: Doc<"subscriptions"> | null;
+}) {
+  const fetchedSubscription = useQuery(
+    api.subscriptions.current,
+    subscription === undefined ? {} : "skip",
+  );
+  const activeSubscription =
+    subscription === undefined ? fetchedSubscription : subscription;
+  const plan = (activeSubscription?.plan ?? "trial") as PlanLevel;
   const daysLeftInTrial =
-    plan === "trial" ? daysLeft(subscription?.currentPeriodEnd) : null;
+    plan === "trial" ? daysLeft(activeSubscription?.currentPeriodEnd) : null;
 
   const value = useMemo<PlanContextType>(() => {
     function canAccess(feature: Feature): boolean {

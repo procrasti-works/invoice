@@ -12,7 +12,7 @@ import {
   ReceiptText,
   ShieldCheck,
   Sparkles,
-} from "lucide-react";
+} from "@/app/_components/IconPack";
 
 export const metadata: Metadata = {
   title: "Pricing | Payvio",
@@ -67,7 +67,7 @@ const plans = [
     features: [
       "All Business features",
       "API access",
-      "NamRA export tools",
+      "Advanced report exports",
       "10 users",
       "Custom branding",
       "Priority support",
@@ -138,8 +138,8 @@ const faqs = [
     "Yes. Payvio pricing is listed in NAD so local businesses can budget without currency conversion.",
   ],
   [
-    "Does Payvio submit directly to NamRA/ITAS?",
-    "Not in v1. Payvio focuses on VAT-ready records and export tools first, with direct integrations added when official requirements are available and tested.",
+    "Can Payvio export VAT records?",
+    "Yes. Payvio focuses on VAT-ready records and report exports for review.",
   ],
   [
     "Can I change plans later?",
@@ -149,18 +149,18 @@ const faqs = [
 
 export default function PricingPage() {
   return (
-    <div className="il-page min-h-screen bg-white text-[#0d141c]">
+    <div className="il-page min-h-screen bg-background text-foreground">
       <MarketingHeader />
 
       <main>
-        <section className="bg-white px-5 py-20 text-center sm:px-8 sm:py-28">
-        <p className="mx-auto inline-flex rounded-full bg-[#c9ecff] px-5 py-2 text-sm font-black text-[#04120f]">
+        <section className="bg-background px-5 py-20 text-center sm:px-8 sm:py-28">
+        <p className="mx-auto inline-flex rounded-full bg-secondary px-5 py-2 text-sm font-semibold text-foreground">
           Pricing built for Namibian SMEs
         </p>
-        <h1 className="mx-auto mt-8 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl">
+        <h1 className="mx-auto mt-8 max-w-5xl text-5xl font-semibold leading-[1.02] sm:text-7xl">
           Pick the invoice plan that fits how your business works.
         </h1>
-        <p className="mx-auto mt-7 max-w-3xl text-xl font-medium leading-8 text-[#4e5961]">
+        <p className="mx-auto mt-7 max-w-3xl text-xl font-medium leading-8 text-muted-foreground">
           Start simple with professional invoices. Upgrade when you need unlimited clients,
           reminders, purchase tracking, reports, branding, or custom support.
         </p>
@@ -175,18 +175,18 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="bg-white px-5 py-20 sm:px-8 sm:py-28" id="plans">
+      <section className="bg-background px-5 py-20 sm:px-8 sm:py-28" id="plans">
         <div className="mx-auto max-w-[1180px]">
           <div className="grid gap-7 lg:grid-cols-[0.82fr_1fr] lg:items-end">
             <div>
-              <p className="text-xs font-black uppercase text-[#0978e1]">
+              <p className="text-xs font-semibold uppercase text-primary">
                 Plans
               </p>
-              <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+              <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
                 Simple monthly plans. Clear annual options.
               </h2>
             </div>
-            <p className="max-w-xl text-lg leading-8 text-[#4e5961] lg:justify-self-end">
+            <p className="max-w-xl text-lg leading-8 text-muted-foreground lg:justify-self-end">
               The Business plan is the best fit for most active SMEs because it removes
               invoice and client limits while adding reminders, reports, and purchases.
             </p>
@@ -197,34 +197,34 @@ export default function PricingPage() {
               <article
                 className={`relative flex flex-col rounded-[8px] border p-6 ${
                   plan.featured
-                    ? "border-[#0978e1] bg-[#eef8ff] shadow-[0_18px_50px_rgba(9,120,225,0.12)]"
-                    : "border-[#e4e8e0] bg-white"
+                    ? "border-primary bg-secondary shadow-sm"
+                    : "border-border bg-background"
                 }`}
                 key={plan.name}
               >
                 <span
-                  className={`mb-5 w-max rounded-full px-3 py-1 text-xs font-black ${
+                  className={`mb-5 w-max rounded-full px-3 py-1 text-xs font-semibold ${
                     plan.featured
-                      ? "bg-[#0978e1] text-white"
-                      : "bg-[#f5f7f2] text-[#0978e1]"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-primary"
                   }`}
                 >
                   {plan.eyebrow}
                 </span>
-                <h3 className="text-2xl font-black">{plan.name}</h3>
-                <p className="mt-3 min-h-12 text-sm font-bold leading-6 text-[#687076]">
+                <h3 className="text-2xl font-semibold">{plan.name}</h3>
+                <p className="mt-3 min-h-12 text-sm font-medium leading-6 text-muted-foreground">
                   {plan.audience}
                 </p>
                 <div className="mt-6">
-                  <strong className="text-4xl font-black">{plan.price}</strong>
-                  <span className="ml-1 text-sm font-bold text-[#687076]">/mo</span>
+                  <strong className="text-4xl font-semibold">{plan.price}</strong>
+                  <span className="ml-1 text-sm font-medium text-muted-foreground">/mo</span>
                 </div>
-                <p className="mt-2 text-sm font-bold text-[#0978e1]">{plan.annual}</p>
-                <p className="mt-5 text-sm leading-6 text-[#4e5961]">{plan.bestFor}</p>
+                <p className="mt-2 text-sm font-medium text-primary">{plan.annual}</p>
+                <p className="mt-5 text-sm leading-6 text-muted-foreground">{plan.bestFor}</p>
                 <ul className="mt-6 grid gap-3">
                   {plan.features.map((feature) => (
-                    <li className="flex gap-2 text-sm font-bold leading-5 text-[#0d141c]" key={feature}>
-                      <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-[#0978e1]" />
+                    <li className="flex gap-2 text-sm font-medium leading-5 text-foreground" key={feature}>
+                      <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
                       <span>{feature}</span>
                     </li>
                   ))}
@@ -241,16 +241,16 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="bg-[#f5f7f2] px-5 py-20 sm:px-8 sm:py-28">
+      <section className="bg-muted px-5 py-20 sm:px-8 sm:py-28">
         <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.72fr_1fr] lg:items-start">
           <div>
-            <p className="text-xs font-black uppercase text-[#0978e1]">
+            <p className="text-xs font-semibold uppercase text-primary">
               All plans
             </p>
-            <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+            <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
               Local invoice basics from day one.
             </h2>
-            <p className="mt-6 text-lg leading-8 text-[#4e5961]">
+            <p className="mt-6 text-lg leading-8 text-muted-foreground">
               Payvio is positioned for the everyday finance work Namibian businesses
               already need: clear invoices, client records, VAT-ready totals, and digital history.
             </p>
@@ -259,10 +259,10 @@ export default function PricingPage() {
             {included.map((item) => {
               const Icon = item.icon;
               return (
-                <article className="rounded-[8px] border border-[#e4e8e0] bg-white p-5" key={item.title}>
-                  <Icon aria-hidden="true" className="size-6 text-[#0978e1]" strokeWidth={1.8} />
-                  <h3 className="mt-4 text-xl font-black">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#4e5961]">{item.body}</p>
+                <article className="rounded-[8px] border border-border bg-background p-5" key={item.title}>
+                  <Icon aria-hidden="true" className="size-6 text-primary" strokeWidth={1.8} />
+                  <h3 className="mt-4 text-xl font-semibold">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.body}</p>
                 </article>
               );
             })}
@@ -270,26 +270,26 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="bg-white px-5 py-20 sm:px-8 sm:py-28">
+      <section className="bg-background px-5 py-20 sm:px-8 sm:py-28">
         <div className="mx-auto max-w-[1180px]">
           <div className="grid gap-8 lg:grid-cols-[0.78fr_1fr] lg:items-end">
             <div>
-              <p className="text-xs font-black uppercase text-[#0978e1]">
+              <p className="text-xs font-semibold uppercase text-primary">
                 Compare
               </p>
-              <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+              <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
                 See what changes as you grow.
               </h2>
             </div>
-            <p className="max-w-xl text-lg leading-8 text-[#4e5961] lg:justify-self-end">
+            <p className="max-w-xl text-lg leading-8 text-muted-foreground lg:justify-self-end">
               Upgrade only when a real business need appears: more clients, more users,
               automation, branding, or branch support.
             </p>
           </div>
 
-          <div className="mt-10 overflow-hidden rounded-[8px] border border-[#e4e8e0]">
-            <table className="w-full min-w-[760px] border-collapse bg-white text-left">
-              <thead className="bg-[#f5f7f2] text-xs font-black uppercase text-[#687076]">
+          <div className="mt-10 overflow-hidden rounded-[8px] border border-border">
+            <table className="w-full min-w-[760px] border-collapse bg-background text-left">
+              <thead className="bg-muted text-xs font-semibold uppercase text-muted-foreground">
                 <tr>
                   <th className="px-5 py-4">Feature</th>
                   <th className="px-5 py-4">Starter</th>
@@ -300,10 +300,10 @@ export default function PricingPage() {
               </thead>
               <tbody>
                 {comparisonRows.map(([feature, starter, business, professional, enterprise]) => (
-                  <tr className="border-t border-[#e4e8e0]" key={feature}>
-                    <td className="px-5 py-4 font-black">{feature}</td>
+                  <tr className="border-t border-border" key={feature}>
+                    <td className="px-5 py-4 font-semibold">{feature}</td>
                     {[starter, business, professional, enterprise].map((value, index) => (
-                      <td className="px-5 py-4 font-bold text-[#4e5961]" key={`${feature}-${index}`}>
+                      <td className="px-5 py-4 font-medium text-muted-foreground" key={`${feature}-${index}`}>
                         {value}
                       </td>
                     ))}
@@ -315,11 +315,11 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="bg-[#0d141c] px-5 py-20 text-white sm:px-8 sm:py-28">
+      <section className="bg-primary px-5 py-20 text-primary-foreground sm:px-8 sm:py-28">
         <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.75fr_1fr] lg:items-start">
           <div>
-            <Sparkles aria-hidden="true" className="size-7 text-[#8dd8ff]" />
-            <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+            <Sparkles aria-hidden="true" className="size-7 text-primary" />
+            <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
               Built around Namibia&apos;s invoice problem.
             </h2>
           </div>
@@ -330,22 +330,22 @@ export default function PricingPage() {
               "Foreign tools are often expensive, complex, and not built around local needs.",
               "Payvio keeps the sales message simple: professional invoices and clearer records.",
             ].map((item) => (
-              <div className="flex gap-3 rounded-[8px] bg-white/10 p-5" key={item}>
-                <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-[#8dd8ff]" />
-                <p className="text-sm font-bold leading-6 text-white/70">{item}</p>
+              <div className="flex gap-3 rounded-[8px] bg-primary-foreground/10 p-5" key={item}>
+                <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" />
+                <p className="text-sm font-medium leading-6 text-primary-foreground/70">{item}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-white px-5 py-20 sm:px-8 sm:py-28">
+      <section className="bg-background px-5 py-20 sm:px-8 sm:py-28">
         <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.72fr_1fr]">
           <div>
-            <p className="text-xs font-black uppercase text-[#0978e1]">
+            <p className="text-xs font-semibold uppercase text-primary">
               Questions
             </p>
-            <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+            <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
               Clear answers before you choose.
             </h2>
             <Link className="il-dark-button mt-8" href="/contact">
@@ -354,29 +354,29 @@ export default function PricingPage() {
           </div>
           <div className="grid gap-3">
             {faqs.map(([question, answer]) => (
-              <article className="rounded-[8px] bg-[#f5f7f2] p-6" key={question}>
-                <h3 className="text-2xl font-black text-[#0d141c]">{question}</h3>
-                <p className="mt-4 text-lg leading-8 text-[#4e5961]">{answer}</p>
+              <article className="rounded-[8px] bg-muted p-6" key={question}>
+                <h3 className="text-2xl font-semibold text-foreground">{question}</h3>
+                <p className="mt-4 text-lg leading-8 text-muted-foreground">{answer}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-[#0978e1] px-5 py-20 text-white sm:px-8 sm:py-28">
+      <section className="bg-primary px-5 py-20 text-primary-foreground sm:px-8 sm:py-28">
         <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[1fr_0.65fr] lg:items-center">
           <div>
-            <p className="text-xs font-black uppercase text-white/80">
+            <p className="text-xs font-semibold uppercase text-primary-foreground/80">
               Start today
             </p>
-            <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] sm:text-7xl">
+            <h2 className="mt-5 max-w-4xl text-4xl font-semibold leading-[1.02] sm:text-7xl">
               Send the first clean invoice.
             </h2>
-            <p className="mt-6 max-w-2xl text-lg font-bold leading-8 text-white/75">
+            <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-primary-foreground/75">
               Choose a plan now, then upgrade when your invoice volume, team, or reporting needs grow.
             </p>
           </div>
-          <div className="grid gap-3 rounded-[8px] bg-white p-5">
+          <div className="grid gap-3 rounded-[8px] bg-background p-5">
             <Link className="il-dark-button" href="/signup">
               Open workspace
             </Link>

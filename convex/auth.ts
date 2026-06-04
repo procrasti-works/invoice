@@ -58,12 +58,6 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         args.profile.emailVerified === true || args.type === "email";
       const now = Date.now();
       const envRole = roleForEmail(email);
-      const userData = {
-        email,
-        name,
-        ...(image ? { image } : null),
-        ...(emailVerified ? { emailVerificationTime: now } : null),
-      };
 
       const appCtx = ctx as MutationCtx;
 
@@ -79,7 +73,13 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         }
 
         await appCtx.db.patch(args.existingUserId, {
-          ...userData,
+          ...profilePatchForUser(existingUser, {
+            email,
+            name,
+            image,
+            emailVerified,
+            now,
+          }),
           ...rolePatchForExisting(existingUser, envRole),
         });
         return args.existingUserId;
@@ -97,7 +97,13 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         }
 
         await appCtx.db.patch(existingUser._id, {
-          ...userData,
+          ...profilePatchForUser(existingUser, {
+            email,
+            name,
+            image,
+            emailVerified,
+            now,
+          }),
           ...rolePatchForExisting(existingUser, envRole),
         });
         return existingUser._id;
@@ -108,7 +114,13 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       }
 
       return await appCtx.db.insert("users", {
-        ...userData,
+        ...profilePatchForUser(null, {
+          email,
+          name,
+          image,
+          emailVerified,
+          now,
+        }),
         role: envRole,
       });
     },
@@ -159,4 +171,25 @@ function rolePatchForExisting(
   }
 
   return user?.role ? {} : { role: "user" as const };
+}
+
+function profilePatchForUser(
+  user: Doc<"users"> | null,
+  profile: {
+    email: string;
+    name: string;
+    image: string | undefined;
+    emailVerified: boolean;
+    now: number;
+  },
+) {
+  const shouldUseGoogleImage = profile.image && !user?.avatarStorageId;
+
+  return {
+    email: profile.email,
+    name: profile.name,
+    ...(profile.image ? { googleImage: profile.image } : null),
+    ...(shouldUseGoogleImage ? { image: profile.image } : null),
+    ...(profile.emailVerified ? { emailVerificationTime: profile.now } : null),
+  };
 }

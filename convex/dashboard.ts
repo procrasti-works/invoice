@@ -3,7 +3,9 @@ import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { organizationWithImageUrl } from "./organizationImages";
 import { getOrganizationForUser } from "./organizationContext";
+import { userWithResolvedAvatar } from "./users";
 
 type OrgCtx = QueryCtx | MutationCtx;
 type SearchKind = "invoice" | "client" | "purchase" | "supplier" | "scan";
@@ -72,6 +74,47 @@ async function activeOrganization(ctx: OrgCtx) {
 
   return { userId, membership: current.membership, organization: current.organization };
 }
+
+export const shellState = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+
+    if (userId === null) {
+      return {
+        user: null,
+        membership: null,
+        organization: null,
+        subscription: null,
+      };
+    }
+
+    const [user, current] = await Promise.all([
+      ctx.db.get(userId),
+      getOrganizationForUser(ctx, userId),
+    ]);
+    const organization = current.organization;
+    const [organizationWithImage, subscriptions] = await Promise.all([
+      organization ? organizationWithImageUrl(ctx, organization) : null,
+      organization
+        ? ctx.db
+            .query("subscriptions")
+            .withIndex("by_organizationId", (q) =>
+              q.eq("organizationId", organization._id),
+            )
+            .order("desc")
+            .take(1)
+        : [],
+    ]);
+
+    return {
+      user: user ? await userWithResolvedAvatar(ctx, user) : null,
+      membership: current.membership,
+      organization: organizationWithImage,
+      subscription: subscriptions[0] ?? null,
+    };
+  },
+});
 
 function normalize(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -338,7 +381,7 @@ export const globalSearch = query({
             title,
             subtitle,
             `${statusLabels[purchase.status]} - ${money(purchase.currency, purchase.total)}`,
-            "/dashboard/ledger",
+            "/dashboard/scan",
             purchase.updatedAt ?? purchase.createdAt,
             score,
           ),

@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Share2, X } from "lucide-react";
+import { Download, Share2, X } from "@/app/_components/IconPack";
 import { useEffect, useState } from "react";
 
 type BeforeInstallPromptEvent = Event & {
@@ -8,7 +8,10 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-const DISMISSED_KEY = "payvio.pwaInstall.dismissed.v1";
+const LEGACY_DISMISSED_KEY = "payvio.pwaInstall.dismissed.v1";
+const INSTALLED_KEY = "payvio.pwaInstall.installed.v1";
+const SUPPRESSED_UNTIL_KEY = "payvio.pwaInstall.suppressedUntil.v1";
+const PROMPT_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000;
 
 function isIosDevice() {
   if (typeof window === "undefined") {
@@ -33,30 +36,86 @@ function isStandaloneMode() {
   );
 }
 
+function getStoredNumber(key: string) {
+  const value = window.localStorage.getItem(key);
+  const parsed = value ? Number(value) : 0;
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isPromptSuppressed(now = Date.now()) {
+  if (window.localStorage.getItem(INSTALLED_KEY) === "true") {
+    return true;
+  }
+
+  const suppressedUntil = getStoredNumber(SUPPRESSED_UNTIL_KEY);
+
+  if (suppressedUntil > now) {
+    return true;
+  }
+
+  if (window.localStorage.getItem(LEGACY_DISMISSED_KEY) === "true") {
+    window.localStorage.setItem(
+      SUPPRESSED_UNTIL_KEY,
+      String(now + PROMPT_COOLDOWN_MS),
+    );
+    window.localStorage.removeItem(LEGACY_DISMISSED_KEY);
+
+    return true;
+  }
+
+  if (suppressedUntil > 0) {
+    window.localStorage.removeItem(SUPPRESSED_UNTIL_KEY);
+  }
+
+  return false;
+}
+
+function suppressPromptForCooldown() {
+  window.localStorage.setItem(
+    SUPPRESSED_UNTIL_KEY,
+    String(Date.now() + PROMPT_COOLDOWN_MS),
+  );
+}
+
+function markPromptInstalled() {
+  window.localStorage.setItem(INSTALLED_KEY, "true");
+  window.localStorage.removeItem(SUPPRESSED_UNTIL_KEY);
+  window.localStorage.removeItem(LEGACY_DISMISSED_KEY);
+}
+
 export function PwaInstallPrompt() {
   const [installEvent, setInstallEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true);
-  const [isDismissed, setIsDismissed] = useState(true);
+  const [isSuppressed, setIsSuppressed] = useState(true);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       setIsIos(isIosDevice());
       setIsStandalone(isStandaloneMode());
-      setIsDismissed(window.localStorage.getItem(DISMISSED_KEY) === "true");
+      setIsSuppressed(isPromptSuppressed());
     });
 
     function handleBeforeInstallPrompt(event: Event) {
       event.preventDefault();
+
+      if (isPromptSuppressed()) {
+        setInstallEvent(null);
+        setIsSuppressed(true);
+        return;
+      }
+
       setInstallEvent(event as BeforeInstallPromptEvent);
-      setIsDismissed(false);
+      setIsSuppressed(false);
     }
 
     function handleInstalled() {
       setInstallEvent(null);
       setIsStandalone(true);
-      window.localStorage.setItem(DISMISSED_KEY, "true");
+      setIsSuppressed(true);
+      markPromptInstalled();
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -70,7 +129,7 @@ export function PwaInstallPrompt() {
   }, []);
 
   const canPrompt = Boolean(installEvent);
-  const shouldShow = !isDismissed && !isStandalone && (canPrompt || isIos);
+  const shouldShow = !isSuppressed && !isStandalone && (canPrompt || isIos);
 
   if (!shouldShow) {
     return null;
@@ -86,9 +145,13 @@ export function PwaInstallPrompt() {
     setInstallEvent(null);
 
     if (choice.outcome === "accepted") {
-      window.localStorage.setItem(DISMISSED_KEY, "true");
-      setIsDismissed(true);
+      markPromptInstalled();
+      setIsSuppressed(true);
+      return;
     }
+
+    suppressPromptForCooldown();
+    setIsSuppressed(true);
   }
 
   return (
@@ -119,8 +182,8 @@ export function PwaInstallPrompt() {
           className="pwa-install-dismiss"
           aria-label="Dismiss install prompt"
           onClick={() => {
-            window.localStorage.setItem(DISMISSED_KEY, "true");
-            setIsDismissed(true);
+            suppressPromptForCooldown();
+            setIsSuppressed(true);
           }}
         >
           <X className="size-4" />

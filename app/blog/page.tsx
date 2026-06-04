@@ -12,7 +12,7 @@ import {
   FileText,
   MailCheck,
   ShieldCheck,
-} from "lucide-react";
+} from "@/app/_components/IconPack";
 
 export const metadata: Metadata = {
   title: "Blog | Payvio",
@@ -76,44 +76,44 @@ const resources = [
 
 export default function BlogPage() {
   return (
-    <div className="il-page min-h-screen bg-white text-[#0d141c]">
+    <div className="il-page min-h-screen bg-background text-foreground">
       <MarketingHeader />
       <main>
-        <section className="bg-white px-5 py-20 text-center sm:px-8 sm:py-28">
-          <p className="mx-auto inline-flex rounded-full bg-[#c9ecff] px-5 py-2 text-sm font-black text-[#04120f]">
+        <section className="bg-background px-5 py-20 text-center sm:px-8 sm:py-28">
+          <p className="mx-auto inline-flex rounded-full bg-secondary px-5 py-2 text-sm font-semibold text-foreground">
             Payvio resources
           </p>
-          <h1 className="mx-auto mt-8 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl">
+          <h1 className="mx-auto mt-8 max-w-5xl text-5xl font-semibold leading-[1.02] sm:text-7xl">
             Practical guides for cleaner invoice work.
           </h1>
-          <p className="mx-auto mt-7 max-w-3xl text-xl font-medium leading-8 text-[#4e5961]">
+          <p className="mx-auto mt-7 max-w-3xl text-xl font-medium leading-8 text-muted-foreground">
             Short, useful notes for Namibian business owners who want better invoices,
             faster follow-up, and clearer records.
           </p>
         </section>
 
-        <section className="border-y border-[#e4e8e0] bg-[#f8fbfa] px-5 py-10 sm:px-8">
+        <section className="border-y border-border bg-muted px-5 py-10 sm:px-8">
           <div className="mx-auto grid max-w-[1180px] gap-4 md:grid-cols-3">
             {resources.map(([title, body]) => (
-              <article className="rounded-[8px] border border-[#e4e8e0] bg-white p-5" key={title}>
-                <BookOpenCheck aria-hidden="true" className="size-6 text-[#0978e1]" strokeWidth={1.8} />
-                <h2 className="mt-4 text-xl font-black">{title}</h2>
-                <p className="mt-3 text-sm font-bold leading-6 text-[#687076]">{body}</p>
+              <article className="rounded-[8px] border border-border bg-background p-5" key={title}>
+                <BookOpenCheck aria-hidden="true" className="size-6 text-primary" strokeWidth={1.8} />
+                <h2 className="mt-4 text-xl font-semibold">{title}</h2>
+                <p className="mt-3 text-sm font-medium leading-6 text-muted-foreground">{body}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="bg-white px-5 py-20 sm:px-8 sm:py-28">
+        <section className="bg-background px-5 py-20 sm:px-8 sm:py-28">
           <div className="mx-auto max-w-[1180px]">
             <div className="grid gap-7 lg:grid-cols-[0.78fr_1fr] lg:items-end">
               <div>
-                <p className="text-xs font-black uppercase text-[#0978e1]">Latest</p>
-                <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+                <p className="text-xs font-semibold uppercase text-primary">Latest</p>
+                <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
                   Read before the next invoice goes out.
                 </h2>
               </div>
-              <p className="max-w-xl text-lg leading-8 text-[#4e5961] lg:justify-self-end">
+              <p className="max-w-xl text-lg leading-8 text-muted-foreground lg:justify-self-end">
                 Each guide is written for practical action: send better invoices,
                 reduce delays, and keep records easier to trust.
               </p>
@@ -123,26 +123,26 @@ export default function BlogPage() {
               {posts.map((post) => {
                 const Icon = post.icon;
                 return (
-                  <article className="flex flex-col rounded-[8px] border border-[#e4e8e0] bg-white p-6" key={post.slug}>
+                  <article className="flex flex-col rounded-[8px] border border-border bg-background p-6" key={post.slug}>
                     <div className="flex items-center justify-between gap-4">
-                      <span className="rounded-full bg-[#c9ecff] px-3 py-1 text-xs font-black text-[#04120f]">
+                      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground">
                         {post.category}
                       </span>
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#687076]">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                         <Clock aria-hidden="true" className="size-3.5" />
                         {post.readTime}
                       </span>
                     </div>
-                    <div className="mt-8 grid size-14 place-items-center rounded-[8px] bg-[#f5f7f2] text-[#0978e1]">
+                    <div className="mt-8 grid size-14 place-items-center rounded-[8px] bg-muted text-primary">
                       <Icon aria-hidden="true" className="size-7" strokeWidth={1.8} />
                     </div>
-                    <p className="mt-6 text-xs font-black uppercase text-[#687076]">{post.date}</p>
-                    <h3 className="mt-3 text-2xl font-black leading-tight">{post.title}</h3>
-                    <p className="mt-4 text-sm leading-6 text-[#4e5961]">{post.excerpt}</p>
+                    <p className="mt-6 text-xs font-semibold uppercase text-muted-foreground">{post.date}</p>
+                    <h3 className="mt-3 text-2xl font-semibold leading-tight">{post.title}</h3>
+                    <p className="mt-4 text-sm leading-6 text-muted-foreground">{post.excerpt}</p>
                     <ul className="mt-6 grid gap-2">
                       {post.takeaways.map((item) => (
-                        <li className="flex gap-2 text-sm font-bold leading-5" key={item}>
-                          <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-[#0978e1]" />
+                        <li className="flex gap-2 text-sm font-medium leading-5" key={item}>
+                          <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -154,34 +154,34 @@ export default function BlogPage() {
           </div>
         </section>
 
-        <section className="bg-[#0d141c] px-5 py-20 text-white sm:px-8 sm:py-28">
+        <section className="bg-primary px-5 py-20 text-primary-foreground sm:px-8 sm:py-28">
           <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.75fr_1fr] lg:items-center">
             <div>
-              <p className="text-xs font-black uppercase text-[#8dd8ff]">Simple operating rhythm</p>
-              <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-6xl">
+              <p className="text-xs font-semibold uppercase text-primary">Simple operating rhythm</p>
+              <h2 className="mt-5 text-4xl font-semibold leading-[1.02] sm:text-6xl">
                 Send. Track. Follow up. Keep the record.
               </h2>
             </div>
             <div className="grid gap-3">
               {["Create the invoice", "Send the client link", "Track approval and payment", "Export reports when needed"].map((item) => (
-                <div className="flex gap-3 rounded-[8px] bg-white/10 p-5" key={item}>
-                  <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-[#8dd8ff]" />
-                  <p className="text-sm font-bold leading-6 text-white/70">{item}</p>
+                <div className="flex gap-3 rounded-[8px] bg-primary-foreground/10 p-5" key={item}>
+                  <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" />
+                  <p className="text-sm font-medium leading-6 text-primary-foreground/70">{item}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="bg-[#0978e1] px-5 py-20 text-white sm:px-8 sm:py-28">
+        <section className="bg-primary px-5 py-20 text-primary-foreground sm:px-8 sm:py-28">
           <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[1fr_0.65fr] lg:items-center">
             <div>
-              <p className="text-xs font-black uppercase text-white/80">Ready when you are</p>
-              <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] sm:text-7xl">
+              <p className="text-xs font-semibold uppercase text-primary-foreground/80">Ready when you are</p>
+              <h2 className="mt-5 max-w-4xl text-4xl font-semibold leading-[1.02] sm:text-7xl">
                 Put the advice into the next invoice.
               </h2>
             </div>
-            <div className="grid gap-3 rounded-[8px] bg-white p-5">
+            <div className="grid gap-3 rounded-[8px] bg-background p-5">
               <Link className="il-dark-button" href="/signup">
                 Open workspace
                 <ArrowRight aria-hidden="true" className="size-4" />

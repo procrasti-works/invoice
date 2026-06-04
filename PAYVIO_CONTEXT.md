@@ -31,7 +31,7 @@ app/
     reminders/page.tsx  # Reminders page
     reports/page.tsx    # Reports & Analytics
     ledger/page.tsx     # Invoice Ledger + 5yr archive
-    vat/page.tsx        # VAT & NamRA compliance
+    vat/page.tsx        # VAT records and exports
     scan/page.tsx       # Scan Paper Invoices (OCR)
     settings/           # Workspace settings
     _components/
@@ -72,7 +72,7 @@ lib/
 | Reports & Analytics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Invoice Ledger | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Scan Paper Invoice | ✅ (50 max) | ❌ | ✅ | ✅ | ✅ | ✅ |
-| VAT & NamRA | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| VAT records | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 
 - Trial = 14 days, Starter features, 50 scan limit tracked in localStorage
 - Locked features show lock icon in sidebar + upgrade page when clicked
@@ -108,14 +108,12 @@ lib/
 
 ---
 
-## Key VAT / NamRA Facts (Namibia)
+## Key VAT Facts (Namibia)
 - VAT rate: **15%**
 - Mandatory registration threshold: N$1M/year
 - Invoice retention: **5 years**
 - VAT return due: **25th of following month**
-- E-invoicing mandate: **2026–2029 phased rollout** (NamRA ITAS system)
 - 40,000+ active SMEs · 29,000+ registered companies · 90% fail within 5 years
-- No local NamRA-compliant invoicing SaaS existed before Payvio — first mover opportunity
 
 ---
 
@@ -135,7 +133,7 @@ lib/
 
 ## What Andreas Still Needs to Build
 1. Optional OCR/parser layer for scan review automation
-2. NamRA ITAS direct API integration (VAT & NamRA page export button)
+2. Tax-authority integration is paused while VAT records and CSV exports stay active
 3. Local bank integrations — FNB, Bank Windhoek, Standard Bank (Enterprise feature)
 4. Payment processing backend (Stripe/Polar already in schema)
 5. Real email delivery for invoices (currently opens Gmail compose)

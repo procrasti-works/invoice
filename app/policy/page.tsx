@@ -58,7 +58,7 @@ const sections: LegalSection[] = [
     title: "Invoice and tax policy",
     body: [
       "Payvio may support NAD, USD, ZAR, VAT-ready fields, invoice numbering, exports, reminders, reports, and record organization for Namibian SMEs and related business use cases. These features are operational tools only.",
-      "Users remain solely responsible for determining whether they are VAT registered, whether VAT must be charged, the applicable rate, the correct treatment of exempt or zero-rated supplies, invoice validity, retention periods, customer documentation, tax filings, e-invoicing obligations, and all NamRA, ITAS, accounting, audit, or sector-specific requirements.",
+      "Users remain solely responsible for determining whether they are VAT registered, whether VAT must be charged, the applicable rate, the correct treatment of exempt or zero-rated supplies, invoice validity, retention periods, customer documentation, tax filings, e-invoicing obligations, and all accounting, audit, regulatory, or sector-specific requirements.",
       "Payvio is not liable if a template, export, report, invoice, reminder, calculation, field, or setting is unsuitable for a user's business, tax position, regulator, accountant, auditor, client, supplier, procurement process, or payment dispute.",
     ],
   },

@@ -1,29 +1,40 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowDownRight,
+  ArrowRight,
   ArrowUpRight,
-  BadgeCheck,
   BarChart3,
   CalendarDays,
   Clock,
   Download,
   FileSpreadsheet,
-  FileText,
   Filter,
-  Gauge,
   ReceiptText,
   ShieldCheck,
   ShoppingCart,
-  WalletCards,
-} from "lucide-react";
+  type LucideIcon,
+} from "@/app/_components/IconPack";
 
 import { api } from "@/convex/_generated/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePlan } from "@/lib/plan";
+import { cn } from "@/lib/utils";
 import { LockedPage } from "../_components/DashboardShell";
 
 type Summary = {
@@ -57,46 +68,18 @@ type VatExportRow = {
   documentNumber: string;
   issueDate: string;
   partyName: string;
-  partyAddress: string;
-  partyVatNumber: string;
-  taxMode: string;
   taxModeLabel: string;
-  vatRate: number;
-  subtotal: number;
   vatAmount: number;
   total: number;
   currency: string;
   status: string;
-  retentionUntil: string;
-  vedStatus: "ready" | "incomplete";
-  missingFields: string[];
 };
 
 type VatReturn = {
   organization: {
-    name: string;
-    legalName: string;
-    address: string;
-    taxId: string;
-    vatNumber: string;
     currency: string;
   } | null;
-  settings: {
-    vatRegistered: boolean;
-    vatNumber: string;
-    vatRate: number;
-    registrationType: string;
-    filingFrequency: "monthly" | "bi_monthly";
-    returnDueDay: number;
-    recordRetentionYears: number;
-    defaultTaxMode: string;
-    vedEnabled: boolean;
-    transmissionMode: "manual_export" | "near_real_time" | "real_time";
-    itasRegistered: boolean;
-  } | null;
   period: {
-    from: string;
-    to: string;
     dueDate: string;
     today: string;
   };
@@ -110,23 +93,14 @@ type VatReturn = {
     netVat: number;
     issuedInvoiceCount: number;
     purchaseRecordCount: number;
-    incompleteRecordCount: number;
   };
   exportRows: VatExportRow[];
-  readiness: Array<{ key: string; label: string; done: boolean }>;
 };
 
-const TABS = [
-  "Overview",
-  "Revenue",
-  "Cash Flow",
-  "VAT / NamRA",
-  "Receivables",
-  "Purchases",
-  "Exports",
-] as const;
-type Tab = (typeof TABS)[number];
+const REPORT_TABS = ["Revenue reports", "Overdue reports", "Tax summaries", "Cash flow charts"] as const;
+type ReportTab = (typeof REPORT_TABS)[number];
 
+const INVOICES_PER_PAGE = 5;
 const overdueStatuses = new Set(["sent", "viewed", "approved", "awaiting_payment", "overdue"]);
 
 function todayIso() {
@@ -148,9 +122,9 @@ function monthEndIso(date = new Date()) {
 function formatMoney(amount: number, currency = "NAD") {
   try {
     return new Intl.NumberFormat("en-NA", {
-      style: "currency",
       currency,
       maximumFractionDigits: 2,
+      style: "currency",
     }).format(amount);
   } catch {
     return `${currency} ${amount.toFixed(2)}`;
@@ -170,8 +144,8 @@ function formatDate(date: string | undefined) {
   return new Intl.DateTimeFormat("en-NA", {
     day: "2-digit",
     month: "short",
-    year: "numeric",
     timeZone: "UTC",
+    year: "numeric",
   }).format(parsed);
 }
 
@@ -181,33 +155,6 @@ function formatPercent(value: number) {
   }
 
   return `${Math.round(value)}%`;
-}
-
-function csvCell(value: unknown) {
-  const text = Array.isArray(value) ? value.join("; ") : String(value ?? "");
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function downloadBlob(filename: string, content: string, type: string) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
-function downloadCsv(filename: string, rows: unknown[][]) {
-  downloadBlob(
-    filename,
-    rows.map((row) => row.map(csvCell).join(",")).join("\n"),
-    "text/csv;charset=utf-8",
-  );
-}
-
-function cleanStatus(status: string) {
-  return status.replace(/_/g, " ");
 }
 
 function monthLabel(issueDate: string) {
@@ -222,9 +169,17 @@ function monthLabel(issueDate: string) {
 
   return new Intl.DateTimeFormat("en-NA", {
     month: "short",
-    year: "2-digit",
     timeZone: "UTC",
+    year: "2-digit",
   }).format(parsed);
+}
+
+function metricPercent(value: number, max: number) {
+  if (max <= 0 || value <= 0) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, Math.round((value / max) * 100)));
 }
 
 function daysPastDue(row: LedgerRow, today: string) {
@@ -242,29 +197,200 @@ function daysPastDue(row: LedgerRow, today: string) {
   return Math.floor((current - due) / 86_400_000);
 }
 
+function csvCell(value: unknown) {
+  const text = Array.isArray(value) ? value.join("; ") : String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename: string, rows: unknown[][]) {
+  const blob = new Blob([rows.map((row) => row.map(csvCell).join(",")).join("\n")], {
+    type: "text/csv;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function titleStatus(status: string) {
+  return status.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function statusClass(status: string) {
   if (status === "paid" || status === "recorded") {
-    return "db-report-status-success";
+    return "bg-teal-50 text-teal-700";
   }
 
-  if (status === "overdue" || status === "rejected" || status === "incomplete") {
-    return "db-report-status-danger";
+  if (status === "overdue" || status === "rejected") {
+    return "bg-red-50 text-red-600";
   }
 
   if (status === "awaiting_payment" || status === "approved") {
-    return "db-report-status-warning";
+    return "bg-amber-50 text-amber-700";
   }
 
-  return "db-report-status-neutral";
+  return "bg-neutral-100 text-neutral-600";
 }
 
 function sumRows(rows: LedgerRow[], field: keyof Pick<LedgerRow, "subtotal" | "vatAmount" | "total" | "balanceDue">) {
   return rows.reduce((total, row) => total + row[field], 0);
 }
 
+function ReportStatusPill({ status }: { status: string }) {
+  return (
+    <Badge className={cn("h-6 rounded-full border-0 px-3 text-sm font-semibold", statusClass(status))}>
+      {titleStatus(status)}
+    </Badge>
+  );
+}
+
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  meta,
+  iconClassName,
+  barClassName,
+  progress,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  meta: string;
+  iconClassName: string;
+  barClassName: string;
+  progress: number;
+}) {
+  return (
+    <article className="min-h-[158px] rounded-lg border border-border bg-card p-6 shadow-none sm:p-[30px]">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[28px] font-semibold leading-tight tracking-normal text-foreground">{value}</p>
+          <p className="mt-2 text-[18px] leading-6 text-muted-foreground">{label}</p>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">{meta}</p>
+        </div>
+        <span className={cn("grid size-12 shrink-0 place-items-center rounded-lg sm:size-[60px]", iconClassName)}>
+          <Icon className="size-6 sm:size-7" />
+        </span>
+      </div>
+      <div className="mt-6 h-1 rounded-full bg-muted">
+        <div className={cn("h-full rounded-full", barClassName)} style={{ width: `${progress}%` }} />
+      </div>
+    </article>
+  );
+}
+
+function SectionTitle({ icon: Icon, title, badge }: { icon: LucideIcon; title: string; badge?: string }) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <p className="flex min-w-0 items-center gap-2 text-base font-semibold text-foreground">
+        <Icon className="size-5 shrink-0" />
+        <span className="truncate">{title}</span>
+      </p>
+      {badge ? (
+        <Badge variant="outline" className="h-6 shrink-0 rounded-full px-3">
+          {badge}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function StatGrid({ rows }: { rows: Array<{ label: string; value: string }> }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {rows.map((row) => (
+        <div key={row.label} className="rounded-lg border border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground">{row.label}</p>
+          <p className="mt-2 text-lg font-semibold text-foreground">{row.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
+  return (
+    <div className="grid min-h-48 place-items-center rounded-lg border border-dashed border-border p-8 text-center">
+      <div>
+        <Icon className="mx-auto mb-3 size-8 text-muted-foreground" />
+        <p className="font-medium text-foreground">{title}</p>
+      </div>
+    </div>
+  );
+}
+
+function CashFlowDonut({
+  cashIn,
+  cashOut,
+  currency,
+}: {
+  cashIn: number;
+  cashOut: number;
+  currency: string;
+}) {
+  const total = Math.max(cashIn + cashOut, 0);
+  const cashInPercent = total > 0 ? (cashIn / total) * 100 : 0;
+  const cashOutPercent = total > 0 ? 100 - cashInPercent : 0;
+  const gradient =
+    total > 0
+      ? `conic-gradient(#0d9488 0deg ${cashInPercent * 3.6}deg, #ef4444 ${cashInPercent * 3.6}deg 360deg)`
+      : "conic-gradient(#f1f1f1 0deg 360deg)";
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Cash split</p>
+          <p className="mt-1 text-lg font-semibold text-foreground">{formatMoney(total, currency)}</p>
+        </div>
+        <Badge variant="outline" className="h-6 rounded-full px-3">
+          {formatPercent(cashInPercent)}
+        </Badge>
+      </div>
+      <div className="mt-6 grid place-items-center">
+        <div className="relative size-48 rounded-full" style={{ background: gradient }}>
+          <div className="absolute inset-6 grid place-items-center rounded-full border border-border bg-background text-center">
+            <span>
+              <strong className="block text-xl font-semibold text-foreground">{formatMoney(cashIn - cashOut, currency)}</strong>
+              <small className="mt-1 block text-sm text-muted-foreground">Net cash</small>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-6 grid gap-3">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">
+          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <i className="size-2 rounded-full bg-teal-600" />
+            Cash in
+          </span>
+          <strong className="text-sm font-semibold text-foreground">{formatMoney(cashIn, currency)}</strong>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">
+          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <i className="size-2 rounded-full bg-red-500" />
+            Cash out
+          </span>
+          <strong className="text-sm font-semibold text-foreground">{formatMoney(cashOut, currency)}</strong>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">
+          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <i className="size-2 rounded-full bg-neutral-900" />
+            Out ratio
+          </span>
+          <strong className="text-sm font-semibold text-foreground">{formatPercent(cashOutPercent)}</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ReportsPage() {
   const { canAccess } = usePlan();
-  const [activeTab, setActiveTab] = useState<Tab>("Overview");
+  const [activeTab, setActiveTab] = useState<ReportTab>("Revenue reports");
+  const [revenuePage, setRevenuePage] = useState(1);
   const [from, setFrom] = useState(monthStartIso);
   const [to, setTo] = useState(monthEndIso);
   const summary = useQuery(api.reports.summary, { from, to }) as Summary | undefined;
@@ -273,23 +399,14 @@ export default function ReportsPage() {
   const workspace = useQuery(api.invoices.workspace);
 
   const ledgerRows = useMemo(() => ledgerRowsResult ?? [], [ledgerRowsResult]);
+  const invoiceRows = useMemo(() => ledgerRows.filter((row) => row.type === "invoice"), [ledgerRows]);
+  const purchaseRows = useMemo(() => ledgerRows.filter((row) => row.type === "purchase"), [ledgerRows]);
+  const paidRows = useMemo(() => invoiceRows.filter((row) => row.status === "paid"), [invoiceRows]);
   const currency = summary?.currency ?? vatReturn?.organization?.currency ?? workspace?.defaultCurrency ?? "NAD";
   const today = vatReturn?.period.today ?? todayIso();
   const invalidPeriod = Boolean(from && to && from > to);
   const isLoading = summary === undefined || ledgerRowsResult === undefined || vatReturn === undefined;
 
-  const invoiceRows = useMemo(
-    () => ledgerRows.filter((row) => row.type === "invoice"),
-    [ledgerRows],
-  );
-  const purchaseRows = useMemo(
-    () => ledgerRows.filter((row) => row.type === "purchase"),
-    [ledgerRows],
-  );
-  const paidRows = useMemo(
-    () => invoiceRows.filter((row) => row.status === "paid"),
-    [invoiceRows],
-  );
   const openInvoiceRows = useMemo(
     () =>
       invoiceRows.filter(
@@ -300,6 +417,7 @@ export default function ReportsPage() {
       ),
     [invoiceRows],
   );
+
   const overdueRows = useMemo(
     () =>
       openInvoiceRows
@@ -307,40 +425,29 @@ export default function ReportsPage() {
         .sort((a, b) => daysPastDue(b, today) - daysPastDue(a, today)),
     [openInvoiceRows, today],
   );
-  const incompleteVatRows = useMemo(
-    () => (vatReturn?.exportRows ?? []).filter((row) => row.vedStatus === "incomplete"),
-    [vatReturn?.exportRows],
-  );
 
-  const trendRows = useMemo(() => {
-    const buckets = new Map<
-      string,
-      { label: string; issued: number; paid: number; purchases: number; vat: number }
-    >();
+  const monthlyRows = useMemo(() => {
+    const buckets = new Map<string, { label: string; issued: number; paid: number; purchases: number }>();
 
     for (const row of ledgerRows) {
       const key = row.issueDate ? row.issueDate.slice(0, 7) : "undated";
-      const existing = buckets.get(key) ?? {
+      const bucket = buckets.get(key) ?? {
         label: monthLabel(row.issueDate),
         issued: 0,
         paid: 0,
         purchases: 0,
-        vat: 0,
       };
 
       if (row.type === "invoice") {
-        existing.issued += row.total;
-        existing.vat += row.vatAmount;
-
+        bucket.issued += row.total;
         if (row.status === "paid") {
-          existing.paid += row.total;
+          bucket.paid += row.total;
         }
       } else {
-        existing.purchases += row.total;
-        existing.vat -= row.vatAmount;
+        bucket.purchases += row.total;
       }
 
-      buckets.set(key, existing);
+      buckets.set(key, bucket);
     }
 
     return Array.from(buckets.entries())
@@ -350,50 +457,18 @@ export default function ReportsPage() {
   }, [ledgerRows]);
 
   const clientRevenue = useMemo(() => {
-    const totals = new Map<string, { party: string; paid: number; issued: number; invoices: number }>();
+    const totals = new Map<string, { party: string; issued: number; invoices: number }>();
 
     for (const row of invoiceRows) {
       const key = row.party || "Client";
-      const existing = totals.get(key) ?? {
-        party: key,
-        paid: 0,
-        issued: 0,
-        invoices: 0,
-      };
-
-      existing.invoices += 1;
+      const existing = totals.get(key) ?? { party: key, issued: 0, invoices: 0 };
       existing.issued += row.total;
-
-      if (row.status === "paid") {
-        existing.paid += row.total;
-      }
-
+      existing.invoices += 1;
       totals.set(key, existing);
     }
 
-    return Array.from(totals.values()).sort((a, b) => b.issued - a.issued).slice(0, 8);
+    return Array.from(totals.values()).sort((a, b) => b.issued - a.issued).slice(0, 6);
   }, [invoiceRows]);
-
-  const supplierSpend = useMemo(() => {
-    const totals = new Map<string, { party: string; total: number; vat: number; records: number }>();
-
-    for (const row of purchaseRows) {
-      const key = row.party || "Supplier";
-      const existing = totals.get(key) ?? {
-        party: key,
-        total: 0,
-        vat: 0,
-        records: 0,
-      };
-
-      existing.records += 1;
-      existing.total += row.total;
-      existing.vat += row.vatAmount;
-      totals.set(key, existing);
-    }
-
-    return Array.from(totals.values()).sort((a, b) => b.total - a.total).slice(0, 8);
-  }, [purchaseRows]);
 
   const ageingBuckets = useMemo(() => {
     const buckets = [
@@ -422,802 +497,515 @@ export default function ReportsPage() {
   const supplierPurchases = vatReturn?.totals.purchaseTotal ?? summary?.purchaseTotal ?? sumRows(purchaseRows, "total");
   const outstanding = summary?.outstanding ?? sumRows(openInvoiceRows, "balanceDue");
   const overdue = summary?.overdue ?? sumRows(overdueRows, "balanceDue");
+  const outputVat = vatReturn?.totals.outputVat ?? summary?.vatCollected ?? 0;
+  const inputVat = vatReturn?.totals.inputVat ?? summary?.vatInput ?? 0;
+  const netVat = vatReturn?.totals.netVat ?? outputVat - inputVat;
   const netCash = paidCashIn - supplierPurchases;
-  const netVat = vatReturn?.totals.netVat ?? (summary?.vatCollected ?? 0) - (summary?.vatInput ?? 0);
-  const readiness = vatReturn?.readiness ?? [];
-  const readyChecks = readiness.filter((item) => item.done).length;
-  const readinessPercent = readiness.length > 0 ? (readyChecks / readiness.length) * 100 : 0;
-  const trendMax = Math.max(
-    1,
-    ...trendRows.flatMap((row) => [row.issued, row.paid, row.purchases]),
-  );
+  const chartMax = Math.max(1, ...monthlyRows.flatMap((row) => [row.issued, row.paid, row.purchases, Math.abs(row.paid - row.purchases)]));
+  const reportBase = Math.max(issuedSales, overdue, Math.abs(netVat), Math.abs(netCash), paidCashIn, supplierPurchases, 1);
   const periodLabel = `${formatDate(from)} to ${formatDate(to)}`;
+  const vatRows = vatReturn?.exportRows ?? [];
 
-  function exportOverview() {
-    downloadCsv(`payvio-report-overview-${from}-to-${to}.csv`, [
-      ["Metric", "Value"],
-      ["Period", periodLabel],
-      ["Issued sales", issuedSales],
-      ["Paid cash in", paidCashIn],
-      ["Supplier purchases", supplierPurchases],
-      ["Net cash", netCash],
-      ["Outstanding", outstanding],
-      ["Overdue", overdue],
-      ["Output VAT", vatReturn?.totals.outputVat ?? summary?.vatCollected ?? 0],
-      ["Input VAT", vatReturn?.totals.inputVat ?? summary?.vatInput ?? 0],
-      ["Net VAT", netVat],
-      ["Readiness", `${readyChecks}/${readiness.length}`],
-      ["Incomplete VAT records", vatReturn?.totals.incompleteRecordCount ?? 0],
-    ]);
-  }
-
-  function exportLedger() {
-    downloadCsv(`payvio-ledger-${from}-to-${to}.csv`, [
-      ["Type", "Document", "Party", "Issue date", "Due date", "Status", "Subtotal", "VAT", "Total", "Balance"],
-      ...ledgerRows.map((row) => [
-        row.type,
-        row.number,
-        row.party,
-        row.issueDate,
-        row.dueDate,
-        row.status,
-        row.subtotal,
-        row.vatAmount,
-        row.total,
-        row.balanceDue,
-      ]),
-    ]);
-  }
-
-  function exportVatCsv() {
-    downloadCsv(`payvio-vat-itas-records-${from}-to-${to}.csv`, [
-      [
-        "Record type",
-        "Document type",
-        "Document number",
-        "Issue date",
-        "Party name",
-        "Party address",
-        "Party VAT number",
-        "Tax mode",
-        "Subtotal",
-        "VAT",
-        "Total",
-        "Currency",
-        "Status",
-        "Retention until",
-        "VED status",
-        "Missing fields",
-      ],
-      ...(vatReturn?.exportRows ?? []).map((row) => [
-        row.recordType,
-        row.documentType,
-        row.documentNumber,
-        row.issueDate,
-        row.partyName,
-        row.partyAddress,
-        row.partyVatNumber,
-        row.taxModeLabel,
-        row.subtotal,
-        row.vatAmount,
-        row.total,
-        row.currency,
-        row.status,
-        row.retentionUntil,
-        row.vedStatus,
-        row.missingFields,
-      ]),
-    ]);
-  }
-
-  function exportItasJson() {
-    downloadBlob(
-      `payvio-itas-export-${from}-to-${to}.json`,
-      JSON.stringify(
-        {
-          source: "Payvio Namibia reports",
-          period: vatReturn?.period,
-          organization: vatReturn?.organization,
-          settings: vatReturn?.settings,
-          totals: vatReturn?.totals,
-          records: vatReturn?.exportRows ?? [],
-        },
-        null,
-        2,
-      ),
-      "application/json;charset=utf-8",
-    );
-  }
+  const reportTabs = [
+    { id: "Revenue reports" as const, count: invoiceRows.length, tone: "bg-teal-100 text-teal-700" },
+    { id: "Overdue reports" as const, count: overdueRows.length, tone: "bg-red-100 text-red-700" },
+    { id: "Tax summaries" as const, count: vatRows.length, tone: "bg-amber-100 text-amber-700" },
+    { id: "Cash flow charts" as const, count: monthlyRows.length, tone: "bg-neutral-100 text-neutral-700" },
+  ];
+  const revenuePageCount = Math.max(1, Math.ceil(invoiceRows.length / INVOICES_PER_PAGE));
+  const currentRevenuePage = Math.min(revenuePage, revenuePageCount);
+  const firstRevenueIndex = (currentRevenuePage - 1) * INVOICES_PER_PAGE;
+  const visibleInvoiceRows = invoiceRows.slice(firstRevenueIndex, firstRevenueIndex + INVOICES_PER_PAGE);
+  const visibleInvoiceStart = invoiceRows.length > 0 ? firstRevenueIndex + 1 : 0;
+  const visibleInvoiceEnd = Math.min(firstRevenueIndex + visibleInvoiceRows.length, invoiceRows.length);
 
   function exportActiveReport() {
-    if (activeTab === "Revenue") {
+    if (activeTab === "Revenue reports") {
       downloadCsv(`payvio-revenue-${from}-to-${to}.csv`, [
-        ["Invoice", "Client", "Issue date", "Due date", "Status", "Subtotal", "VAT", "Total", "Balance"],
-        ...invoiceRows.map((row) => [
-          row.number,
-          row.party,
-          row.issueDate,
-          row.dueDate,
-          row.status,
-          row.subtotal,
-          row.vatAmount,
-          row.total,
-          row.balanceDue,
-        ]),
+        ["Invoice", "Client", "Issue date", "Status", "Subtotal", "VAT", "Total", "Balance"],
+        ...invoiceRows.map((row) => [row.number, row.party, row.issueDate, row.status, row.subtotal, row.vatAmount, row.total, row.balanceDue]),
       ]);
       return;
     }
 
-    if (activeTab === "Cash Flow") {
-      downloadCsv(`payvio-cash-flow-${from}-to-${to}.csv`, [
-        ["Metric", "Value"],
-        ["Paid cash in", paidCashIn],
-        ["Supplier purchases", supplierPurchases],
-        ["Net cash", netCash],
-        ["Outstanding receivables", outstanding],
-        ["Overdue receivables", overdue],
-      ]);
-      return;
-    }
-
-    if (activeTab === "VAT / NamRA") {
-      exportVatCsv();
-      return;
-    }
-
-    if (activeTab === "Receivables") {
-      downloadCsv(`payvio-receivables-${from}-to-${to}.csv`, [
+    if (activeTab === "Overdue reports") {
+      downloadCsv(`payvio-overdue-${from}-to-${to}.csv`, [
         ["Invoice", "Client", "Due date", "Days overdue", "Status", "Balance"],
-        ...openInvoiceRows.map((row) => [
-          row.number,
-          row.party,
-          row.dueDate,
-          daysPastDue(row, today),
-          row.status,
-          row.balanceDue,
-        ]),
+        ...overdueRows.map((row) => [row.number, row.party, row.dueDate, daysPastDue(row, today), row.status, row.balanceDue]),
       ]);
       return;
     }
 
-    if (activeTab === "Purchases") {
-      downloadCsv(`payvio-purchases-${from}-to-${to}.csv`, [
-        ["Supplier invoice", "Supplier", "Issue date", "Due date", "Status", "Subtotal", "VAT input", "Total"],
-        ...purchaseRows.map((row) => [
-          row.number,
-          row.party,
-          row.issueDate,
-          row.dueDate,
-          row.status,
-          row.subtotal,
-          row.vatAmount,
-          row.total,
-        ]),
+    if (activeTab === "Tax summaries") {
+      downloadCsv(`payvio-tax-summary-${from}-to-${to}.csv`, [
+        ["Metric", "Value"],
+        ["Sales subtotal", vatReturn?.totals.salesSubtotal ?? sumRows(invoiceRows, "subtotal")],
+        ["Output tax", outputVat],
+        ["Purchase subtotal", vatReturn?.totals.purchaseSubtotal ?? sumRows(purchaseRows, "subtotal")],
+        ["Input tax", inputVat],
+        ["Net tax", netVat],
       ]);
       return;
     }
 
-    if (activeTab === "Exports") {
-      exportLedger();
-      return;
-    }
-
-    exportOverview();
+    downloadCsv(`payvio-cash-flow-${from}-to-${to}.csv`, [
+      ["Month", "Issued revenue", "Cash in", "Cash out", "Net cash"],
+      ...monthlyRows.map((row) => [row.label, row.issued, row.paid, row.purchases, row.paid - row.purchases]),
+    ]);
   }
 
   return (
-    <div className="db-page db-dashboard-page db-reports-page">
-      <section className="db-workview">
-      <div className="db-workview-head">
-        <div>
-          <p className="db-breadcrumb">Payvio <span>/</span> Reports</p>
-          <h1 className="db-workview-title">Reports</h1>
+    <div className="invoice-list-page space-y-[30px]">
+      <section className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-muted-foreground">Payvio / Reports</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-normal text-foreground">Reporting & Analytics</h1>
         </div>
-        <div className="db-report-header-actions">
-          <button className="db-outline-btn" type="button" onClick={() => setActiveTab("VAT / NamRA")}>
-            <ShieldCheck className="size-4" />
-            VAT readiness
-          </button>
-          <button className="db-primary-btn db-new-invoice-btn" type="button" onClick={exportActiveReport} disabled={isLoading}>
-            <Download className="size-4" />
-            Export
-          </button>
-        </div>
-      </div>
+        <Button
+          type="button"
+          className="h-11 rounded-lg bg-neutral-950 px-5 text-base font-semibold !text-white hover:bg-neutral-800 hover:!text-white xl:self-end"
+          onClick={exportActiveReport}
+          disabled={isLoading}
+        >
+          <Download className="size-4" />
+          Export report
+        </Button>
+      </section>
 
-      <section className="db-card db-report-controls-card">
-        <div className="db-panel-header">
-          <div>
-            <p className="db-panel-kicker">Controls</p>
-            <h2>Report period</h2>
+      <section className="rounded-lg border border-border bg-card p-5 shadow-none sm:p-[30px]">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Filter className="size-4" />
+              Report period
+            </div>
+            <p className="mt-2 text-lg font-semibold text-foreground">{periodLabel}</p>
           </div>
-          <div className="db-report-period-chip">
-            <Filter className="size-4" />
-            {periodLabel}
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,180px)_minmax(0,180px)_auto] sm:items-end">
+            <label className="grid gap-2 text-sm font-medium text-foreground" htmlFor="report-from">
+              From
+              <Input
+                id="report-from"
+                type="date"
+                value={from}
+                onChange={(event) => {
+                  setRevenuePage(1);
+                  setFrom(event.target.value);
+                }}
+                className="h-11 rounded-lg border-border bg-background text-base"
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-medium text-foreground" htmlFor="report-to">
+              To
+              <Input
+                id="report-to"
+                type="date"
+                value={to}
+                onChange={(event) => {
+                  setRevenuePage(1);
+                  setTo(event.target.value);
+                }}
+                className="h-11 rounded-lg border-border bg-background text-base"
+              />
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-lg px-4 text-base"
+              onClick={() => {
+                setRevenuePage(1);
+                setFrom(monthStartIso());
+                setTo(monthEndIso());
+              }}
+            >
+              <CalendarDays className="size-4" />
+              Current month
+            </Button>
           </div>
-        </div>
-        <div className="db-report-controls">
-          <label className="db-field">
-            <span>From</span>
-            <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="db-field-input" />
-          </label>
-          <label className="db-field">
-            <span>To</span>
-            <input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="db-field-input" />
-          </label>
-          <button className="db-outline-btn" type="button" onClick={() => {
-            setFrom(monthStartIso());
-            setTo(monthEndIso());
-          }}>
-            <CalendarDays className="size-4" />
-            Current month
-          </button>
         </div>
       </section>
 
       {invalidPeriod ? (
-        <div className="db-notice db-notice-clean db-report-warning" role="alert">
-          <AlertTriangle className="size-4" />
+        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700" role="alert">
+          <AlertTriangle className="size-4 shrink-0" />
           <span>The start date is after the end date.</span>
         </div>
       ) : null}
 
-      <div className="db-metric-strip" aria-label="Report metrics">
-        <div className="db-metric-cell">
-          <span>Issued sales</span>
-          <strong>{formatMoney(issuedSales, currency)}</strong>
-          <small>{vatReturn?.totals.issuedInvoiceCount ?? invoiceRows.length} issued invoices</small>
-        </div>
-        <div className="db-metric-cell">
-          <span>Paid cash in</span>
-          <strong>{formatMoney(paidCashIn, currency)}</strong>
-          <small>{paidRows.length} paid invoices</small>
-        </div>
-        <div className="db-metric-cell">
-          <span>Overdue</span>
-          <strong>{formatMoney(overdue, currency)}</strong>
-          <small>{overdueRows.length} invoices past due</small>
-        </div>
-        <div className="db-metric-cell">
-          <span>Net VAT</span>
-          <strong>{formatMoney(netVat, currency)}</strong>
-          <small>{netVat >= 0 ? "Payable position" : "Refund position"}</small>
-        </div>
-      </div>
+      <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          icon={ArrowUpRight}
+          label="Revenue reports"
+          value={formatMoney(issuedSales, currency)}
+          meta={`${invoiceRows.length} invoices issued`}
+          iconClassName="bg-teal-50 text-teal-600"
+          barClassName="bg-teal-600"
+          progress={metricPercent(issuedSales, reportBase)}
+        />
+        <MetricCard
+          icon={Clock}
+          label="Overdue reports"
+          value={formatMoney(overdue, currency)}
+          meta={`${overdueRows.length} invoices overdue`}
+          iconClassName="bg-red-50 text-red-600"
+          barClassName="bg-red-600"
+          progress={metricPercent(overdue, reportBase)}
+        />
+        <MetricCard
+          icon={ShieldCheck}
+          label="Tax summaries"
+          value={formatMoney(netVat, currency)}
+          meta={`Output ${formatMoney(outputVat, currency)} / Input ${formatMoney(inputVat, currency)}`}
+          iconClassName="bg-amber-50 text-amber-600"
+          barClassName="bg-amber-500"
+          progress={metricPercent(Math.abs(netVat), reportBase)}
+        />
+        <MetricCard
+          icon={BarChart3}
+          label="Cash flow charts"
+          value={formatMoney(netCash, currency)}
+          meta={netCash >= 0 ? "Positive net cash" : "Negative net cash"}
+          iconClassName="bg-neutral-100 text-neutral-900"
+          barClassName="bg-neutral-900"
+          progress={metricPercent(Math.abs(netCash), reportBase)}
+        />
+      </section>
 
-      <div className="db-tabs db-report-tabs" role="tablist" aria-label="Report views">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={`db-tab${activeTab === tab ? " db-tab-active" : ""}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "Overview" ? (
-        <>
-          <div className="db-report-grid">
-            <section className="db-card db-report-wide">
-              <div className="db-report-card-head">
-                <p className="db-card-title">
-                  <BarChart3 className="size-4" />
-                  Revenue and purchase trend
-                </p>
-                <span className="db-report-chip">{trendRows.length || 1} months</span>
-              </div>
-              <div className="db-report-bars">
-                {trendRows.length > 0 ? (
-                  trendRows.map((row) => (
-                    <div className="db-report-bar-row" key={row.label}>
-                      <span>{row.label}</span>
-                      <div className="db-report-bar-track">
-                        <i className="db-report-bar db-report-bar-issued" style={{ width: `${Math.max(4, (row.issued / trendMax) * 100)}%` }} />
-                        <i className="db-report-bar db-report-bar-paid" style={{ width: `${Math.max(4, (row.paid / trendMax) * 100)}%` }} />
-                        <i className="db-report-bar db-report-bar-purchase" style={{ width: `${Math.max(4, (row.purchases / trendMax) * 100)}%` }} />
-                      </div>
-                      <strong>{formatMoney(row.issued, currency)}</strong>
-                    </div>
-                  ))
-                ) : (
-                  <div className="db-empty db-report-empty">
-                    <BarChart3 className="size-10" />
-                    <h3>No report activity</h3>
-                    <p>Create invoices or purchase records for this period.</p>
-                  </div>
-                )}
-              </div>
-              <div className="db-report-legend">
-                <span><i className="db-report-dot-issued" /> Issued</span>
-                <span><i className="db-report-dot-paid" /> Paid</span>
-                <span><i className="db-report-dot-purchase" /> Purchases</span>
-              </div>
-            </section>
-
-            <section className="db-card">
-              <div className="db-report-card-head">
-                <p className="db-card-title">
-                  <Gauge className="size-4" />
-                  NamRA readiness
-                </p>
-                <span className="db-report-chip">{formatPercent(readinessPercent)}</span>
-              </div>
-              <div className="db-report-score">
-                <strong>{readyChecks}/{readiness.length || 0}</strong>
-                <span>checks ready</span>
-              </div>
-              <div className="db-compliance-list">
-                {readiness.slice(0, 6).map((item) => (
-                  <div key={item.key} className="db-compliance-row">
-                    <span className={item.done ? "db-compliance-check db-compliance-check-done" : "db-compliance-check db-compliance-check-pending"}>
-                      {item.done ? "Y" : "-"}
-                    </span>
-                    <span>{item.label}</span>
-                    <span className="db-compliance-tag">{item.done ? "Ready" : "Open"}</span>
-                  </div>
-                ))}
-              </div>
-              <Link href="/dashboard/vat" className="db-outline-btn db-report-card-action">
-                <ShieldCheck className="size-4" />
-                VAT settings
-              </Link>
-            </section>
-          </div>
-
-          <section className="db-card">
-            <div className="db-report-card-head">
-              <p className="db-card-title">
-                <FileText className="size-4" />
-                Report packet
-              </p>
-              <span className="db-report-chip">{ledgerRows.length} records</span>
-            </div>
-            <div className="db-info-grid db-report-summary-grid">
-              <div className="db-info-row"><span>Paid cash in</span><strong>{formatMoney(paidCashIn, currency)}</strong></div>
-              <div className="db-info-row"><span>Supplier purchases</span><strong>{formatMoney(supplierPurchases, currency)}</strong></div>
-              <div className="db-info-row"><span>Net cash</span><strong>{formatMoney(netCash, currency)}</strong></div>
-              <div className="db-info-row"><span>Outstanding receivables</span><strong>{formatMoney(outstanding, currency)}</strong></div>
-              <div className="db-info-row"><span>Incomplete VAT records</span><strong>{vatReturn?.totals.incompleteRecordCount ?? 0}</strong></div>
-              <div className="db-info-row"><span>Return due</span><strong>{formatDate(vatReturn?.period.dueDate)}</strong></div>
-            </div>
-          </section>
-        </>
-      ) : null}
-
-      {activeTab === "Revenue" ? (
-        <>
-          <div className="db-split-grid db-report-two">
-            <section className="db-card">
-              <p className="db-card-title">
-                <ArrowUpRight className="size-4" />
-                Sales report
-              </p>
-              <div className="db-info-grid">
-                <div className="db-info-row"><span>Issued subtotal</span><strong>{formatMoney(vatReturn?.totals.salesSubtotal ?? sumRows(invoiceRows, "subtotal"), currency)}</strong></div>
-                <div className="db-info-row"><span>Output VAT</span><strong>{formatMoney(vatReturn?.totals.outputVat ?? summary?.vatCollected ?? 0, currency)}</strong></div>
-                <div className="db-info-row"><span>Issued total</span><strong>{formatMoney(issuedSales, currency)}</strong></div>
-                <div className="db-info-row"><span>Paid total</span><strong>{formatMoney(paidCashIn, currency)}</strong></div>
-              </div>
-            </section>
-            <section className="db-card">
-              <p className="db-card-title">
-                <WalletCards className="size-4" />
-                Clients by revenue
-              </p>
-              <div className="db-report-mini-list">
-                {clientRevenue.length > 0 ? (
-                  clientRevenue.map((client) => (
-                    <div className="db-report-mini-row" key={client.party}>
-                      <span>
-                        <strong>{client.party}</strong>
-                        <small>{client.invoices} invoices</small>
-                      </span>
-                      <b>{formatMoney(client.issued, currency)}</b>
-                    </div>
-                  ))
-                ) : (
-                  <p className="db-report-muted">No client revenue in this period.</p>
-                )}
-              </div>
-            </section>
-          </div>
-
-          <section className="db-card">
-            <p className="db-card-title">
-              <ReceiptText className="size-4" />
-              Issued invoices
-            </p>
-            <div className="db-table-wrap">
-              <table className="db-table">
-                <thead>
-                  <tr>
-                    <th>Invoice</th>
-                    <th>Client</th>
-                    <th>Issue date</th>
-                    <th>Status</th>
-                    <th>VAT</th>
-                    <th>Total</th>
-                    <th>Balance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoiceRows.map((row) => (
-                    <tr key={`invoice:${row.number}:${row.issueDate}`}>
-                      <td><span className="db-inv-num">{row.number}</span></td>
-                      <td>{row.party}</td>
-                      <td>{formatDate(row.issueDate)}</td>
-                      <td><span className={`db-status-pill ${statusClass(row.status)}`}>{cleanStatus(row.status)}</span></td>
-                      <td>{formatMoney(row.vatAmount, row.currency)}</td>
-                      <td>{formatMoney(row.total, row.currency)}</td>
-                      <td>{formatMoney(row.balanceDue, row.currency)}</td>
-                    </tr>
-                  ))}
-                  {invoiceRows.length === 0 ? <tr><td colSpan={7} className="db-table-empty">No issued invoices in this period</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      ) : null}
-
-      {activeTab === "Cash Flow" ? (
-        <div className="db-report-grid">
-          <section className="db-card db-report-wide">
-            <p className="db-card-title">
-              <ArrowUpRight className="size-4" />
-              Cash flow position
-            </p>
-            <div className="db-report-flow-grid">
-              <div className="db-report-flow-cell">
-                <span>Cash in</span>
-                <strong>{formatMoney(paidCashIn, currency)}</strong>
-                <small>{paidRows.length} paid invoices</small>
-              </div>
-              <div className="db-report-flow-cell">
-                <span>Cash out</span>
-                <strong>{formatMoney(supplierPurchases, currency)}</strong>
-                <small>{purchaseRows.length} supplier records</small>
-              </div>
-              <div className={`db-report-flow-cell ${netCash >= 0 ? "db-report-positive" : "db-report-negative"}`}>
-                <span>Net position</span>
-                <strong>{formatMoney(netCash, currency)}</strong>
-                <small>{netCash >= 0 ? "Positive period" : "Negative period"}</small>
-              </div>
-            </div>
-          </section>
-
-          <section className="db-card">
-            <p className="db-card-title">
-              <ArrowDownRight className="size-4" />
-              Working capital
-            </p>
-            <div className="db-info-grid">
-              <div className="db-info-row"><span>Outstanding</span><strong>{formatMoney(outstanding, currency)}</strong></div>
-              <div className="db-info-row"><span>Overdue</span><strong>{formatMoney(overdue, currency)}</strong></div>
-              <div className="db-info-row"><span>Purchase balance</span><strong>{formatMoney(sumRows(purchaseRows, "balanceDue"), currency)}</strong></div>
-              <div className="db-info-row"><span>Receivable ratio</span><strong>{formatPercent(issuedSales ? (outstanding / issuedSales) * 100 : 0)}</strong></div>
-            </div>
-          </section>
-        </div>
-      ) : null}
-
-      {activeTab === "VAT / NamRA" ? (
-        <>
-          <section className="db-card db-report-status-card">
-            <div className="db-report-status-main">
-              <span className="db-report-status-icon">
-              <ShieldCheck className="size-4" />
-              </span>
-              <div>
-              <p>
-                {vatReturn?.settings?.vedEnabled ? "VAT e-document records enabled" : "Manual VAT export mode"}
-              </p>
-              <span>
-                VAT {Math.round((vatReturn?.settings?.vatRate ?? 0.15) * 100)}% | return due day {vatReturn?.settings?.returnDueDay ?? 25} | retention {vatReturn?.settings?.recordRetentionYears ?? 5} years
-              </span>
-              </div>
-            </div>
-            <span className="db-compliance-badge db-report-status-badge">
-              {vatReturn?.settings?.transmissionMode === "manual_export"
-                ? "Manual export"
-                : vatReturn?.settings?.transmissionMode?.replace("_", " ") ?? "Manual export"}
-            </span>
-          </section>
-
-          <div className="db-split-grid db-report-two">
-            <section className="db-card">
-              <p className="db-card-title">
-                <BadgeCheck className="size-4" />
-                VAT return summary
-              </p>
-              <div className="db-info-grid">
-                <div className="db-info-row"><span>Sales subtotal</span><strong>{formatMoney(vatReturn?.totals.salesSubtotal ?? 0, currency)}</strong></div>
-                <div className="db-info-row"><span>Output VAT</span><strong>{formatMoney(vatReturn?.totals.outputVat ?? 0, currency)}</strong></div>
-                <div className="db-info-row"><span>Purchase subtotal</span><strong>{formatMoney(vatReturn?.totals.purchaseSubtotal ?? 0, currency)}</strong></div>
-                <div className="db-info-row"><span>Input VAT</span><strong>{formatMoney(vatReturn?.totals.inputVat ?? 0, currency)}</strong></div>
-                <div className="db-info-row db-info-row-total"><span>Net VAT</span><strong>{formatMoney(netVat, currency)}</strong></div>
-              </div>
-            </section>
-            <section className="db-card">
-              <p className="db-card-title">
-                <ShieldCheck className="size-4" />
-                Tax invoice checks
-              </p>
-              <div className="db-compliance-list">
-                {readiness.map((item) => (
-                  <div key={item.key} className="db-compliance-row">
-                    <span className={item.done ? "db-compliance-check db-compliance-check-done" : "db-compliance-check db-compliance-check-pending"}>
-                      {item.done ? "Y" : "-"}
-                    </span>
-                    <span>{item.label}</span>
-                    <span className="db-compliance-tag">{item.done ? "Ready" : "Open"}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <section className="db-card">
-            <div className="db-report-card-head">
-              <p className="db-card-title">
-                <FileSpreadsheet className="size-4" />
-                ITAS export records
-              </p>
-              <div className="db-header-actions">
-                <button className="db-outline-btn" type="button" onClick={exportItasJson} disabled={!vatReturn}>
-                  <Download className="size-4" />
-                  JSON
-                </button>
-                <button className="db-primary-btn" type="button" onClick={exportVatCsv} disabled={!vatReturn}>
-                  <Download className="size-4" />
-                  CSV
-                </button>
-              </div>
-            </div>
-            <div className="db-table-wrap">
-              <table className="db-table">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Document</th>
-                    <th>Date</th>
-                    <th>Party</th>
-                    <th>Tax</th>
-                    <th>Status</th>
-                    <th>VAT</th>
-                    <th>Retention</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(vatReturn?.exportRows ?? []).slice(0, 50).map((row) => (
-                    <tr key={`${row.recordType}:${row.documentNumber}:${row.issueDate}`}>
-                      <td>{row.recordType}</td>
-                      <td>
-                        <span className="db-inv-num">{row.documentNumber || "-"}</span>
-                        <span className="db-report-table-meta">{row.documentType}</span>
-                      </td>
-                      <td>{formatDate(row.issueDate)}</td>
-                      <td>{row.partyName}</td>
-                      <td>{row.taxModeLabel}</td>
-                      <td><span className={`db-status-pill ${statusClass(row.vedStatus)}`}>{row.vedStatus}</span></td>
-                      <td>{formatMoney(row.vatAmount, row.currency)}</td>
-                      <td>{formatDate(row.retentionUntil)}</td>
-                    </tr>
-                  ))}
-                  {vatReturn?.exportRows.length === 0 ? <tr><td colSpan={8} className="db-table-empty">No VAT records in this period</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-            {incompleteVatRows.length > 0 ? (
-              <div className="db-report-incomplete-list">
-                {incompleteVatRows.slice(0, 4).map((row) => (
-                  <div key={`${row.recordType}:${row.documentNumber}:missing`}>
-                    <AlertTriangle className="size-4" />
-                    <span>
-                      <strong>{row.documentNumber || row.partyName}</strong>
-                      <small>{row.missingFields.join(", ")}</small>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </section>
-        </>
-      ) : null}
-
-      {activeTab === "Receivables" ? (
-        <>
-          <div className="db-metric-strip db-report-ageing-strip" aria-label="Receivable ageing">
-            {ageingBuckets.map((bucket) => (
-              <div className="db-metric-cell" key={bucket.label}>
-                <span>{bucket.label}</span>
-                <strong>{formatMoney(bucket.amount, currency)}</strong>
-                <small>{bucket.count} invoices</small>
-              </div>
+      <section className="min-h-[560px] rounded-lg border border-border bg-card p-5 shadow-none sm:p-[30px]">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)}>
+          <TabsList className="grid h-auto w-full max-w-none grid-cols-1 gap-2 overflow-visible rounded-none bg-transparent p-0 sm:grid-cols-2 xl:grid-cols-4">
+            {reportTabs.map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="h-12 min-w-0 justify-between gap-3 rounded-lg px-3 text-base text-muted-foreground after:hidden data-active:bg-muted data-active:text-foreground data-active:shadow-none"
+              >
+                <span className="min-w-0 truncate">{tab.id}</span>
+                <span className={cn("grid size-9 shrink-0 place-items-center rounded-full text-base font-semibold", tab.tone)}>
+                  {tab.count}
+                </span>
+              </TabsTrigger>
             ))}
-          </div>
-          <section className="db-card">
-            <div className="db-report-card-head">
-              <p className="db-card-title">
-                <Clock className="size-4" />
-                Receivables and overdue invoices
-              </p>
-              <Link href="/dashboard/reminders" className="db-outline-btn">
-                <Clock className="size-4" />
-                Reminders
-              </Link>
-            </div>
-            <div className="db-table-wrap">
-              <table className="db-table">
-                <thead>
-                  <tr>
-                    <th>Invoice</th>
-                    <th>Client</th>
-                    <th>Due date</th>
-                    <th>Days overdue</th>
-                    <th>Status</th>
-                    <th>Balance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {openInvoiceRows.map((row) => (
-                    <tr key={`receivable:${row.number}:${row.dueDate}`}>
-                      <td><span className="db-inv-num">{row.number}</span></td>
-                      <td>{row.party}</td>
-                      <td>{formatDate(row.dueDate)}</td>
-                      <td>{daysPastDue(row, today)}</td>
-                      <td><span className={`db-status-pill ${statusClass(row.status)}`}>{cleanStatus(row.status)}</span></td>
-                      <td>{formatMoney(row.balanceDue, row.currency)}</td>
-                    </tr>
-                  ))}
-                  {openInvoiceRows.length === 0 ? <tr><td colSpan={6} className="db-table-empty">No open receivables in this period</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      ) : null}
+          </TabsList>
+        </Tabs>
 
-      {activeTab === "Purchases" ? (
-        <>
-          <div className="db-split-grid db-report-two">
-            <section className="db-card">
-              <p className="db-card-title">
-                <ShoppingCart className="size-4" />
-                Supplier spend
-              </p>
-              <div className="db-info-grid">
-                <div className="db-info-row"><span>Purchase subtotal</span><strong>{formatMoney(vatReturn?.totals.purchaseSubtotal ?? sumRows(purchaseRows, "subtotal"), currency)}</strong></div>
-                <div className="db-info-row"><span>Input VAT</span><strong>{formatMoney(vatReturn?.totals.inputVat ?? sumRows(purchaseRows, "vatAmount"), currency)}</strong></div>
-                <div className="db-info-row"><span>Total purchases</span><strong>{formatMoney(supplierPurchases, currency)}</strong></div>
-                <div className="db-info-row"><span>Purchase records</span><strong>{vatReturn?.totals.purchaseRecordCount ?? purchaseRows.length}</strong></div>
-              </div>
-            </section>
-            <section className="db-card">
-              <p className="db-card-title">
-                <ReceiptText className="size-4" />
-                Suppliers by spend
-              </p>
-              <div className="db-report-mini-list">
-                {supplierSpend.length > 0 ? (
-                  supplierSpend.map((supplier) => (
-                    <div className="db-report-mini-row" key={supplier.party}>
-                      <span>
-                        <strong>{supplier.party}</strong>
-                        <small>{supplier.records} records | VAT {formatMoney(supplier.vat, currency)}</small>
+        <div className="mt-[30px]">
+          {activeTab === "Revenue reports" ? (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
+              <section className="rounded-lg border border-border bg-background p-5 shadow-none sm:p-6">
+                <SectionTitle icon={ReceiptText} title="Revenue reports" badge={`${invoiceRows.length} invoices`} />
+                <div className="mt-5">
+                  <StatGrid
+                    rows={[
+                      { label: "Issued revenue", value: formatMoney(issuedSales, currency) },
+                      { label: "Paid revenue", value: formatMoney(paidCashIn, currency) },
+                      { label: "Outstanding", value: formatMoney(outstanding, currency) },
+                      { label: "Collection rate", value: formatPercent(issuedSales ? (paidCashIn / issuedSales) * 100 : 0) },
+                    ]}
+                  />
+                </div>
+                <div className="mt-6 overflow-hidden rounded-lg border border-border bg-card">
+                  {invoiceRows.length > 0 ? (
+                    <Table className="w-full table-fixed text-base">
+                      <colgroup>
+                        <col className="w-[19%]" />
+                        <col className="w-[19%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[15%]" />
+                        <col className="w-[15%]" />
+                      </colgroup>
+                      <TableHeader>
+                        <TableRow className="border-border hover:bg-transparent">
+                          <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Invoice</TableHead>
+                          <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Client</TableHead>
+                          <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Date</TableHead>
+                          <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Status</TableHead>
+                          <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Total</TableHead>
+                          <TableHead className="h-14 overflow-hidden px-3 font-semibold text-foreground">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {visibleInvoiceRows.map((row, index) => (
+                          <TableRow key={`revenue:${row.number}:${index}`} className="h-[71px] border-border hover:bg-muted/40">
+                            <TableCell className="overflow-hidden px-3 font-medium text-foreground">
+                              <span className="block truncate">{row.number || "-"}</span>
+                            </TableCell>
+                            <TableCell className="overflow-hidden px-3 text-foreground">
+                              <span className="block truncate">{row.party || "Client"}</span>
+                            </TableCell>
+                            <TableCell className="overflow-hidden px-3 text-foreground">
+                              <span className="block truncate">{formatDate(row.issueDate)}</span>
+                            </TableCell>
+                            <TableCell className="overflow-hidden px-3">
+                              <ReportStatusPill status={row.status} />
+                            </TableCell>
+                            <TableCell className="overflow-hidden px-3 text-foreground">
+                              <span className="block truncate">{formatMoney(row.total, row.currency)}</span>
+                            </TableCell>
+                            <TableCell className="overflow-hidden px-3 text-foreground">
+                              <span className="block truncate">{formatMoney(row.balanceDue, row.currency)}</span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <EmptyState icon={ReceiptText} title="No revenue records for this period" />
+                  )}
+                </div>
+                {invoiceRows.length > 0 ? (
+                  <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2">
+                      <span>Show</span>
+                      <span className="inline-flex h-10 min-w-14 items-center justify-center rounded-lg border border-border bg-background px-3 font-medium text-foreground">
+                        {INVOICES_PER_PAGE}
                       </span>
-                      <b>{formatMoney(supplier.total, currency)}</b>
+                      <span>per page</span>
                     </div>
-                  ))
-                ) : (
-                  <p className="db-report-muted">No supplier purchases in this period.</p>
-                )}
+                    <div className="flex items-center gap-3 sm:ml-auto">
+                      <span className="min-w-20 text-right">
+                        {visibleInvoiceStart}-{visibleInvoiceEnd} of {invoiceRows.length}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-9 rounded-lg"
+                        disabled={currentRevenuePage === 1}
+                        aria-label="Previous invoice page"
+                        onClick={() => setRevenuePage((page) => Math.max(1, page - 1))}
+                      >
+                        <ArrowLeft className="size-4" />
+                      </Button>
+                      <span className="grid size-10 place-items-center rounded-lg bg-muted font-semibold text-foreground">
+                        {currentRevenuePage}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-9 rounded-lg"
+                        disabled={currentRevenuePage >= revenuePageCount}
+                        aria-label="Next invoice page"
+                        onClick={() => setRevenuePage((page) => Math.min(revenuePageCount, page + 1))}
+                      >
+                        <ArrowRight className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+
+              <section className="rounded-lg border border-border bg-background p-5 shadow-none sm:p-6">
+                <SectionTitle icon={ArrowUpRight} title="Top clients" />
+                <div className="mt-5 space-y-3">
+                  {clientRevenue.length > 0 ? (
+                    clientRevenue.map((client) => (
+                      <div key={client.party} className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
+                        <span className="min-w-0">
+                          <strong className="block truncate text-sm font-semibold text-foreground">{client.party}</strong>
+                          <small className="mt-1 block text-sm text-muted-foreground">{client.invoices} invoices</small>
+                        </span>
+                        <b className="shrink-0 text-sm font-semibold text-foreground">{formatMoney(client.issued, currency)}</b>
+                      </div>
+                    ))
+                  ) : (
+                    <EmptyState icon={ArrowUpRight} title="No client revenue yet" />
+                  )}
+                </div>
+              </section>
+            </div>
+          ) : null}
+
+          {activeTab === "Overdue reports" ? (
+            <div className="space-y-6">
+              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+                {ageingBuckets.map((bucket) => (
+                  <article key={bucket.label} className="rounded-lg border border-border bg-background p-5 shadow-none">
+                    <p className="text-sm text-muted-foreground">{bucket.label}</p>
+                    <strong className="mt-2 block text-2xl font-semibold text-foreground">{formatMoney(bucket.amount, currency)}</strong>
+                    <small className="mt-1 block text-sm text-muted-foreground">{bucket.count} invoices</small>
+                  </article>
+                ))}
               </div>
-            </section>
-          </div>
+              <section className="rounded-lg border border-border bg-background p-5 shadow-none sm:p-6">
+                <SectionTitle icon={Clock} title="Overdue reports" badge={`${overdueRows.length} invoices`} />
+                <div className="mt-5 max-h-[430px] overflow-y-auto pr-1 [scrollbar-color:color-mix(in_oklch,var(--foreground)_35%,transparent)_transparent] [scrollbar-width:thin]">
+                  {overdueRows.length > 0 ? (
+                    <Table className="min-w-[760px] table-fixed text-base">
+                      <TableHeader className="sticky top-0 z-10 bg-background">
+                        <TableRow className="border-border hover:bg-transparent">
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Invoice</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Client</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Due date</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Days overdue</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Status</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {overdueRows.map((row, index) => (
+                          <TableRow key={`overdue:${row.number}:${index}`} className="h-[71px] border-border hover:bg-muted/40">
+                            <TableCell className="px-3 font-medium text-foreground">{row.number || "-"}</TableCell>
+                            <TableCell className="px-3 text-foreground">{row.party || "Client"}</TableCell>
+                            <TableCell className="px-3 text-foreground">{formatDate(row.dueDate)}</TableCell>
+                            <TableCell className="px-3 text-foreground">{daysPastDue(row, today)}</TableCell>
+                            <TableCell className="px-3"><ReportStatusPill status={row.status} /></TableCell>
+                            <TableCell className="px-3 text-foreground">{formatMoney(row.balanceDue, row.currency)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <EmptyState icon={Clock} title="No overdue invoices for this period" />
+                  )}
+                </div>
+              </section>
+            </div>
+          ) : null}
 
-          <section className="db-card">
-            <p className="db-card-title">
-              <FileText className="size-4" />
-              Purchase records
-            </p>
-            <div className="db-table-wrap">
-              <table className="db-table">
-                <thead>
-                  <tr>
-                    <th>Supplier invoice</th>
-                    <th>Supplier</th>
-                    <th>Issue date</th>
-                    <th>Status</th>
-                    <th>VAT input</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {purchaseRows.map((row) => (
-                    <tr key={`purchase:${row.number}:${row.issueDate}`}>
-                      <td><span className="db-inv-num">{row.number || "-"}</span></td>
-                      <td>{row.party}</td>
-                      <td>{formatDate(row.issueDate)}</td>
-                      <td><span className={`db-status-pill ${statusClass(row.status)}`}>{cleanStatus(row.status)}</span></td>
-                      <td>{formatMoney(row.vatAmount, row.currency)}</td>
-                      <td>{formatMoney(row.total, row.currency)}</td>
-                    </tr>
-                  ))}
-                  {purchaseRows.length === 0 ? <tr><td colSpan={6} className="db-table-empty">No purchase records in this period</td></tr> : null}
-                </tbody>
-              </table>
+          {activeTab === "Tax summaries" ? (
+            <div className="space-y-6">
+              <section className="rounded-lg border border-border bg-background p-5 shadow-none sm:p-6">
+                <SectionTitle icon={ShieldCheck} title="Tax summaries" badge={formatMoney(netVat, currency)} />
+                <div className="mt-5">
+                  <StatGrid
+                    rows={[
+                      { label: "Sales subtotal", value: formatMoney(vatReturn?.totals.salesSubtotal ?? sumRows(invoiceRows, "subtotal"), currency) },
+                      { label: "Output tax", value: formatMoney(outputVat, currency) },
+                      { label: "Purchase subtotal", value: formatMoney(vatReturn?.totals.purchaseSubtotal ?? sumRows(purchaseRows, "subtotal"), currency) },
+                      { label: "Input tax", value: formatMoney(inputVat, currency) },
+                    ]}
+                  />
+                </div>
+              </section>
+              <section className="rounded-lg border border-border bg-background p-5 shadow-none sm:p-6">
+                <SectionTitle icon={FileSpreadsheet} title="Tax records" badge={`${vatRows.length} records`} />
+                <div className="mt-5 max-h-[430px] overflow-y-auto pr-1 [scrollbar-color:color-mix(in_oklch,var(--foreground)_35%,transparent)_transparent] [scrollbar-width:thin]">
+                  {vatRows.length > 0 ? (
+                    <Table className="min-w-[760px] table-fixed text-base">
+                      <TableHeader className="sticky top-0 z-10 bg-background">
+                        <TableRow className="border-border hover:bg-transparent">
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Type</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Document</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Date</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Party</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Tax</TableHead>
+                          <TableHead className="h-14 px-3 font-semibold text-foreground">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {vatRows.map((row, index) => (
+                          <TableRow key={`tax:${row.documentNumber}:${index}`} className="h-[71px] border-border hover:bg-muted/40">
+                            <TableCell className="px-3 text-foreground">{row.recordType}</TableCell>
+                            <TableCell className="px-3 font-medium text-foreground">{row.documentNumber || "-"}</TableCell>
+                            <TableCell className="px-3 text-foreground">{formatDate(row.issueDate)}</TableCell>
+                            <TableCell className="px-3 text-foreground">{row.partyName || "-"}</TableCell>
+                            <TableCell className="px-3 text-foreground">{formatMoney(row.vatAmount, row.currency)}</TableCell>
+                            <TableCell className="px-3 text-foreground">{formatMoney(row.total, row.currency)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <EmptyState icon={ShieldCheck} title="No tax records for this period" />
+                  )}
+                </div>
+              </section>
             </div>
-          </section>
-        </>
-      ) : null}
+          ) : null}
 
-      {activeTab === "Exports" ? (
-        <div className="db-report-grid">
-          <section className="db-card">
-            <p className="db-card-title">
-              <Download className="size-4" />
-              Export center
-            </p>
-            <div className="db-report-export-actions">
-              <button className="db-outline-btn" type="button" onClick={exportOverview}>
-                <Download className="size-4" />
-                Overview CSV
-              </button>
-              <button className="db-outline-btn" type="button" onClick={exportLedger}>
-                <Download className="size-4" />
-                Ledger CSV
-              </button>
-              <button className="db-outline-btn" type="button" onClick={exportVatCsv}>
-                <Download className="size-4" />
-                VAT CSV
-              </button>
-              <button className="db-primary-btn" type="button" onClick={exportItasJson}>
-                <Download className="size-4" />
-                ITAS JSON
-              </button>
+          {activeTab === "Cash flow charts" ? (
+            <div className="space-y-6">
+              <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+                <CashFlowDonut cashIn={paidCashIn} cashOut={supplierPurchases} currency={currency} />
+
+                <section className="rounded-lg border border-border bg-background p-5 shadow-none sm:p-6">
+                  <SectionTitle icon={BarChart3} title="Monthly cash movement" badge={formatMoney(netCash, currency)} />
+                  {monthlyRows.length > 0 ? (
+                    <>
+                      <div className="mt-6 overflow-x-auto pb-2 [scrollbar-color:color-mix(in_oklch,var(--foreground)_35%,transparent)_transparent] [scrollbar-width:thin]">
+                        <div className="flex h-[280px] min-w-[640px] items-end gap-4 rounded-lg border border-border bg-card px-4 pb-4 pt-6">
+                          {monthlyRows.map((row) => {
+                            const rowNetCash = row.paid - row.purchases;
+                            return (
+                              <div key={row.label} className="flex h-full min-w-14 flex-1 flex-col justify-end">
+                                <div className="flex h-[220px] items-end justify-center gap-1.5 border-b border-border pb-2">
+                                  <span
+                                    className="w-3 rounded-t-full bg-teal-600"
+                                    title={`Cash in ${formatMoney(row.paid, currency)}`}
+                                    style={{ height: `${row.paid > 0 ? Math.max(8, (row.paid / chartMax) * 100) : 0}%` }}
+                                  />
+                                  <span
+                                    className="w-3 rounded-t-full bg-red-500"
+                                    title={`Cash out ${formatMoney(row.purchases, currency)}`}
+                                    style={{ height: `${row.purchases > 0 ? Math.max(8, (row.purchases / chartMax) * 100) : 0}%` }}
+                                  />
+                                  <span
+                                    className={cn("w-3 rounded-t-full", rowNetCash >= 0 ? "bg-neutral-900" : "bg-red-700")}
+                                    title={`Net cash ${formatMoney(rowNetCash, currency)}`}
+                                    style={{ height: `${Math.abs(rowNetCash) > 0 ? Math.max(8, (Math.abs(rowNetCash) / chartMax) * 100) : 0}%` }}
+                                  />
+                                </div>
+                                <span className="mt-3 truncate text-center text-xs font-medium text-muted-foreground">{row.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="mt-5 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-2"><i className="size-2 rounded-full bg-teal-600" /> Cash in</span>
+                        <span className="inline-flex items-center gap-2"><i className="size-2 rounded-full bg-red-500" /> Cash out</span>
+                        <span className="inline-flex items-center gap-2"><i className="size-2 rounded-full bg-neutral-900" /> Net cash</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-6">
+                      <EmptyState icon={BarChart3} title="No cash flow data for this period" />
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              <section className="rounded-lg border border-border bg-background p-5 shadow-none sm:p-6">
+                <SectionTitle icon={ArrowDownRight} title="Cash position" />
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <i className="size-2 rounded-full bg-teal-600" />
+                      Cash in
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">{formatMoney(paidCashIn, currency)}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <i className="size-2 rounded-full bg-red-500" />
+                      Cash out
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">{formatMoney(supplierPurchases, currency)}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <i className="size-2 rounded-full bg-neutral-900" />
+                      Net cash
+                    </p>
+                    <p className={cn("mt-2 text-lg font-semibold", netCash >= 0 ? "text-foreground" : "text-red-600")}>
+                      {formatMoney(netCash, currency)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <ShoppingCart className="size-4" />
+                      Purchases
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">{purchaseRows.length} records</p>
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
-          <section className="db-card db-report-wide">
-            <p className="db-card-title">
-              <FileSpreadsheet className="size-4" />
-              Exportable records
-            </p>
-            <div className="db-table-wrap">
-              <table className="db-table">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Document</th>
-                    <th>Party</th>
-                    <th>Issue date</th>
-                    <th>Status</th>
-                    <th>VAT</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ledgerRows.map((row) => (
-                    <tr key={`export:${row.type}:${row.number}:${row.issueDate}`}>
-                      <td>{row.type}</td>
-                      <td><span className="db-inv-num">{row.number || "-"}</span></td>
-                      <td>{row.party}</td>
-                      <td>{formatDate(row.issueDate)}</td>
-                      <td><span className={`db-status-pill ${statusClass(row.status)}`}>{cleanStatus(row.status)}</span></td>
-                      <td>{formatMoney(row.vatAmount, row.currency)}</td>
-                      <td>{formatMoney(row.total, row.currency)}</td>
-                    </tr>
-                  ))}
-                  {ledgerRows.length === 0 ? <tr><td colSpan={7} className="db-table-empty">No export records in this period</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          ) : null}
         </div>
-      ) : null}
       </section>
     </div>
   );

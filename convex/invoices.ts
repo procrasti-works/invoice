@@ -50,12 +50,6 @@ const vatFilingFrequencyValidator = v.union(
   v.literal("bi_monthly"),
 );
 
-const vedTransmissionModeValidator = v.union(
-  v.literal("manual_export"),
-  v.literal("near_real_time"),
-  v.literal("real_time"),
-);
-
 const lineItemValidator = v.object({
   description: v.string(),
   quantity: v.number(),
@@ -569,6 +563,14 @@ async function invoiceProofs(ctx: QueryCtx | MutationCtx, invoiceId: Id<"invoice
     .take(10);
 }
 
+async function invoicePayments(ctx: QueryCtx | MutationCtx, invoiceId: Id<"invoices">) {
+  return await ctx.db
+    .query("paymentRecords")
+    .withIndex("by_invoiceId", (q) => q.eq("invoiceId", invoiceId))
+    .order("desc")
+    .take(20);
+}
+
 async function latestInvoiceProof(ctx: QueryCtx | MutationCtx, invoiceId: Id<"invoices">) {
   const proofs = await ctx.db
     .query("paymentProofs")
@@ -729,8 +731,6 @@ export const updateWorkspace = mutation({
     vatRecordRetentionYears: v.optional(v.number()),
     vatDefaultTaxMode: v.optional(taxModeValidator),
     vedEnabled: v.optional(v.boolean()),
-    vedTransmissionMode: v.optional(vedTransmissionModeValidator),
-    itasRegistered: v.optional(v.boolean()),
     defaultCurrency: v.string(),
     defaultTerms: v.optional(v.string()),
     invoicePrefix: v.optional(v.string()),
@@ -773,9 +773,6 @@ export const updateWorkspace = mutation({
       vedEnabled: vatRegistered
         ? args.vedEnabled ?? organization.vedEnabled ?? true
         : false,
-      vedTransmissionMode:
-        args.vedTransmissionMode ?? organization.vedTransmissionMode ?? "manual_export",
-      itasRegistered: args.itasRegistered ?? organization.itasRegistered ?? false,
       defaultCurrency: cleanCurrency(args.defaultCurrency, organization.defaultCurrency),
       defaultTerms: clean(args.defaultTerms ?? "", organization.defaultTerms ?? defaultTerms),
       invoicePrefix: cleanPrefix(args.invoicePrefix ?? organization.invoicePrefix),
@@ -802,6 +799,141 @@ export const updateWorkspace = mutation({
   },
 });
 
+function emptyInvoiceStats() {
+  return {
+    totalOutstanding: 0,
+    totalPaid: 0,
+    invoiceCount: 0,
+    awaitingClientCount: 0,
+    overdueCount: 0,
+    paidCount: 0,
+    vatCollected: 0,
+    vatOutstanding: 0,
+  };
+}
+
+async function invoiceListForOrganization(
+  ctx: QueryCtx,
+  organizationId: Id<"organizations">,
+) {
+  const invoices = await ctx.db
+    .query("invoices")
+    .withIndex("by_organizationId_and_createdAt", (q) =>
+      q.eq("organizationId", organizationId),
+    )
+    .order("desc")
+    .take(60);
+  const submittedProofs = await ctx.db
+    .query("paymentProofs")
+    .withIndex("by_organizationId_and_status", (q) =>
+      q.eq("organizationId", organizationId).eq("status", "submitted"),
+    )
+    .order("desc")
+    .take(100);
+  const proofsByInvoice = new Map<Id<"invoices">, Doc<"paymentProofs">[]>();
+
+  for (const proof of submittedProofs) {
+    const proofs = proofsByInvoice.get(proof.invoiceId) ?? [];
+    proofs.push(proof);
+    proofsByInvoice.set(proof.invoiceId, proofs);
+  }
+
+  return invoices.map((invoice) => ({
+    invoice,
+    client: null,
+    events: [],
+    lineItems: [],
+    paymentProofs: proofsByInvoice.get(invoice._id) ?? [],
+  }));
+}
+
+async function invoiceStatsForOrganization(
+  ctx: QueryCtx,
+  organizationId: Id<"organizations">,
+) {
+  const invoiceGroups = await Promise.all(
+    statsInvoiceStatuses.map((status) =>
+      ctx.db
+        .query("invoices")
+        .withIndex("by_organizationId_and_status", (q) =>
+          q.eq("organizationId", organizationId).eq("status", status),
+        )
+        .order("desc")
+        .take(250),
+    ),
+  );
+  const invoices = invoiceGroups.flat();
+
+  return invoices.reduce((totals, invoice) => {
+    if (invoice.status === "void") {
+      return totals;
+    }
+
+    const total = invoiceTotal(invoice);
+    totals.invoiceCount += 1;
+
+    if (invoice.status === "paid") {
+      totals.paidCount += 1;
+      totals.totalPaid += total;
+      totals.vatCollected += invoice.vatAmount ?? 0;
+    } else {
+      totals.totalOutstanding += invoiceBalance(invoice);
+      totals.vatOutstanding += invoice.vatAmount ?? 0;
+    }
+
+    if (
+      invoice.status === "sent" ||
+      invoice.status === "viewed" ||
+      invoice.status === "approved" ||
+      invoice.status === "awaiting_payment"
+    ) {
+      totals.awaitingClientCount += 1;
+    }
+
+    if (invoice.status === "overdue") {
+      totals.overdueCount += 1;
+    }
+
+    return totals;
+  }, emptyInvoiceStats());
+}
+
+export const dashboardOverview = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+
+    if (userId === null) {
+      return {
+        workspace: null,
+        rows: [],
+        stats: emptyInvoiceStats(),
+      };
+    }
+
+    const organization = await getExistingOrganization(ctx, userId);
+
+    if (!organization) {
+      return {
+        workspace: null,
+        rows: [],
+        stats: emptyInvoiceStats(),
+      };
+    }
+
+    const [rows, stats] = await Promise.all([
+      invoiceListForOrganization(ctx, organization._id),
+      invoiceStatsForOrganization(ctx, organization._id),
+    ]);
+
+    return {
+      workspace: organization,
+      rows,
+      stats,
+    };
+  },
+});
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -817,61 +949,7 @@ export const list = query({
       return [];
     }
 
-    const invoices = await ctx.db
-      .query("invoices")
-      .withIndex("by_organizationId", (q) =>
-        q.eq("organizationId", organization._id),
-      )
-      .order("desc")
-      .take(60);
-    const submittedProofs = await ctx.db
-      .query("paymentProofs")
-      .withIndex("by_organizationId_and_status", (q) =>
-        q.eq("organizationId", organization._id).eq("status", "submitted"),
-      )
-      .order("desc")
-      .take(100);
-    const proofsByInvoice = new Map<Id<"invoices">, Doc<"paymentProofs">[]>();
-
-    for (const proof of submittedProofs) {
-      const proofs = proofsByInvoice.get(proof.invoiceId) ?? [];
-      proofs.push(proof);
-      proofsByInvoice.set(proof.invoiceId, proofs);
-    }
-
-    const invoiceIds = new Set(invoices.map((invoice) => invoice._id));
-    const recentEvents =
-      invoices.length > 0
-        ? await ctx.db
-            .query("invoiceEvents")
-            .withIndex("by_organizationId_and_createdAt", (q) =>
-              q.eq("organizationId", organization._id),
-            )
-            .order("desc")
-            .take(240)
-        : [];
-    const eventsByInvoice = new Map<Id<"invoices">, Doc<"invoiceEvents">[]>();
-
-    for (const event of recentEvents) {
-      if (!invoiceIds.has(event.invoiceId)) {
-        continue;
-      }
-
-      const events = eventsByInvoice.get(event.invoiceId) ?? [];
-
-      if (events.length < 3) {
-        events.push(event);
-        eventsByInvoice.set(event.invoiceId, events);
-      }
-    }
-
-    return invoices.map((invoice) => ({
-      invoice,
-      client: null,
-      events: eventsByInvoice.get(invoice._id) ?? [],
-      lineItems: [],
-      paymentProofs: proofsByInvoice.get(invoice._id) ?? [],
-    }));
+    return await invoiceListForOrganization(ctx, organization._id);
   },
 });
 
@@ -933,6 +1011,52 @@ export const getEditDetails = query({
     const client = await invoiceClient(ctx, organization._id, invoice);
 
     return { invoice, client, lineItems };
+  },
+});
+
+export const getDetails = query({
+  args: {
+    id: v.id("invoices"),
+  },
+  handler: async (ctx, args) => {
+    const { organization } = await requireOrganization(ctx);
+    const invoice = await ctx.db.get(args.id);
+
+    if (!invoice || invoice.organizationId !== organization._id) {
+      return null;
+    }
+
+    const [client, lineItems, paymentProofs, paymentRecords, events] = await Promise.all([
+      invoiceClient(ctx, organization._id, invoice),
+      invoiceLineItems(ctx, invoice._id),
+      invoiceProofs(ctx, invoice._id),
+      invoicePayments(ctx, invoice._id),
+      ctx.db
+        .query("invoiceEvents")
+        .withIndex("by_invoiceId", (q) => q.eq("invoiceId", invoice._id))
+        .order("desc")
+        .take(50),
+    ]);
+    const snapshot = invoice.snapshotId ? await ctx.db.get(invoice.snapshotId) : null;
+    const snapshotLineItems = snapshot
+      ? await ctx.db
+          .query("invoiceSnapshotLineItems")
+          .withIndex("by_snapshotId", (q) => q.eq("snapshotId", snapshot._id))
+          .order("asc")
+          .take(50)
+      : [];
+
+    return {
+      organization,
+      invoice,
+      client,
+      lineItems,
+      snapshot,
+      snapshotLineItems,
+      paymentProofs,
+      paymentRecords,
+      events,
+    };
   },
 });
 
@@ -1026,72 +1150,18 @@ export const stats = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    const empty = {
-      totalOutstanding: 0,
-      totalPaid: 0,
-      invoiceCount: 0,
-      awaitingClientCount: 0,
-      overdueCount: 0,
-      paidCount: 0,
-      vatCollected: 0,
-      vatOutstanding: 0,
-    };
 
     if (userId === null) {
-      return empty;
+      return emptyInvoiceStats();
     }
 
     const organization = await getExistingOrganization(ctx, userId);
 
     if (!organization) {
-      return empty;
+      return emptyInvoiceStats();
     }
 
-    const invoiceGroups = await Promise.all(
-      statsInvoiceStatuses.map((status) =>
-        ctx.db
-          .query("invoices")
-          .withIndex("by_organizationId_and_status", (q) =>
-            q.eq("organizationId", organization._id).eq("status", status),
-          )
-          .order("desc")
-          .take(250),
-      ),
-    );
-    const invoices = invoiceGroups.flat();
-
-    return invoices.reduce((totals, invoice) => {
-      if (invoice.status === "void") {
-        return totals;
-      }
-
-      const total = invoiceTotal(invoice);
-      totals.invoiceCount += 1;
-
-      if (invoice.status === "paid") {
-        totals.paidCount += 1;
-        totals.totalPaid += total;
-        totals.vatCollected += invoice.vatAmount ?? 0;
-      } else {
-        totals.totalOutstanding += invoiceBalance(invoice);
-        totals.vatOutstanding += invoice.vatAmount ?? 0;
-      }
-
-      if (
-        invoice.status === "sent" ||
-        invoice.status === "viewed" ||
-        invoice.status === "approved" ||
-        invoice.status === "awaiting_payment"
-      ) {
-        totals.awaitingClientCount += 1;
-      }
-
-      if (invoice.status === "overdue") {
-        totals.overdueCount += 1;
-      }
-
-      return totals;
-    }, empty);
+    return await invoiceStatsForOrganization(ctx, organization._id);
   },
 });
 
@@ -1286,7 +1356,11 @@ export const createDraft = mutation({
       { actorType: "user", actorUserId: userId },
     );
 
-    return invoiceId;
+    return {
+      id: invoiceId,
+      invoiceNumber,
+      status: calculated.total > 0 ? "ready" : "draft",
+    };
   },
 });
 

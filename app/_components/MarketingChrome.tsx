@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Users,
   type LucideIcon,
-} from "lucide-react";
+} from "@/app/_components/IconPack";
 
 import { PayvioMark } from "./PayvioMark";
 
@@ -225,20 +225,20 @@ export function MarketingHeader() {
 
 export function MarketingFooter() {
   return (
-    <footer className="bg-[#0d141c] py-16 text-white">
+    <footer className="bg-primary py-16 text-primary-foreground">
       <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-6">
         <div>
           <span className="il-footer-wordmark">
             <PayvioMark className="il-footer-mark" />
             <span>Payvio</span>
           </span>
-          <p className="mt-6 text-sm leading-7 text-white/65">
+          <p className="mt-6 text-sm leading-7 text-primary-foreground/65">
             Invoice and ledger software for Namibian businesses.
           </p>
         </div>
         <div>
-          <h3 className="font-black">Product</h3>
-          <div className="mt-4 grid gap-2 text-sm text-white/65">
+          <h3 className="font-semibold">Product</h3>
+          <div className="mt-4 grid gap-2 text-sm text-primary-foreground/65">
             <FooterLink href="/#invoices">Invoices</FooterLink>
             <FooterLink href="/#scan">Scan invoices</FooterLink>
             <FooterLink href="/#receipts">Receipt Tracker</FooterLink>
@@ -248,32 +248,32 @@ export function MarketingFooter() {
           </div>
         </div>
         <div>
-          <h3 className="font-black">Company</h3>
-          <div className="mt-4 grid gap-2 text-sm text-white/65">
+          <h3 className="font-semibold">Company</h3>
+          <div className="mt-4 grid gap-2 text-sm text-primary-foreground/65">
             <FooterLink href="/about">About</FooterLink>
             <FooterLink href="/blog">Blog</FooterLink>
             <FooterLink href="/contact">Contact</FooterLink>
           </div>
         </div>
         <div>
-          <h3 className="font-black">Account</h3>
-          <div className="mt-4 grid gap-2 text-sm text-white/65">
+          <h3 className="font-semibold">Account</h3>
+          <div className="mt-4 grid gap-2 text-sm text-primary-foreground/65">
             <FooterLink href="/signup">Open workspace</FooterLink>
             <FooterLink href="/login">Login</FooterLink>
             <FooterLink href="/forgot-password">Reset password</FooterLink>
           </div>
         </div>
         <div>
-          <h3 className="font-black">Legal</h3>
-          <div className="mt-4 grid gap-2 text-sm text-white/65">
+          <h3 className="font-semibold">Legal</h3>
+          <div className="mt-4 grid gap-2 text-sm text-primary-foreground/65">
             <FooterLink href="/terms">Terms</FooterLink>
             <FooterLink href="/privacy">Privacy</FooterLink>
             <FooterLink href="/policy">Policy</FooterLink>
           </div>
         </div>
         <div>
-          <h3 className="font-black">Location</h3>
-          <p className="mt-4 text-sm leading-7 text-white/65">
+          <h3 className="font-semibold">Location</h3>
+          <p className="mt-4 text-sm leading-7 text-primary-foreground/65">
             Windhoek, Namibia
             <br />
             Built for local SMEs
