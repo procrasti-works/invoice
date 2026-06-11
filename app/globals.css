@@ -14506,3 +14506,48 @@ html { background: var(--pv-paper); }
 .payvio-auth-submit:hover { background: var(--pv-ink-deep) !important; }
 .payvio-auth-mark, .payvio-auth-logo { color: var(--pv-green) !important; }
 .payvio-auth-footer a, .payvio-auth-field-link, .payvio-auth-back { color: var(--pv-green) !important; }
+
+/* ── Mint press room: beat the legacy :has(.db-dashboard-page) theme ──
+   Double-class selectors tie its (0,3,0) specificity; being last wins. */
+.db-root.db-root {
+  --db-canvas: var(--pv-paper);
+  --db-sidebar: var(--pv-ink);
+  --db-panel: var(--pv-paper-bright);
+  --db-panel-2: #faf7ee;
+  --db-hover: #ece7d6;
+  --db-border: var(--pv-line);
+  --db-border-strong: #d2cbb6;
+  --db-accent: var(--pv-green);
+  --db-accent-hover: #0a6747;
+  --db-yellow: var(--pv-gold);
+  background: var(--pv-paper) !important;
+}
+.db-root.db-root .db-sidebar {
+  background: var(--pv-ink) !important;
+}
+.db-root.db-root .db-main,
+.db-root.db-root .db-content,
+.db-root.db-root .db-topbar {
+  background: var(--pv-paper) !important;
+}
+.db-root.db-root .db-dashboard-page,
+.db-root.db-root .db-workview {
+  background: var(--pv-paper) !important;
+}
+.db-root.db-root .db-main {
+  box-shadow: 0 0 0 1px rgba(11, 59, 46, 0.06) !important;
+}
+.db-root.db-root .db-card,
+.db-root.db-root .db-loading-card,
+.db-root.db-root .db-locked-card {
+  background: var(--pv-paper-bright) !important;
+  border: 1px solid var(--pv-line) !important;
+}
+/* the blue legacy primaries become ink */
+.db-root.db-root .db-action-primary,
+.db-root.db-root button[class*="primary"]:not(.payvio-auth-option-primary) {
+  background: var(--pv-ink) !important;
+  color: var(--pv-paper) !important;
+  border-color: var(--pv-ink) !important;
+}
+.db-root.db-root .db-action-primary:hover { background: var(--pv-ink-deep) !important; }
