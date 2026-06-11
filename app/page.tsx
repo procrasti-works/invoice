@@ -1,146 +1,23 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   MarketingFooter,
   MarketingHeader,
 } from "@/app/_components/MarketingChrome";
-import dashboardMockup from "./_assets/payvio-dashboard-mockup.png";
 import {
-  ArrowRight,
-  BarChart3,
-  FileText,
-  ReceiptText,
-  Users,
-} from "lucide-react";
+  CountUp,
+  Magnetic,
+  PrintedInvoice,
+  Reveal,
+  TickerTape,
+} from "@/app/_components/MintMotion";
+import { ArrowRight } from "lucide-react";
 
-type PlatformFeature = {
-  body: string;
-  bullets: string[];
-  id: string;
-  image: { src: string; alt: string };
-  kicker: string;
-  title: string;
-  visual: {
-    amount: string;
-    body: string;
-    fromName: string;
-    fromToken: string;
-    label: string;
-    title: string;
-    toName: string;
-    toToken: string;
-  };
-};
+/* ── PAYVIO · THE MINT ──
+   An invoice is money in written form. This page is the press room:
+   engraved banknote-green ink on cream paper stock, serif headlines,
+   tabular numerals, and documents that print themselves. */
 
-const platformFeatures: PlatformFeature[] = [
-  {
-    id: "invoices",
-    kicker: "Invoices",
-    title: "Create, send, and close invoices from one workspace.",
-    body: "Payvio keeps the invoice flow direct: draft the invoice, send the client link, track the status, and mark payment when it lands.",
-    bullets: ["Line items", "Client link", "Payment status"],
-    image: {
-      src: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=80",
-      alt: "Business professional reviewing invoices on a laptop",
-    },
-    visual: {
-      title: "Invoice sent",
-      body: "Every invoice has a simple path from draft to paid.",
-      label: "Invoice total",
-      amount: "N$4,850.00",
-      fromToken: "INV",
-      fromName: "Payvio workspace",
-      toToken: "Client",
-      toName: "Secure approval link",
-    },
-  },
-  {
-    id: "scan",
-    kicker: "Scan Paper Invoices",
-    title: "Turn paper invoices into digital records instantly.",
-    body: "Point your camera at any supplier invoice and Payvio extracts the details — supplier, amounts, line items, and VAT — straight into your purchase ledger.",
-    bullets: ["OCR extraction", "Auto line items", "VAT detection"],
-    image: {
-      src: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=900&q=80",
-      alt: "Scanning a paper document with a phone camera",
-    },
-    visual: {
-      title: "Scan complete",
-      body: "Paper details land directly into a draft purchase record.",
-      label: "Extracted total",
-      amount: "N$2,300.00",
-      fromToken: "Paper",
-      fromName: "Physical invoice",
-      toToken: "Draft",
-      toName: "Ready to review",
-    },
-  },
-  {
-    id: "receipts",
-    kicker: "Receipt Tracker",
-    title: "Capture every expense receipt and never lose one again.",
-    body: "Photograph any receipt — fuel, stationery, meals, equipment — and Payvio extracts the amount, merchant, date, and VAT. Every receipt feeds your VAT input totals automatically.",
-    bullets: ["Photo capture", "VAT input tracking", "Expense categories"],
-    image: {
-      src: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=900&q=80",
-      alt: "Business person organising expense receipts",
-    },
-    visual: {
-      title: "Receipt captured",
-      body: "Merchant, amount, and VAT land in your expense record.",
-      label: "VAT input claimed",
-      amount: "N$345.00",
-      fromToken: "Receipt",
-      fromName: "Physical receipt",
-      toToken: "VAT",
-      toName: "Input VAT total",
-    },
-  },
-  {
-    id: "clients",
-    kicker: "Clients",
-    title: "Keep approvals and follow-up easy to manage.",
-    body: "Save client details once, reuse them on every invoice, and keep reminders connected to the same record.",
-    bullets: ["Client records", "Approval status", "Reminder drafts"],
-    image: {
-      src: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=900&q=80",
-      alt: "Business team in a client meeting",
-    },
-    visual: {
-      title: "Client review",
-      body: "The client sees the invoice without needing an account.",
-      label: "Awaiting approval",
-      amount: "3 invoices",
-      fromToken: "SME",
-      fromName: "Your business",
-      toToken: "OK",
-      toName: "Client approval",
-    },
-  },
-  {
-    id: "ledger",
-    kicker: "Ledger",
-    title: "See sales, supplier purchases, and VAT-ready totals clearly.",
-    body: "Payvio keeps the operational record tidy so reporting does not become a month-end rebuild.",
-    bullets: ["Issued invoices", "Supplier records", "VAT summary"],
-    image: {
-      src: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80",
-      alt: "Financial analytics dashboard on a screen",
-    },
-    visual: {
-      title: "Ledger view",
-      body: "Sales and purchases stay side by side.",
-      label: "This month",
-      amount: "N$38,420.00",
-      fromToken: "Sales",
-      fromName: "Issued invoices",
-      toToken: "VAT",
-      toName: "VAT-ready records",
-    },
-  },
-];
-
-const marqueeItems = [
+const tickerItems = [
   "moodbod",
   "link",
   "wandr",
@@ -150,408 +27,431 @@ const marqueeItems = [
   "presence",
 ];
 
-const faqs = [
+type PressFeature = {
+  id: string;
+  plate: string; // engraved plate number
+  kicker: string;
+  title: string;
+  body: string;
+  bullets: string[];
+  figure: { label: string; value: number; prefix: string; note: string };
+};
+
+const pressFeatures: PressFeature[] = [
+  {
+    id: "invoices",
+    plate: "PLATE I",
+    kicker: "Invoices",
+    title: "Draft it. Send the link. Watch it come back paid.",
+    body: "Line items, client link, payment status — the whole life of an invoice on one sheet, from first draft to the stamp.",
+    bullets: ["Line items", "Secure client link", "Payment status"],
+    figure: {
+      label: "Invoice total",
+      value: 4850,
+      prefix: "N$",
+      note: "draft → sent → approved → paid",
+    },
+  },
+  {
+    id: "scan",
+    plate: "PLATE II",
+    kicker: "Scan paper invoices",
+    title: "Paper goes in. A purchase record comes out.",
+    body: "Point the camera at any supplier invoice. Payvio engraves the details — supplier, amounts, line items, VAT — straight into your purchase ledger.",
+    bullets: ["OCR extraction", "Auto line items", "VAT detection"],
+    figure: {
+      label: "Extracted total",
+      value: 2300,
+      prefix: "N$",
+      note: "photographed → extracted → filed",
+    },
+  },
+  {
+    id: "receipts",
+    plate: "PLATE III",
+    kicker: "Receipt tracker",
+    title: "Every till slip becomes claimable VAT input.",
+    body: "Fuel, stationery, meals, equipment — photograph the receipt and the merchant, amount, date, and VAT land in your expense record automatically.",
+    bullets: ["Photo capture", "VAT input tracking", "Expense categories"],
+    figure: {
+      label: "VAT input claimed",
+      value: 345,
+      prefix: "N$",
+      note: "receipt → record → VAT return",
+    },
+  },
+  {
+    id: "clients",
+    plate: "PLATE IV",
+    kicker: "Clients",
+    title: "Clients approve from one private link. No accounts.",
+    body: "Save the client once, reuse them on every invoice, and keep reminders attached to the same record. Follow-up stops being archaeology.",
+    bullets: ["Client records", "Approval status", "Reminder drafts"],
+    figure: {
+      label: "Awaiting approval",
+      value: 3,
+      prefix: "",
+      note: "invoices in the approval queue",
+    },
+  },
+  {
+    id: "ledger",
+    plate: "PLATE V",
+    kicker: "Ledger",
+    title: "Month end stops being a rebuild.",
+    body: "Sales, supplier purchases, and VAT-ready totals stay side by side all month — so reporting is a glance, not a forensic exercise.",
+    bullets: ["Issued invoices", "Supplier records", "VAT summary"],
+    figure: {
+      label: "This month",
+      value: 38420,
+      prefix: "N$",
+      note: "sales recorded and reconciled",
+    },
+  },
+];
+
+const faqs: [string, string][] = [
   [
     "What is Payvio?",
-    "A simple invoice and ledger workspace for Namibian businesses.",
+    "A simple invoice and ledger workspace for Namibian businesses — invoices, client approvals, scanned supplier records, receipts, and VAT-ready totals in one place.",
   ],
   [
     "Who is it for?",
-    "Freelancers, SMEs, and finance teams that need clean invoices, client records, and VAT-ready totals.",
+    "Freelancers, SMEs, and finance teams that need clean invoices, client records, and VAT-ready totals without spreadsheet rituals.",
   ],
   [
     "Does Payvio submit to NamRA/ITAS?",
-    "Not in this version. Payvio keeps VAT-ready records first and can add direct submission after official specifications are available.",
+    "Not in this version. Payvio keeps VAT-ready records first and can add direct submission once official specifications are available.",
   ],
 ];
 
-function HeroLeadForm({ source }: { source: string }) {
+function LeadForm({ source, tone }: { source: string; tone: "ink" | "paper" }) {
   return (
-    <form action="/signup" className="il-lead-form">
+    <form action="/signup" className={`pv-lead pv-lead-${tone}`}>
       <input name="source" type="hidden" value={source} />
       <input
-        aria-label="Work email"
-        className="il-lead-input"
+        aria-label="Business email"
+        className="pv-lead-input"
         name="email"
         placeholder="Business email"
         type="email"
       />
-      <button className="il-lead-button" type="submit">
-        Start free
-      </button>
+      <Magnetic>
+        <button className="pv-lead-btn" type="submit">
+          Start free
+          <ArrowRight aria-hidden="true" className="size-4" />
+        </button>
+      </Magnetic>
     </form>
   );
 }
 
-function HeroPreview() {
-  return (
-    <div className="il-preview" aria-label="Payvio invoice workspace preview">
-      <Image
-        alt="Payvio invoice dashboard showing invoice metrics and a new invoice form"
-        className="il-preview-image"
-        placeholder="blur"
-        preload
-        quality={85}
-        sizes="(max-width: 760px) 94vw, (max-width: 1120px) 88vw, 1120px"
-        src={dashboardMockup}
-      />
-    </div>
-  );
-}
-
-function ClientsCarousel() {
-  const trackItems = [...marqueeItems, ...marqueeItems];
-
-  return (
-    <section className="il-used-by-section">
-      <div className="il-used-by-shell">
-        <p className="il-used-by-label">Used by</p>
-
-        <div aria-label="Companies using Payvio" className="il-marquee il-used-by-marquee">
-          <div className="il-marquee-track il-used-by-track">
-            {trackItems.map((item, index) => (
-              <span
-                aria-hidden={index >= marqueeItems.length}
-                className="il-used-by-name"
-                key={`${item}-${index}`}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function OrbitScaleSection() {
-  return (
-    <section className="il-orbit-section" aria-labelledby="orbit-scale-title">
-      <div className="il-orbit-stage">
-        <div className="il-orbit-ring il-orbit-ring-outer" />
-        <div className="il-orbit-ring il-orbit-ring-inner" />
-        <div className="il-orbit-marker il-marker-one">
-          <FileText aria-hidden="true" />
-        </div>
-        <div className="il-orbit-marker il-marker-two">
-          <Users aria-hidden="true" />
-        </div>
-        <div className="il-orbit-marker il-marker-three">
-          <ReceiptText aria-hidden="true" />
-        </div>
-        <div className="il-orbit-marker il-marker-four">
-          <BarChart3 aria-hidden="true" />
-        </div>
-        <div className="il-orbit-copy">
-          <h2 id="orbit-scale-title">Easy to start, clear enough to scale.</h2>
-          <p>
-            One Payvio workspace for invoices, clients, reminders, scanned
-            supplier records, and VAT-ready reporting. Start simple and keep the
-            record clean as the business grows.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PlatformFeature({ feature }: { feature: PlatformFeature }) {
-  return (
-    <article
-      className="grid gap-8 border-t border-[#d9dfd6] py-10 lg:grid-cols-[0.72fr_1fr] lg:items-center"
-      id={feature.id}
-    >
-      <div>
-        <p className="text-xs font-black uppercase text-[#0978e1]">
-          {feature.kicker}
-        </p>
-        <h3 className="mt-4 max-w-2xl text-3xl font-black leading-[1.02] text-[#0d141c] sm:text-5xl">
-          {feature.title}
-        </h3>
-        <p className="mt-5 max-w-xl text-lg leading-8 text-[#4e5961]">
-          {feature.body}
-        </p>
-      </div>
-      <div className="il-platform-panel">
-        <div className="il-platform-feature-img">
-          <Image
-            src={feature.image.src}
-            alt={feature.image.alt}
-            width={900}
-            height={500}
-            className="il-platform-img"
-          />
-        </div>
-        <div className="il-platform-showcase-copy">
-          <h4>{feature.visual.title}</h4>
-          <p>{feature.visual.body}</p>
-        </div>
-
-        <div className="il-platform-flow-card">
-          <p>{feature.visual.label}</p>
-          <strong>{feature.visual.amount}</strong>
-
-          <div className="il-platform-flow-box">
-            <div className="il-platform-flow-row">
-              <span className="il-platform-flow-token">
-                {feature.visual.fromToken}
-              </span>
-              <span>{feature.visual.fromName}</span>
-            </div>
-            <span className="il-platform-flow-arrow" aria-hidden="true">
-              &darr;
-            </span>
-            <div className="il-platform-flow-row">
-              <span className="il-platform-flow-token il-platform-flow-token-soft">
-                {feature.visual.toToken}
-              </span>
-              <span>{feature.visual.toName}</span>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="il-platform-feature-pills"
-          aria-label={`${feature.kicker} tools`}
-        >
-          {feature.bullets.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-black uppercase text-[#0978e1]">{children}</p>
-  );
-}
-
-function SecuritySection() {
-  const items = [
-    ["Secure links", "Clients can review invoices from a private link."],
-    ["Role aware", "Team access is kept inside the workspace."],
-    ["Clear records", "Events, totals, and status changes stay visible."],
-    ["Local focus", "Built around NAD, VAT-ready records, and Namibian SMEs."],
+/** Layered engraved guilloché curves, drifting slowly. */
+function Guilloche() {
+  const curves = [
+    "M0,160 C240,60 480,260 720,160 C960,60 1200,260 1440,160",
+    "M0,180 C240,80 480,280 720,180 C960,80 1200,280 1440,180",
+    "M0,200 C240,100 480,300 720,200 C960,100 1200,300 1440,200",
+    "M0,140 C240,240 480,40 720,140 C960,240 1200,40 1440,140",
+    "M0,120 C240,220 480,20 720,120 C960,220 1200,20 1440,120",
+    "M0,220 C240,120 480,320 720,220 C960,120 1200,320 1440,220",
   ];
-
   return (
-    <section className="bg-[#0d141c] py-20 text-white sm:py-28">
-      <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 lg:grid-cols-[0.8fr_1fr] lg:items-center">
-        <div>
-          <p className="text-xs font-black uppercase text-[#8dd8ff]">
-            Safety and clarity
-          </p>
-          <h2 className="mt-5 text-4xl font-black leading-[1.02] sm:text-7xl">
-            Built for real invoice work.
-          </h2>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {items.map(([title, body]) => (
-            <article className="rounded-[8px] bg-white/10 p-5" key={title}>
-              <h3 className="text-xl font-black">{title}</h3>
-              <p className="mt-3 text-sm leading-6 text-white/65">{body}</p>
-            </article>
+    <div aria-hidden="true" className="pv-guilloche">
+      {[0, 1].map((layer) => (
+        <svg
+          className={`pv-guilloche-layer pv-guilloche-${layer}`}
+          fill="none"
+          key={layer}
+          preserveAspectRatio="none"
+          viewBox="0 0 1440 340"
+        >
+          {curves.map((d, i) => (
+            <path d={d} key={i} transform={`translate(0 ${i * 18 - 40})`} />
           ))}
-        </div>
-      </div>
-    </section>
+          {curves.map((d, i) => (
+            <path d={d} key={`b-${i}`} transform={`translate(0 ${i * 18 + 120})`} />
+          ))}
+        </svg>
+      ))}
+    </div>
   );
 }
 
 export default function Home() {
   return (
-    <div className="il-page min-h-screen bg-white text-[#0d141c]">
+    <div className="pv-page">
       <MarketingHeader />
 
       <main>
-        <section className="il-hero bg-white">
-        <div className="il-hero-shell mx-auto max-w-[1180px] px-5 text-center sm:px-8">
-          <a
-            className="il-hero-eyebrow inline-flex items-center rounded-full bg-[#c9ecff] px-5 py-2 text-sm font-extrabold text-[#04120f]"
-            href="#platform"
-          >
-            Payvio for invoices, clients, VAT, and ledgers
-          </a>
-          <h1 className="il-hero-title mx-auto mt-9 max-w-6xl text-[#0d141c]">
-            The invoice platform Namibia can grow with.
-          </h1>
-          <p className="il-hero-copy mx-auto mt-7 max-w-3xl text-[#0d141c]">
-            Create invoices, send secure client links, scan supplier invoices,
-            track payments, and keep VAT-ready records in one simple workspace.
-          </p>
-          <div className="il-hero-form mx-auto mt-9">
-            <HeroLeadForm source="Homepage hero" />
+        {/* ── THE PRESS — hero ── */}
+        <section className="pv-hero">
+          <Guilloche />
+          <div className="pv-hero-grain" aria-hidden="true" />
+          <div className="pv-hero-shell">
+            <div className="pv-hero-copy">
+              <p className="pv-eyebrow">
+                <span className="pv-eyebrow-rule" aria-hidden="true" />
+                EST. WINDHOEK · INVOICES, CLIENTS, VAT &amp; LEDGERS
+              </p>
+              <h1 className="pv-hero-title">
+                Your invoices,
+                <br />
+                <em>minted</em> properly.
+              </h1>
+              <p className="pv-hero-sub">
+                Payvio is the press room for your business&apos;s money — draft
+                invoices, send secure client links, scan supplier paper, and
+                keep VAT-ready records that survive month end.
+              </p>
+              <LeadForm source="Homepage hero" tone="ink" />
+              <p className="pv-hero-note">
+                Payvio keeps the record. Payments stay with your bank — exactly
+                where they should be.
+              </p>
+              <div className="pv-hero-figures">
+                <div>
+                  <span className="pv-figure-label">Issued this month</span>
+                  <span className="pv-figure-value">
+                    <CountUp decimals={2} prefix="N$" value={38420} />
+                  </span>
+                </div>
+                <div>
+                  <span className="pv-figure-label">VAT position</span>
+                  <span className="pv-figure-value">
+                    <CountUp decimals={2} prefix="N$" value={3780} />
+                  </span>
+                </div>
+                <div>
+                  <span className="pv-figure-label">Awaiting approval</span>
+                  <span className="pv-figure-value">
+                    <CountUp decimals={0} value={3} />
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="pv-hero-doc">
+              <PrintedInvoice />
+            </div>
           </div>
-          <p className="il-hero-note mx-auto mt-7 max-w-2xl text-xs leading-5 text-[#33413c]">
-            Payvio keeps invoice records organized. Payments stay with your
-            bank or payment provider.
-          </p>
-          <div className="mt-12 w-full">
-            <HeroPreview />
+          <div className="pv-hero-foot" aria-hidden="true">
+            <span className="pv-microtext">
+              PAYVIO·WINDHOEK·NAD·VAT·READY·PAYVIO·WINDHOEK·NAD·VAT·READY·PAYVIO·WINDHOEK·NAD·VAT·READY·PAYVIO·WINDHOEK·NAD·VAT·READY·PAYVIO·WINDHOEK·NAD·VAT·READY
+            </span>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <ClientsCarousel />
+        {/* ── ticker tape ── */}
+        <section className="pv-tape-section">
+          <p className="pv-tape-label">IN CIRCULATION AT</p>
+          <TickerTape items={tickerItems} />
+        </section>
 
-      <OrbitScaleSection />
-
-      <section className="bg-white py-20 sm:py-28" id="platform">
-        <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
-          <div className="grid gap-8 lg:grid-cols-[0.85fr_1fr] lg:items-end">
-            <div>
-              <SectionLabel>One workspace for invoice operations</SectionLabel>
-              <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] text-[#0d141c] sm:text-7xl">
-                Invoices, scans, clients, purchases, and VAT in one place.
+        {/* ── the five plates ── */}
+        <section className="pv-press" id="platform">
+          <div className="pv-press-shell">
+            <Reveal>
+              <p className="pv-kicker">THE PRESS</p>
+              <h2 className="pv-h2">
+                Five plates. One clean record
+                <br />
+                of <em>every dollar</em> you&apos;re owed.
               </h2>
+            </Reveal>
+
+            <div className="pv-plates">
+              {pressFeatures.map((f, i) => (
+                <Reveal
+                  as="article"
+                  className={`pv-plate ${i % 2 ? "pv-plate-flip" : ""}`}
+                  key={f.id}
+                >
+                  <div className="pv-plate-copy" id={f.id}>
+                    <span className="pv-plate-no">{f.plate}</span>
+                    <p className="pv-kicker">{f.kicker.toUpperCase()}</p>
+                    <h3 className="pv-h3">{f.title}</h3>
+                    <p className="pv-body">{f.body}</p>
+                    <div className="pv-bullets">
+                      {f.bullets.map((b) => (
+                        <span className="pv-bullet" key={b}>
+                          {b}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pv-plate-figure">
+                    <div className="pv-figure-card">
+                      <span className="pv-figure-card-label">{f.figure.label}</span>
+                      <span className="pv-figure-card-value">
+                        <CountUp
+                          decimals={f.figure.prefix ? 2 : 0}
+                          prefix={f.figure.prefix}
+                          value={f.figure.value}
+                        />
+                      </span>
+                      <span className="pv-figure-card-note">{f.figure.note}</span>
+                      <span className="pv-figure-card-corner" aria-hidden="true" />
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
             </div>
-            <p className="max-w-xl text-lg leading-8 text-[#4e5961] lg:justify-self-end">
-              The structure is simple: create the invoice, send the link, scan
-              supplier files, collect proof, and keep the ledger ready for reporting.
-            </p>
           </div>
+        </section>
 
-          <div className="mt-10">
-            {platformFeatures.map((feature) => (
-              <PlatformFeature feature={feature} key={feature.id} />
-            ))}
+        {/* ── VAT — the balance ── */}
+        <section className="pv-vat" id="vat">
+          <div className="pv-vat-shell">
+            <Reveal>
+              <p className="pv-kicker pv-kicker-light">VAT-READY RECORDS</p>
+              <h2 className="pv-h2 pv-h2-light">
+                Month end, <em>already done.</em>
+              </h2>
+              <p className="pv-body pv-body-light">
+                Payvio keeps subtotal, VAT, and total as separate engravings on
+                every record — so when reporting time arrives, the numbers are
+                simply <strong>there</strong>.
+              </p>
+              <div className="pv-vat-ctas">
+                <Magnetic>
+                  <Link className="pv-btn-paper" href="/signup">
+                    Start workspace
+                    <ArrowRight aria-hidden="true" className="size-4" />
+                  </Link>
+                </Magnetic>
+                <Link className="pv-btn-ghost" href="/contact">
+                  Contact us
+                </Link>
+              </div>
+            </Reveal>
+            <Reveal className="pv-vat-card" delay={150}>
+              <div className="pv-vat-row">
+                <span>VAT collected</span>
+                <strong>
+                  <CountUp decimals={2} prefix="N$" value={4920} />
+                </strong>
+              </div>
+              <div className="pv-vat-row">
+                <span>Supplier VAT input</span>
+                <strong>
+                  <CountUp decimals={2} prefix="N$" value={1140} />
+                </strong>
+              </div>
+              <div className="pv-vat-row pv-vat-position">
+                <span>VAT position</span>
+                <strong>
+                  <CountUp decimals={2} prefix="N$" value={3780} />
+                </strong>
+              </div>
+              <p className="pv-vat-note">Sample values for the marketing preview.</p>
+            </Reveal>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="vat" className="bg-[#f5f7f2] py-20 sm:py-28">
-        <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 lg:grid-cols-[0.85fr_1fr] lg:items-center">
-          <div>
-            <SectionLabel>VAT-ready records</SectionLabel>
-            <h2 className="mt-5 text-4xl font-black leading-[1.02] text-[#0d141c] sm:text-7xl">
-              Keep the numbers clean before month end.
-            </h2>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-[#4e5961]">
-              Payvio separates subtotal, VAT, and total values so the record is
-              easier to review when reporting time arrives.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="il-dark-button" href="/signup">
-                Start workspace
-                <ArrowRight aria-hidden="true" className="size-4" />
+        {/* ── pricing teaser ── */}
+        <section className="pv-pricing" id="pricing">
+          <div className="pv-pricing-shell">
+            <Reveal className="pv-price-card pv-price-ink">
+              <p className="pv-kicker pv-kicker-light">UP AND RUNNING FAST</p>
+              <h2 className="pv-h3 pv-h3-light">Start with the first invoice.</h2>
+              <p className="pv-body pv-body-light">
+                Create the workspace, add a client, and send a secure invoice
+                link — without changing how you get paid.
+              </p>
+            </Reveal>
+            <Reveal className="pv-price-card pv-price-paper" delay={120}>
+              <p className="pv-kicker">CLEAR PLANS</p>
+              <h2 className="pv-h3">Simple pricing for growing teams.</h2>
+              <p className="pv-body">
+                Pick the plan that fits your invoice volume, client list, and
+                reporting needs.
+              </p>
+              <Link className="pv-link-rule" href="/pricing">
+                See pricing <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
-              <Link className="il-light-button" href="/contact">
-                Contact us
-              </Link>
-            </div>
+            </Reveal>
           </div>
-          <div className="il-ledger-card">
-            <div>
-              <span>VAT collected</span>
-              <strong>N$4,920.00</strong>
-            </div>
-            <div>
-              <span>Supplier VAT input</span>
-              <strong>N$1,140.00</strong>
-            </div>
-            <div>
-              <span>VAT position</span>
-              <strong>N$3,780.00</strong>
-            </div>
-            <p>Numbers shown are sample values for the marketing preview.</p>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="bg-white py-20 sm:py-28" id="pricing">
-        <div className="mx-auto grid max-w-[1180px] gap-4 px-5 sm:px-8 lg:grid-cols-2">
-          <article className="rounded-[8px] bg-[#0d141c] p-8 text-white sm:p-10">
-            <p className="text-xs font-black uppercase text-[#8dd8ff]">
-              Up and running fast
-            </p>
-            <h2 className="mt-5 text-3xl font-black leading-[1.02] sm:text-6xl">
-              Start with the first invoice.
-            </h2>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/65">
-              Create the workspace, add a client, and send a secure invoice
-              link without changing how you get paid.
-            </p>
-          </article>
-          <article className="rounded-[8px] bg-[#e8f4dc] p-8 text-[#0d141c] sm:p-10">
-            <p className="text-xs font-black uppercase text-[#0978e1]">
-              Clear plans
-            </p>
-            <h2 className="mt-5 text-3xl font-black leading-[1.02] sm:text-6xl">
-              Simple pricing for growing teams.
-            </h2>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-[#4e5961]">
-              Pick the plan that fits your invoice volume, client list, and
-              reporting needs.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <SecuritySection />
-
-      <section id="contact" className="bg-white py-20 sm:py-28">
-        <div className="mx-auto grid max-w-[1180px] gap-12 px-5 sm:px-8 lg:grid-cols-[0.75fr_1fr]">
-          <div>
-            <SectionLabel>Contact</SectionLabel>
-            <h2 className="mt-5 text-4xl font-black leading-[1.02] text-[#0d141c] sm:text-6xl">
-              Simple answers. Clear next steps.
-            </h2>
-            <div className="mt-8">
-              <Link className="il-dark-button" href="/contact">
-                Talk to Payvio
-                <ArrowRight aria-hidden="true" className="size-4" />
-              </Link>
+        {/* ── security strip ── */}
+        <section className="pv-security">
+          <div className="pv-security-shell">
+            <Reveal>
+              <p className="pv-kicker">SAFETY AND CLARITY</p>
+              <h2 className="pv-h2">
+                Built like a vault,
+                <br />
+                <em>readable</em> like a ledger.
+              </h2>
+            </Reveal>
+            <div className="pv-security-grid">
+              {[
+                ["Secure links", "Clients review invoices from one private link — no client accounts, no attachments lost to inboxes."],
+                ["Role aware", "Team access stays inside the workspace, scoped to what each person actually does."],
+                ["Clear records", "Events, totals, and status changes stay visible. The history is the audit trail."],
+                ["Local focus", "Built around NAD, VAT-ready records, and the way Namibian SMEs actually invoice."],
+              ].map(([title, body], i) => (
+                <Reveal className="pv-security-card" delay={i * 90} key={title}>
+                  <span className="pv-security-index">{String(i + 1).padStart(2, "0")}</span>
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                </Reveal>
+              ))}
             </div>
           </div>
-          <div className="grid gap-3">
-            {faqs.map(([question, answer]) => (
-              <article className="rounded-[8px] bg-[#f5f7f2] p-6" key={question}>
-                <h3 className="text-2xl font-black text-[#0d141c]">
-                  {question}
-                </h3>
-                <p className="mt-4 text-lg leading-8 text-[#4e5961]">{answer}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="bg-[#0978e1] py-20 sm:py-28">
-        <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 lg:grid-cols-[1fr_0.85fr] lg:items-center">
-          <div>
-            <p className="text-xs font-black uppercase text-white/80">
-              Ready when you are
-            </p>
-            <h2 className="mt-5 max-w-4xl text-4xl font-black leading-[1.02] text-white sm:text-7xl">
-              Start your invoice workspace today.
-            </h2>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Link
-                className="inline-flex min-h-12 items-center justify-center rounded-full bg-white px-6 text-base font-black text-[#0d141c] transition hover:bg-[#f5f7f2]"
-                href="/signup"
-              >
-                Open workspace
-              </Link>
-              <Link
-                className="il-final-login inline-flex min-h-12 items-center justify-center rounded-full bg-[#0d141c] px-6 text-base font-black transition hover:bg-[#092054]"
-                href="/login"
-              >
-                Login
-              </Link>
+        {/* ── FAQ ── */}
+        <section className="pv-faq" id="contact">
+          <div className="pv-faq-shell">
+            <Reveal>
+              <p className="pv-kicker">QUESTIONS</p>
+              <h2 className="pv-h2">
+                Simple answers.
+                <br />
+                <em>Clear</em> next steps.
+              </h2>
+              <Magnetic>
+                <Link className="pv-btn-ink" href="/contact">
+                  Talk to Payvio
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              </Magnetic>
+            </Reveal>
+            <div className="pv-faq-list">
+              {faqs.map(([q, a], i) => (
+                <Reveal className="pv-faq-item" delay={i * 80} key={q}>
+                  <h3>{q}</h3>
+                  <p>{a}</p>
+                </Reveal>
+              ))}
             </div>
           </div>
-          <div className="rounded-[8px] bg-white p-5">
-            <HeroLeadForm source="Homepage final CTA" />
+        </section>
+
+        {/* ── final plate ── */}
+        <section className="pv-final">
+          <Guilloche />
+          <div className="pv-final-shell">
+            <Reveal>
+              <p className="pv-kicker pv-kicker-mint">READY WHEN YOU ARE</p>
+              <h2 className="pv-final-title">
+                Put your money
+                <br />
+                on <em>paper.</em>
+              </h2>
+            </Reveal>
+            <Reveal className="pv-final-form" delay={150}>
+              <LeadForm source="Homepage final CTA" tone="paper" />
+              <Link className="pv-final-login" href="/login">
+                or log in to your workspace →
+              </Link>
+            </Reveal>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
       <MarketingFooter />
-      </main>
     </div>
   );
 }

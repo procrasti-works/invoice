@@ -168,7 +168,7 @@ function FooterLink({ children, href }: { children: ReactNode; href: string }) {
 
 export function MarketingHeader() {
   return (
-    <header className="il-header">
+    <header className="il-header pv-header">
       <div className="il-header-shell">
         <Link aria-label="Payvio home" className="il-header-logo" href="/">
           <span className="il-wordmark">
@@ -225,15 +225,22 @@ export function MarketingHeader() {
 
 export function MarketingFooter() {
   return (
-    <footer className="bg-[#0d141c] py-16 text-white">
-      <div className="mx-auto grid max-w-[1180px] gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-6">
+    <footer className="pv-footer">
+      <div className="pv-footer-rule" aria-hidden="true">
+        <span className="pv-footer-microtext">
+          PAYVIO·INVOICE·LEDGER·VAT·PAYVIO·INVOICE·LEDGER·VAT·PAYVIO·INVOICE·LEDGER·VAT·PAYVIO·INVOICE·LEDGER·VAT·PAYVIO·INVOICE·LEDGER·VAT
+        </span>
+      </div>
+      <div className="mx-auto grid max-w-[1180px] gap-10 px-5 py-16 sm:px-8 md:grid-cols-2 lg:grid-cols-6">
         <div>
           <span className="il-footer-wordmark">
             <PayvioMark className="il-footer-mark" />
             <span>Payvio</span>
           </span>
-          <p className="mt-6 text-sm leading-7 text-white/65">
-            Invoice and ledger software for Namibian businesses.
+          <p className="pv-footer-tag mt-6 text-sm leading-7">
+            The press room for your
+            <br />
+            business&apos;s money.
           </p>
         </div>
         <div>
