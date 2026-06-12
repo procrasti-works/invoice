@@ -134,6 +134,10 @@ export default defineSchema({
   users: defineTable({
     name: v.optional(v.string()),
     image: v.optional(v.string()),
+    // Kept additive for forward-compat with workspace data created by other
+    // builds (avatar uploads / Google profile image). Unused by this UI.
+    avatarStorageId: v.optional(v.id("_storage")),
+    googleImage: v.optional(v.string()),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
     phone: v.optional(v.string()),
@@ -176,6 +180,10 @@ export default defineSchema({
     paymentInstructions: v.string(),
     paymentLink: v.optional(v.string()),
     brandColor: v.string(),
+    // Additive for forward-compat with workspace-logo data. Unused by this UI.
+    imageStorageId: v.optional(v.id("_storage")),
+    imageFileName: v.optional(v.string()),
+    imageUpdatedAt: v.optional(v.number()),
     permissionPolicy: v.optional(organizationPermissionPolicyValidator),
     deletedAt: v.optional(v.number()),
     deletedByUserId: v.optional(v.id("users")),
@@ -293,6 +301,7 @@ export default defineSchema({
   })
     .index("by_organizationId", ["organizationId"])
     .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_organizationId_and_createdAt", ["organizationId", "createdAt"])
     .index("by_organizationId_and_issueDate", ["organizationId", "issueDate"])
     .index("by_publicToken", ["publicToken"])
     .index("by_clientId", ["clientId"]),
