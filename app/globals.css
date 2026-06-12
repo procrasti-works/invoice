@@ -14551,3 +14551,118 @@ html { background: var(--pv-paper); }
   border-color: var(--pv-ink) !important;
 }
 .db-root.db-root .db-action-primary:hover { background: var(--pv-ink-deep) !important; }
+
+/* ════════════════════════════════════════════════════════════════
+   MINT DARK · "the press room at night"
+   My own dark theme for the Mint design — toggled via html.pv-dark.
+   The hero/VAT/final/footer are already ink-dark; this flips the cream
+   surfaces and dashboard to dark stone and lifts the text to warm light.
+   The printed hero invoice stays white — a real paper document on a
+   dark desk. No dependency on any external theme system.
+   ════════════════════════════════════════════════════════════════ */
+
+html.pv-dark {
+  --pv-paper: #0a1410;
+  --pv-paper-warm: #0c1813;
+  --pv-paper-bright: #11211b;
+  --pv-line: rgba(243, 238, 225, 0.10);
+  --pv-green: #25b87b;
+  --pv-gold: #d9b552;
+  --pv-line-ink: rgba(243, 238, 225, 0.12);
+
+  /* mapped product / shadcn tokens */
+  --background: #0a1410;
+  --foreground: #eef0e7;
+  --secondary: #0f1f18;
+  --secondary-foreground: #eef0e7;
+  --muted: #10201a;
+  --muted-foreground: #8c9a90;
+  --accent: #12241c;
+  --accent-foreground: #9fe7c4;
+  --border: rgba(243, 238, 225, 0.10);
+  --input: rgba(243, 238, 225, 0.16);
+  --line: rgba(243, 238, 225, 0.10);
+  --line-dark: rgba(243, 238, 225, 0.16);
+  --ink-soft: #c4d0c7;
+  --ink-muted: #8c9a90;
+
+  /* app surfaces */
+  --app-bg: #0a1410;
+  --app-surface: #11211b;
+  --app-surface-subtle: #0e1c16;
+  --app-fill: #13241d;
+  --app-hover: #182c23;
+  --mint-soft: #133026;
+
+  color-scheme: dark;
+}
+html.pv-dark body { background: var(--pv-paper); color: var(--foreground); }
+
+/* headings & values that used dark ink text → warm light on dark */
+html.pv-dark .pv-h2,
+html.pv-dark .pv-h3,
+html.pv-dark .pv-figure-card-value,
+html.pv-dark .pv-faq-item h3,
+html.pv-dark .pv-security-card h3,
+html.pv-dark .pv-vat-row strong,
+html.pv-dark .pv-tape-item { color: #eef0e7; }
+html.pv-dark .pv-h2 em,
+html.pv-dark .pv-h3 em { color: var(--pv-mint); }
+
+/* body / muted text on the now-dark surfaces */
+html.pv-dark .pv-body { color: #aebbb0; }
+html.pv-dark .pv-security-card p,
+html.pv-dark .pv-faq-item p { color: #94a399; }
+html.pv-dark .pv-figure-card-label,
+html.pv-dark .pv-figure-card-note,
+html.pv-dark .pv-vat-note,
+html.pv-dark .pv-tape-label,
+html.pv-dark .pv-bullet { color: #94a399; }
+html.pv-dark .pv-bullet { background: var(--pv-paper-bright); border-color: var(--pv-line); }
+
+/* the printed hero invoice stays a real white paper document */
+html.pv-dark .pv-doc-paper { background: #fffdf6; }
+
+/* marketing header in dark */
+html.pv-dark .pv-header { background: rgba(10, 20, 16, 0.9) !important; border-bottom-color: var(--pv-line) !important; }
+html.pv-dark .pv-header .il-wordmark,
+html.pv-dark .pv-header .il-wordmark span { color: #eef0e7; }
+html.pv-dark .pv-header .il-menu-trigger,
+html.pv-dark .pv-header .il-header-login { color: #c4d0c7; }
+html.pv-dark .pv-header .il-menu-trigger:hover,
+html.pv-dark .pv-header .il-header-login:hover { color: #eef0e7; }
+html.pv-dark .pv-header .il-header-cta { background: var(--pv-mint); color: #06140e; }
+html.pv-dark .pv-header .il-menu-panel { background: #11211b; border-color: var(--pv-line); }
+html.pv-dark .pv-header .il-menu-item strong { color: #eef0e7; }
+html.pv-dark .pv-header .il-menu-item small { color: #94a399; }
+html.pv-dark .pv-header .il-menu-item:hover { background: #0e1c16; }
+html.pv-dark .pv-header .il-menu-icon { background: #13302455; color: var(--pv-mint); }
+
+/* dashboard: canvas/cards already follow --pv-* tokens; lift card titles */
+html.pv-dark .db-root.db-root .db-card-title,
+html.pv-dark .db-root.db-root .db-topbar-title,
+html.pv-dark .db-root.db-root .db-topbar-workspace { color: #eef0e7 !important; }
+html.pv-dark .db-root.db-root .db-search,
+html.pv-dark .db-root.db-root .db-global-search-trigger { background: #11211b !important; }
+
+/* the theme toggle control */
+.pv-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--pv-line);
+  background: transparent;
+  color: var(--pv-ink);
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+.pv-theme-toggle:hover { background: color-mix(in srgb, var(--pv-green) 10%, transparent); }
+.pv-header .pv-theme-toggle { color: #2e463b; }
+html.pv-dark .pv-header .pv-theme-toggle,
+html.pv-dark .pv-theme-toggle { color: #c4d0c7; border-color: var(--pv-line); }
+/* dashboard sidebar toggle sits on the ink rail */
+.db-sidebar .pv-theme-toggle { color: rgba(241, 238, 226, 0.7); border-color: var(--pv-line-ink); }
+.db-sidebar .pv-theme-toggle:hover { color: #fff; }

@@ -1,0 +1,16 @@
+# Payvio code ownership.
+# Any change to UI / design code requires the owner's review before it can
+# merge (enforced together with branch protection: "Require review from
+# Code Owners" on the protected branch).
+
+# Default owner for everything.
+*                         @NazeemHarris18
+
+# UI / design surface — explicitly owner-gated.
+/app/                     @NazeemHarris18
+/components/              @NazeemHarris18
+/app/globals.css          @NazeemHarris18
+/app/**/*.tsx             @NazeemHarris18
+*.css                     @NazeemHarris18
+/lib/theme.ts             @NazeemHarris18
+/tailwind.config.*        @NazeemHarris18

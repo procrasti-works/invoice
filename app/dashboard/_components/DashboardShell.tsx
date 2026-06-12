@@ -41,6 +41,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PayvioMark } from "@/app/_components/PayvioMark";
+import { ThemeToggle } from "@/app/_components/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { PlanProvider, usePlan, PLAN_LABELS, type Feature } from "@/lib/plan";
 import { DashboardWarmup } from "./DashboardWarmup";
@@ -643,6 +644,7 @@ function ShellInner({ children }: { children: ReactNode }) {
             </button>
           </div>
           <div className="db-topbar-right">
+            <ThemeToggle />
             <div className="db-topbar-action-wrap" ref={notificationsRef}>
               <button
                 type="button"
