@@ -14495,9 +14495,9 @@ html { background: var(--pv-paper); }
 /* ── auth screens join the Mint ── */
 .payvio-auth-screen { background: var(--pv-paper) !important; }
 .payvio-auth-card {
-  background: var(--pv-paper-bright) !important;
-  border: 1px solid var(--pv-line) !important;
-  box-shadow: 0 24px 60px rgba(11, 59, 46, 0.1) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 .payvio-auth-heading { font-family: var(--pv-serif); color: var(--pv-ink) !important; }
 .payvio-auth-option-primary { background: var(--pv-ink) !important; color: var(--pv-paper) !important; }
