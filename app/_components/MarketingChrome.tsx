@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { PayvioMark } from "./PayvioMark";
-import { ThemeToggle } from "./ThemeToggle";
 
 type NavItem = {
   body: string;
@@ -212,7 +211,6 @@ export function MarketingHeader() {
         </nav>
 
         <div className="il-header-actions">
-          <ThemeToggle />
           <Link className="il-header-login" href="/login">
             Login
           </Link>

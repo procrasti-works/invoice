@@ -5,7 +5,6 @@ import "./globals.css";
 import { ConvexClientProvider } from "./providers";
 import { PerformanceBoot } from "./_components/PerformanceBoot";
 import { PwaInstallPrompt } from "./_components/PwaInstallPrompt";
-import { pvThemeBootstrap } from "./_components/ThemeToggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,7 +64,6 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <script dangerouslySetInnerHTML={{ __html: pvThemeBootstrap }} />
         <PerformanceBoot />
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>

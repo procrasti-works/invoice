@@ -14553,128 +14553,10 @@ html { background: var(--pv-paper); }
 .db-root.db-root .db-action-primary:hover { background: var(--pv-ink-deep) !important; }
 
 /* ════════════════════════════════════════════════════════════════
-   MINT DARK · "the press room at night"
-   My own dark theme for the Mint design — toggled via html.pv-dark.
-   The hero/VAT/final/footer are already ink-dark; this flips the cream
-   surfaces and dashboard to dark stone and lifts the text to warm light.
-   The printed hero invoice stays white — a real paper document on a
-   dark desk. No dependency on any external theme system.
-   ════════════════════════════════════════════════════════════════ */
-
-html.pv-dark {
-  /* warmer "deep forest" — lifted off near-black so it reads as a room at
-     dusk, not a void. */
-  --pv-paper: #14271d;
-  --pv-paper-warm: #183022;
-  --pv-paper-bright: #1f3729;
-  --pv-line: rgba(243, 238, 225, 0.13);
-  --pv-green: #2fc585;
-  --pv-gold: #e0bd5d;
-  --pv-line-ink: rgba(243, 238, 225, 0.15);
-
-  /* mapped product / shadcn tokens */
-  --background: #14271d;
-  --foreground: #f0f2ea;
-  --secondary: #1c3527;
-  --secondary-foreground: #f0f2ea;
-  --muted: #1b3326;
-  --muted-foreground: #9aa89d;
-  --accent: #20392b;
-  --accent-foreground: #aef0cf;
-  --border: rgba(243, 238, 225, 0.13);
-  --input: rgba(243, 238, 225, 0.18);
-  --line: rgba(243, 238, 225, 0.13);
-  --line-dark: rgba(243, 238, 225, 0.2);
-  --ink-soft: #cdd8cf;
-  --ink-muted: #9aa89d;
-
-  /* app surfaces */
-  --app-bg: #14271d;
-  --app-surface: #1f3729;
-  --app-surface-subtle: #1a3024;
-  --app-fill: #223c2d;
-  --app-hover: #284633;
-  --mint-soft: #1c3d2e;
-
-  color-scheme: dark;
-}
-html.pv-dark body { background: var(--pv-paper); color: var(--foreground); }
-
-/* headings & values that used dark ink text → warm light on dark */
-html.pv-dark .pv-h2,
-html.pv-dark .pv-h3,
-html.pv-dark .pv-figure-card-value,
-html.pv-dark .pv-faq-item h3,
-html.pv-dark .pv-security-card h3,
-html.pv-dark .pv-vat-row strong,
-html.pv-dark .pv-tape-item { color: #eef0e7; }
-html.pv-dark .pv-h2 em,
-html.pv-dark .pv-h3 em { color: var(--pv-mint); }
-
-/* body / muted text on the now-dark surfaces */
-html.pv-dark .pv-body { color: #aebbb0; }
-html.pv-dark .pv-security-card p,
-html.pv-dark .pv-faq-item p { color: #94a399; }
-html.pv-dark .pv-figure-card-label,
-html.pv-dark .pv-figure-card-note,
-html.pv-dark .pv-vat-note,
-html.pv-dark .pv-tape-label,
-html.pv-dark .pv-bullet { color: #94a399; }
-html.pv-dark .pv-bullet { background: var(--pv-paper-bright); border-color: var(--pv-line); }
-
-/* the printed hero invoice stays a real white paper document */
-html.pv-dark .pv-doc-paper { background: #fffdf6; }
-
-/* marketing header in dark */
-html.pv-dark .pv-header { background: rgba(10, 20, 16, 0.9) !important; border-bottom-color: var(--pv-line) !important; }
-html.pv-dark .pv-header .il-wordmark,
-html.pv-dark .pv-header .il-wordmark span { color: #eef0e7; }
-html.pv-dark .pv-header .il-menu-trigger,
-html.pv-dark .pv-header .il-header-login { color: #c4d0c7; }
-html.pv-dark .pv-header .il-menu-trigger:hover,
-html.pv-dark .pv-header .il-header-login:hover { color: #eef0e7; }
-html.pv-dark .pv-header .il-header-cta { background: var(--pv-mint); color: #06140e; }
-html.pv-dark .pv-header .il-menu-panel { background: #11211b; border-color: var(--pv-line); }
-html.pv-dark .pv-header .il-menu-item strong { color: #eef0e7; }
-html.pv-dark .pv-header .il-menu-item small { color: #94a399; }
-html.pv-dark .pv-header .il-menu-item:hover { background: #0e1c16; }
-html.pv-dark .pv-header .il-menu-icon { background: #13302455; color: var(--pv-mint); }
-
-/* dashboard: canvas/cards already follow --pv-* tokens; lift card titles */
-html.pv-dark .db-root.db-root .db-card-title,
-html.pv-dark .db-root.db-root .db-topbar-title,
-html.pv-dark .db-root.db-root .db-topbar-workspace { color: #eef0e7 !important; }
-html.pv-dark .db-root.db-root .db-search,
-html.pv-dark .db-root.db-root .db-global-search-trigger { background: #11211b !important; }
-
-/* the theme toggle control */
-.pv-theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  border: 1px solid var(--pv-line);
-  background: transparent;
-  color: var(--pv-ink);
-  cursor: pointer;
-  transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
-}
-.pv-theme-toggle:hover { background: color-mix(in srgb, var(--pv-green) 10%, transparent); }
-.pv-header .pv-theme-toggle { color: #2e463b; }
-html.pv-dark .pv-header .pv-theme-toggle,
-html.pv-dark .pv-theme-toggle { color: #c4d0c7; border-color: var(--pv-line); }
-/* dashboard sidebar toggle sits on the ink rail */
-.db-sidebar .pv-theme-toggle { color: rgba(241, 238, 226, 0.7); border-color: var(--pv-line-ink); }
-.db-sidebar .pv-theme-toggle:hover { color: #fff; }
-
-/* ════════════════════════════════════════════════════════════════
-   PAPER TEXTURE · grain + notepad ruled lines
-   A faint fiber grain gives every light surface real paper tooth; the
-   key paper surfaces (the printed invoice, cards) also get whisper-faint
-   ruled lines for the "notepad" feel. Grain uses multiply, so it textures
-   the cream and all but vanishes on the dark theme.
+   PAPER TEXTURE · grain + notepad ruled lines (light-only)
+   A faint fiber grain gives every surface real paper tooth; the key
+   paper surfaces (the printed invoice, cards) also get whisper-faint
+   ruled lines for the "notepad" feel.
    ════════════════════════════════════════════════════════════════ */
 
 body::after {
@@ -14688,8 +14570,6 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.45'/%3E%3C/svg%3E");
   background-size: 180px 180px;
 }
-/* lighten the grain's bite in dark mode so it doesn't muddy the forest */
-html.pv-dark body::after { opacity: 0.18; mix-blend-mode: soft-light; }
 
 /* notepad ruled lines on the paper surfaces (kept under the content) */
 .pv-doc-paper,
@@ -14706,8 +14586,7 @@ html.pv-dark body::after { opacity: 0.18; mix-blend-mode: soft-light; }
     color-mix(in srgb, var(--pv-ink) 5%, transparent) 28px
   );
 }
-/* the printed invoice gets slightly clearer rules + a faint margin line,
-   like a real notepad sheet */
+/* the printed invoice gets slightly clearer rules + a faint margin line */
 .pv-doc-paper {
   background-image:
     linear-gradient(
@@ -14725,35 +14604,105 @@ html.pv-dark body::after { opacity: 0.18; mix-blend-mode: soft-light; }
       color-mix(in srgb, var(--pv-ink) 7%, transparent) 28px
     );
 }
-html.pv-dark .pv-doc-paper {
-  /* the invoice stays a white sheet in dark mode — keep its rules ink-faint */
-  background-image:
-    linear-gradient(
-      to right,
-      transparent 30px,
-      rgba(192, 59, 45, 0.22) 30px,
-      rgba(192, 59, 45, 0.22) 31px,
-      transparent 31px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      transparent,
-      transparent 27px,
-      rgba(11, 59, 46, 0.07) 27px,
-      rgba(11, 59, 46, 0.07) 28px
-    );
+
+/* ════════════════════════════════════════════════════════════════
+   DASHBOARD PAGE-FLIP · each section turns in like a page
+   ════════════════════════════════════════════════════════════════ */
+.db-content { perspective: 1600px; perspective-origin: left center; }
+.db-page-flip {
+  transform-origin: left center;
+  backface-visibility: hidden;
+  animation: db-page-flip 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
 }
-/* cards keep their ruled lines faint in dark mode */
-html.pv-dark .pv-figure-card,
-html.pv-dark .pv-faq-item,
-html.pv-dark .pv-security-card,
-html.pv-dark .pv-price-paper,
-html.pv-dark .pv-vat-card {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 27px,
-    rgba(243, 238, 225, 0.04) 27px,
-    rgba(243, 238, 225, 0.04) 28px
-  );
+@keyframes db-page-flip {
+  0% {
+    opacity: 0;
+    transform: rotateY(-18deg) translateZ(-30px);
+  }
+  60% { opacity: 1; }
+  100% {
+    opacity: 1;
+    transform: rotateY(0deg) translateZ(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .db-page-flip { animation: db-page-fade 180ms ease both; }
+  @keyframes db-page-fade { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   MOBILE · landing (≤640px)
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .pv-hero-shell { padding: 56px 20px 48px; gap: 40px; }
+  .pv-hero-title { font-size: clamp(2.3rem, 11.5vw, 3rem); line-height: 1.02; }
+  .pv-hero-sub { font-size: 1rem; }
+  .pv-eyebrow { font-size: 0.62rem; letter-spacing: 0.16em; }
+
+  /* lead form stacks so the button never runs off the edge */
+  .pv-lead { flex-direction: column; gap: 12px; max-width: 100%; }
+  .pv-lead .pv-magnetic { width: 100%; }
+  .pv-lead-input { width: 100%; }
+  .pv-lead-btn { width: 100%; justify-content: center; }
+
+  .pv-hero-figures { gap: 20px 28px; margin-top: 32px; padding-top: 20px; }
+  .pv-figure-value { font-size: 1.15rem; }
+
+  /* section rhythm + headings */
+  .pv-press, .pv-vat, .pv-pricing, .pv-security, .pv-faq, .pv-final { padding: 56px 0; }
+  .pv-press-shell, .pv-vat-shell, .pv-pricing-shell, .pv-security-shell, .pv-faq-shell, .pv-final-shell { padding: 0 20px; }
+  .pv-h2 { font-size: clamp(1.9rem, 8.5vw, 2.4rem); }
+  .pv-h3 { font-size: clamp(1.45rem, 6.5vw, 1.8rem); }
+  .pv-body { font-size: 0.98rem; }
+
+  /* plates already stack; tighten the figure card */
+  .pv-plate { gap: 24px; padding: 36px 0; }
+  .pv-figure-card { padding: 28px 24px; max-width: 100%; }
+  .pv-figure-card-value { font-size: clamp(2rem, 10vw, 2.6rem); }
+
+  /* the printed hero invoice — keep it readable, not cramped */
+  .pv-doc-paper { padding: 24px 22px 38px; transform: rotate(1deg); }
+  .pv-doc-brand { font-size: 0.95rem; }
+  .pv-doc-row { font-size: 0.78rem; gap: 8px; }
+
+  .pv-vat-card { padding: 26px; transform: none; }
+  .pv-vat-ctas { gap: 10px; }
+  .pv-btn-ink, .pv-btn-paper, .pv-btn-ghost { width: 100%; justify-content: center; }
+  .pv-faq-item { padding: 22px; }
+  .pv-final-title { font-size: clamp(2.4rem, 12vw, 3.4rem); }
+  .pv-tape-item { font-size: 1.25rem; gap: 26px; padding-right: 26px; }
+
+  /* footer columns: 2-up reads better than 6-up cramped */
+  .pv-footer .grid { gap: 28px 20px; }
+}
+
+/* hide the grain on mobile — multiply over small text can muddy it */
+@media (max-width: 640px) {
+  body::after { opacity: 0.28; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   MOBILE · dashboard (≤768px)
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* the topbar Payvio mark was rendering near-black — give it the brand green */
+  .db-mobile-topbar-mark { color: var(--pv-green) !important; }
+
+  /* clear the fixed bottom tabbar so the last fields aren't hidden under it */
+  .db-content { padding-bottom: 88px; }
+
+  /* metric strip: let the cards size sensibly in the horizontal scroll */
+  .db-metric-strip { gap: 12px; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+  .db-metric-strip > * { scroll-snap-align: start; min-width: 46%; }
+
+  /* page-flip pivots from a smaller angle on mobile (less overscan) */
+  .db-content { perspective: 1100px; }
+  .db-page-flip { transform-origin: center; }
+}
+@media (max-width: 768px) {
+  @keyframes db-page-flip {
+    0% { opacity: 0; transform: translateY(10px) rotateX(6deg); }
+    100% { opacity: 1; transform: translateY(0) rotateX(0); }
+  }
 }
