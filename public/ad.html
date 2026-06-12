@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Payvio — animated ad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Geist:wght@400;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#0b3b2e;--ink-deep:#072a21;--paper:#f6f3ea;--paper-bright:#fffdf6;
+    --mint:#2fd08c;--green:#0c7a55;--gold:#c9a227;--stamp:#c03b2d;--cream:#f1eee2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#05140e}
+  body{display:flex;align-items:center;justify-content:center;font-family:"Geist",system-ui,sans-serif}
+
+  /* 9:16 stage, scales to fit any screen */
+  .stage{
+    position:relative;width:min(100vw,56.25vh);aspect-ratio:9/16;overflow:hidden;
+    background:radial-gradient(120% 80% at 80% -10%,#11543f 0%,transparent 55%),linear-gradient(180deg,var(--ink),var(--ink-deep));
+    color:var(--cream);border-radius:18px;
+  }
+  .grain{position:absolute;inset:0;opacity:.04;mix-blend-mode:overlay;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")}
+  .guilloche{position:absolute;inset:0;opacity:.5}
+  .guilloche path{fill:none;stroke:#70c49e;stroke-width:1;opacity:.16}
+
+  .eyebrow{position:absolute;top:7%;left:0;right:0;text-align:center;font-family:"Geist Mono",monospace;
+    font-size:1.7vh;letter-spacing:.24em;color:var(--mint)}
+
+  .head{position:absolute;top:11%;left:7%;right:7%;font-family:"Fraunces",Georgia,serif;font-weight:600;
+    font-size:6.2vh;line-height:1.02;letter-spacing:-.01em;color:var(--cream)}
+  .head em{font-style:italic;color:var(--mint)}
+  .ln{display:inline-block;opacity:0;animation:lnin .6s cubic-bezier(.22,1,.36,1) forwards}
+  .l1{animation-delay:.25s}.l2{animation-delay:.5s}.l3{animation-delay:.65s}
+  @keyframes lnin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+  /* the printed invoice */
+  .doc{position:absolute;top:36%;left:11%;width:78%;background:var(--paper-bright);color:var(--ink);
+    border-radius:6px;padding:2.6vh 2.6vh 3.4vh;box-shadow:0 3vh 6vh rgba(0,0,0,.45);transform:rotate(1.6deg);
+    opacity:0;animation:docin .6s ease .95s forwards}
+  @keyframes docin{from{opacity:0;transform:translateY(2vh) rotate(1.6deg)}to{opacity:1;transform:translateY(0) rotate(1.6deg)}}
+  .doc-head{display:flex;justify-content:space-between;border-bottom:1px solid #e7e1d0;padding-bottom:1.1vh;
+    font-family:"Geist Mono",monospace;font-size:1.35vh;letter-spacing:.06em;color:#6c6a5c}
+  .doc-no{color:var(--green)}
+  .row{display:flex;justify-content:space-between;padding:1.2vh 0;border-bottom:1px dashed #e7e1d0;font-size:1.8vh;opacity:0;animation:rowin .4s ease forwards}
+  .row span:last-child{font-family:"Geist Mono",monospace;font-variant-numeric:tabular-nums}
+  .r1{animation-delay:1.3s}.r2{animation-delay:1.55s}.r3{animation-delay:1.8s}
+  .total{border-bottom:0;border-top:2px solid var(--ink);margin-top:.6vh;padding-top:1.4vh;
+    font-family:"Fraunces",serif;font-weight:600;font-size:2.3vh}
+  .r4{animation-delay:2.05s}
+  @keyframes rowin{from{opacity:0;transform:translateX(-1vh)}to{opacity:1;transform:translateX(0)}}
+  .stamp{position:absolute;right:2.4vh;bottom:9.5vh;border:.4vh solid var(--stamp);border-radius:.6vh;color:var(--stamp);
+    font-family:"Geist Mono",monospace;font-size:3.4vh;font-weight:700;letter-spacing:.18em;padding:.5vh 1.6vh;
+    opacity:0;transform:rotate(-13deg) scale(2.4);mix-blend-mode:multiply;
+    animation:slam .5s cubic-bezier(.34,1.4,.64,1) 2.55s forwards}
+  @keyframes slam{0%{opacity:0;transform:rotate(-13deg) scale(2.4)}60%{opacity:1;transform:rotate(-10deg) scale(.92)}100%{opacity:.92;transform:rotate(-11deg) scale(1)}}
+
+  .cta{position:absolute;bottom:11%;left:0;right:0;text-align:center;opacity:0;animation:ctain .5s ease 3.1s forwards}
+  .cta span{display:inline-block;background:var(--mint);color:var(--ink-deep);font-weight:700;font-size:2.4vh;
+    padding:1.7vh 4vh;border-radius:999px}
+  @keyframes ctain{from{opacity:0;transform:translateY(1vh)}to{opacity:1;transform:translateY(0)}}
+  .url{position:absolute;bottom:5.5%;left:0;right:0;text-align:center;font-family:"Geist Mono",monospace;
+    font-size:1.7vh;letter-spacing:.16em;color:rgba(241,238,226,.6)}
+
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="grain"></div>
+    <svg class="guilloche" viewBox="0 0 100 178" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M-10 40 C20 22,38 58,60 40 C82 22,100 58,118 40"/>
+      <path d="M-10 46 C20 28,38 64,60 46 C82 28,100 64,118 46"/>
+      <path d="M-10 140 C20 122,38 158,60 140 C82 122,100 158,118 140"/>
+      <path d="M-10 146 C20 128,38 164,60 146 C82 128,100 164,118 146"/>
+    </svg>
+    <div class="eyebrow">EST · WINDHOEK · INVOICES &amp; VAT</div>
+    <div class="head">
+      <span class="ln l1">Get paid</span><br>
+      <span class="ln l2"><em>without</em></span>
+      <span class="ln l3">the chase.</span>
+    </div>
+    <div class="doc">
+      <div class="doc-head"><span>OKONJIMA STUDIO</span><span class="doc-no">№ 0114</span></div>
+      <div class="row r1"><span>Brand identity</span><span>N$9,800.00</span></div>
+      <div class="row r2"><span>Packaging — 3 SKUs</span><span>N$7,350.00</span></div>
+      <div class="row total r4"><span>Total due</span><span>N$22,482.50</span></div>
+      <span class="stamp">PAID</span>
+    </div>
+    <div class="cta"><span>Start free →</span></div>
+    <div class="url">payvio.site</div>
+  </div>
+</body>
+</html>
