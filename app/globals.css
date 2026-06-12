@@ -14562,37 +14562,39 @@ html { background: var(--pv-paper); }
    ════════════════════════════════════════════════════════════════ */
 
 html.pv-dark {
-  --pv-paper: #0a1410;
-  --pv-paper-warm: #0c1813;
-  --pv-paper-bright: #11211b;
-  --pv-line: rgba(243, 238, 225, 0.10);
-  --pv-green: #25b87b;
-  --pv-gold: #d9b552;
-  --pv-line-ink: rgba(243, 238, 225, 0.12);
+  /* warmer "deep forest" — lifted off near-black so it reads as a room at
+     dusk, not a void. */
+  --pv-paper: #14271d;
+  --pv-paper-warm: #183022;
+  --pv-paper-bright: #1f3729;
+  --pv-line: rgba(243, 238, 225, 0.13);
+  --pv-green: #2fc585;
+  --pv-gold: #e0bd5d;
+  --pv-line-ink: rgba(243, 238, 225, 0.15);
 
   /* mapped product / shadcn tokens */
-  --background: #0a1410;
-  --foreground: #eef0e7;
-  --secondary: #0f1f18;
-  --secondary-foreground: #eef0e7;
-  --muted: #10201a;
-  --muted-foreground: #8c9a90;
-  --accent: #12241c;
-  --accent-foreground: #9fe7c4;
-  --border: rgba(243, 238, 225, 0.10);
-  --input: rgba(243, 238, 225, 0.16);
-  --line: rgba(243, 238, 225, 0.10);
-  --line-dark: rgba(243, 238, 225, 0.16);
-  --ink-soft: #c4d0c7;
-  --ink-muted: #8c9a90;
+  --background: #14271d;
+  --foreground: #f0f2ea;
+  --secondary: #1c3527;
+  --secondary-foreground: #f0f2ea;
+  --muted: #1b3326;
+  --muted-foreground: #9aa89d;
+  --accent: #20392b;
+  --accent-foreground: #aef0cf;
+  --border: rgba(243, 238, 225, 0.13);
+  --input: rgba(243, 238, 225, 0.18);
+  --line: rgba(243, 238, 225, 0.13);
+  --line-dark: rgba(243, 238, 225, 0.2);
+  --ink-soft: #cdd8cf;
+  --ink-muted: #9aa89d;
 
   /* app surfaces */
-  --app-bg: #0a1410;
-  --app-surface: #11211b;
-  --app-surface-subtle: #0e1c16;
-  --app-fill: #13241d;
-  --app-hover: #182c23;
-  --mint-soft: #133026;
+  --app-bg: #14271d;
+  --app-surface: #1f3729;
+  --app-surface-subtle: #1a3024;
+  --app-fill: #223c2d;
+  --app-hover: #284633;
+  --mint-soft: #1c3d2e;
 
   color-scheme: dark;
 }
@@ -14666,3 +14668,92 @@ html.pv-dark .pv-theme-toggle { color: #c4d0c7; border-color: var(--pv-line); }
 /* dashboard sidebar toggle sits on the ink rail */
 .db-sidebar .pv-theme-toggle { color: rgba(241, 238, 226, 0.7); border-color: var(--pv-line-ink); }
 .db-sidebar .pv-theme-toggle:hover { color: #fff; }
+
+/* ════════════════════════════════════════════════════════════════
+   PAPER TEXTURE · grain + notepad ruled lines
+   A faint fiber grain gives every light surface real paper tooth; the
+   key paper surfaces (the printed invoice, cards) also get whisper-faint
+   ruled lines for the "notepad" feel. Grain uses multiply, so it textures
+   the cream and all but vanishes on the dark theme.
+   ════════════════════════════════════════════════════════════════ */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.45'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+/* lighten the grain's bite in dark mode so it doesn't muddy the forest */
+html.pv-dark body::after { opacity: 0.18; mix-blend-mode: soft-light; }
+
+/* notepad ruled lines on the paper surfaces (kept under the content) */
+.pv-doc-paper,
+.pv-figure-card,
+.pv-faq-item,
+.pv-security-card,
+.pv-price-paper,
+.pv-vat-card {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    color-mix(in srgb, var(--pv-ink) 5%, transparent) 27px,
+    color-mix(in srgb, var(--pv-ink) 5%, transparent) 28px
+  );
+}
+/* the printed invoice gets slightly clearer rules + a faint margin line,
+   like a real notepad sheet */
+.pv-doc-paper {
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 30px,
+      color-mix(in srgb, var(--pv-stamp) 22%, transparent) 30px,
+      color-mix(in srgb, var(--pv-stamp) 22%, transparent) 31px,
+      transparent 31px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 27px,
+      color-mix(in srgb, var(--pv-ink) 7%, transparent) 27px,
+      color-mix(in srgb, var(--pv-ink) 7%, transparent) 28px
+    );
+}
+html.pv-dark .pv-doc-paper {
+  /* the invoice stays a white sheet in dark mode — keep its rules ink-faint */
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 30px,
+      rgba(192, 59, 45, 0.22) 30px,
+      rgba(192, 59, 45, 0.22) 31px,
+      transparent 31px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 27px,
+      rgba(11, 59, 46, 0.07) 27px,
+      rgba(11, 59, 46, 0.07) 28px
+    );
+}
+/* cards keep their ruled lines faint in dark mode */
+html.pv-dark .pv-figure-card,
+html.pv-dark .pv-faq-item,
+html.pv-dark .pv-security-card,
+html.pv-dark .pv-price-paper,
+html.pv-dark .pv-vat-card {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    rgba(243, 238, 225, 0.04) 27px,
+    rgba(243, 238, 225, 0.04) 28px
+  );
+}
