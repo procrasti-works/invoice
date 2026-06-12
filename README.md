@@ -1,72 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Payvio
 
-## Getting Started
+**The press room for your business's money.** Payvio is an invoice, client,
+ledger, receipt-scanning and VAT-ready record workspace built for Namibian
+SMEs — live at **[payvio.site](https://payvio.site)**.
 
-First, run the development server:
+---
+
+## Stack
+
+- **Next.js 16** (App Router, TypeScript) + **Tailwind v4**
+- **Convex** — database, auth (email + Google), file storage
+- **Design:** "THE MINT" — engraved-banknote aesthetic (see below)
+- Hosting: **Vercel** (frontend) + **Convex production** (backend)
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+npm run dev            # http://localhost:3000
+npx convex dev         # backend (dev deployment)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The production flow is **git push → Vercel**, with the Convex backend deployed
+separately:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+git push procrasti HEAD:main      # → triggers the payvio.site Vercel build
+npx convex deploy -y              # → deploys backend to prod (wandering-cormorant-766)
+```
 
-## Learn More
+> Frontend-only changes (CSS, pages) need only the push. Anything under
+> `convex/` (schema, functions) also needs `npx convex deploy`.
 
-To learn more about Next.js, take a look at the following resources:
+## Repo governance
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`.github/CODEOWNERS` gates every UI path (`app/`, `components/`, CSS) to the
+owner. **This only enforces once branch protection is enabled** on `main`
+(Settings → Branches → require a PR + "Require review from Code Owners").
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## THE MINT — brand kit
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The single source of truth for every surface **and every ad**. Light theme only.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Token | Hex | Use |
+|---|---|---|
+| Ink (deep green) | `#0B3B2E` | dark CTA bands, sidebar, primary buttons, headlines on cream |
+| Ink deep | `#072A21` | hover, gradient floor |
+| Green | `#0C7A55` | kickers, links, accents |
+| Mint | `#2FD08C` | the "highlighter" — one bright accent, key numbers, primary CTAs on dark |
+| Gold | `#C9A227` | plate numerals, small archival marks |
+| Stamp red | `#C03B2D` | the PAID stamp, the invoice margin line |
+| Paper | `#F6F3EA` | the cream canvas |
+| Paper bright | `#FFFDF6` | cards, the printed-invoice sheet |
 
-## Code Review Notes — Fable 5 (2026-06-10)
+- **Display serif:** Fraunces (italic cut for the emphasis word — "*minted*").
+- **UI / body:** Geist. **Numbers:** Geist Mono, tabular.
+- **Textures:** faint paper grain on light surfaces; whisper notepad ruled
+  lines on the printed-invoice + cards; the hero invoice has a red left margin.
+- **Voice:** plain, confident, a little editorial. "The press room for your
+  business's money." "Your invoices, *minted* properly." "Month end, already done."
+- **Motifs:** the self-printing invoice with a red **PAID** stamp; guilloché
+  (banknote line-work); engraved "plates"; tabular money figures (N$).
 
-Overall the codebase is technically clean: TypeScript compiles with zero errors,
-the production build succeeds for all routes, and lint shows only 6 unused-import
-warnings (in `app/dashboard/receipts/page.tsx`).
+---
 
-### 🔴 Critical: access-code billing upgrade is not secure
+## ADS PLAYBOOK
 
-The Billing panel lets anyone grant themselves a paid plan (including Enterprise).
-Two independent holes:
+How we produce Payvio ads with the connected MCP tools. **No Remotion** — video
+is done with the Higgsfield Marketing Studio MCP. Two audiences, always.
 
-1. **Codes are validated only in the browser and ship to every visitor.** The
-   access codes are hardcoded in `app/dashboard/_components/SettingsPage.tsx`
-   (`ACCESS_CODES`, ~line 787), so they get compiled into the public JS bundle on
-   payvio.site. Anyone can open DevTools, search the bundle for "PAYVIO", and read
-   `PAYVIO-ADMIN-2026` to unlock Enterprise.
-2. **The server never checks the code at all.** `upsertForOrganization` in
-   `convex/subscriptions.ts` accepts `{ plan, status }` from any authenticated
-   user — no code, no owner/admin role check. A user can skip the UI and call the
-   Convex mutation directly with `plan: "enterprise", status: "active"`. Rotating
-   the codes alone would not fix this.
+### Tools
 
-**Recommended fix:** move validation server-side. Replace the open mutation with a
-`redeemAccessCode({ code })` mutation that looks the code up on the server (env var
-or a codes table so they can be rotated/revoked), verifies the caller is the org
-owner, then writes the subscription. The client should never receive the code list
-or be able to pick its own plan. Longer term, real billing can run through the
-Stripe/PayPal/Square integrations with access codes kept as an admin/comp path
-behind the same server-side check.
+| Need | Tool | Notes |
+|---|---|---|
+| Static ads (IG/FB post, story, poster, flyer, email banner) | **Canva MCP** | `generate-design` → review candidates → `create-design-from-candidate` → `export-design` (PNG/JPG/MP4) |
+| Short ad video (Apple-style product spot) | **Higgsfield MCP** | `generate_video` with `model: marketing_studio_video`; **preflight credits with `get_cost: true` before generating** |
+| Hero/product stills for the ads | **Higgsfield MCP** | `generate_image`, `model: marketing_studio_image` |
 
-### Smaller improvements
+### The two audiences (every concept ships in both voices)
 
-- Remove the 6 unused imports/vars in `app/dashboard/receipts/page.tsx`.
-- Add the owner/admin role check to the subscription mutation itself (not just the
-  UI), covered by the fix above.
+**A — Small business / freelancer** (the core market)
+- Pain: chasing payments, month-end scramble, losing receipts, looking unprofessional.
+- Tone: warm, direct, "you". "Get paid without the chase." "One link. Client approves. Done."
+- Surfaces: Instagram post (1080×1350), Story (1080×1920), Facebook post.
+
+**B — Large company / finance team** (up-market)
+- Pain: VAT-ready records, audit trail, team roles, reconciliation across the org.
+- Tone: precise, institutional, "your team". "VAT-ready records, before month end." "An audit trail that reads itself."
+- Surfaces: LinkedIn-style post, poster, email banner.
+
+### Canva generation prompt recipe
+
+Always feed the brand kit into the `query`. Template:
+
+> Create a [format] ad for **Payvio**, an invoice & VAT-records app for
+> [Namibian SMEs / finance teams]. Style: "engraved private bank" — **cream
+> paper `#F6F3EA`** background with faint paper grain, **deep banknote-green
+> `#0B3B2E`** headline in an elegant **serif (Fraunces)** with one **italic**
+> emphasis word, a **mint `#2FD08C`** pill CTA, tabular **N$** figures in mono,
+> and a small **PAID** stamp motif in **stamp-red `#C03B2D`**. Headline: "[copy]".
+> Subhead: "[copy]". CTA: "Start free". Clean, lots of cream space, no stock-photo clutter.
+
+### Headline bank
+
+*SMB:* "Get paid without the chase." · "Your invoices, minted properly." ·
+"One link. Client approves. Paid." · "Receipts in. VAT sorted."
+*Enterprise:* "Month end, already done." · "VAT-ready records, before the deadline." ·
+"An audit trail that reads itself." · "Every dollar your team is owed, on one ledger."
+
+### Workflow
+
+1. `generate-design` (format + brand-kit query) → get candidates.
+2. Pick the best → `create-design-from-candidate` (saves to the Canva account).
+3. `export-design` → PNG/JPG download URL to share/post.
+4. For video: `generate_video` (preflight `get_cost`) → optional `upscale_video`.
+5. Stage social posts through the HubSpot/Canva flow or hand the exports to the owner.
