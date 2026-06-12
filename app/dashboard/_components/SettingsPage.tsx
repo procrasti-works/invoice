@@ -782,19 +782,9 @@ function TeamInvitationsPanel({ state }: { state: SettingsState }) {
   );
 }
 
-type BillingPlan = "trial" | "starter" | "business" | "professional" | "enterprise";
-
-const ACCESS_CODES: Record<string, BillingPlan> = {
-  "PAYVIO-ADMIN-2026": "enterprise",
-  "ENT-2026": "enterprise",
-  "PRO-2026": "professional",
-  "BIZ-2026": "business",
-  "START-2026": "starter",
-};
-
 function BillingPanel({ state }: { state: SettingsState }) {
   const subscription = useQuery(api.subscriptions.current);
-  const upsertSubscription = useMutation(api.subscriptions.upsertForOrganization);
+  const redeemAccessCode = useMutation(api.subscriptions.redeemAccessCode);
   const isOwner = state.membership.role === "owner" || state.membership.role === "admin";
 
   const [code, setCode] = useState("");
@@ -810,19 +800,20 @@ function BillingPanel({ state }: { state: SettingsState }) {
     e.preventDefault();
     setNotice(null);
     setError(null);
-    const trimmed = code.trim().toUpperCase();
-    const plan: BillingPlan | undefined = ACCESS_CODES[trimmed];
-    if (!plan) {
-      setError("Invalid access code. Please check and try again.");
+    const trimmed = code.trim();
+    if (!trimmed) {
+      setError("Enter an access code.");
       return;
     }
     setPending(true);
     try {
-      await upsertSubscription({ plan, status: "active" });
-      setNotice(`Plan upgraded to ${PLAN_LABELS[plan]}. Refresh to see all features.`);
+      // The server validates the code and decides the plan; the client never does.
+      const { plan } = await redeemAccessCode({ code: trimmed });
+      const label = PLAN_LABELS[plan as PlanLevel] ?? plan;
+      setNotice(`Plan upgraded to ${label}. Refresh to see all features.`);
       setCode("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not apply code.");
+      setError(err instanceof Error ? err.message : "Invalid access code. Please check and try again.");
     } finally {
       setPending(false);
     }

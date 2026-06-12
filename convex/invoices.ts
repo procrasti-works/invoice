@@ -1794,7 +1794,19 @@ export const getByToken = query({
       return null;
     }
 
-    const organization = await ctx.db.get(invoice.organizationId);
+    const organizationDoc = await ctx.db.get(invoice.organizationId);
+    // Public surface: expose only display fields. The full organization
+    // record holds bank account numbers, owner/user ids, tax ids, VAT
+    // configuration, sequence counters, and the permission policy — none of
+    // which an unauthenticated invoice viewer should receive. Payment and
+    // bank details the client needs to pay come from the invoice snapshot.
+    const organization = organizationDoc
+      ? {
+          _id: organizationDoc._id,
+          name: organizationDoc.name,
+          brandColor: organizationDoc.brandColor,
+        }
+      : null;
     const snapshot = invoice.snapshotId
       ? await ctx.db.get(invoice.snapshotId)
       : null;
@@ -1951,10 +1963,11 @@ export const rejectByToken = mutation({
     }
 
     const now = Date.now();
+    // Public, unauthenticated input — cap length to prevent storage abuse.
     const reason = clean(
       args.reason,
       "Client rejected the invoice and requested changes.",
-    );
+    ).slice(0, 1000);
 
     await ctx.db.patch(invoice._id, {
       status: "rejected",
