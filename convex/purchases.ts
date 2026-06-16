@@ -43,6 +43,8 @@ const purchaseScanStatusValidator = v.union(
 const extractionProviderValidator = v.union(
   v.literal("manual"),
   v.literal("desert"),
+  v.literal("claude"),
+  v.literal("tesseract"),
   v.literal("none"),
 );
 
